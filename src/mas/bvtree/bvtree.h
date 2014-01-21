@@ -81,6 +81,38 @@ public:
 			const Vector3d &dir, Point3d &nearest ) const = 0;
 };
 
+// Definitions
+// objects that can be bounded
+class BoundablePointSet : public Boundable {
+public:
+	std::vector<Point3d> pnts;
+	int idx;
+
+public:
+	BoundablePointSet(int idx);
+	BoundablePointSet(const std::vector<Point3d> &pnts, int idx);
+	void setPoints(const std::vector<Point3d> &pnts);
+	void addPoint(const Point3d &pnt);
+
+	void setIndex(int idx);
+	int getIndex();
+
+	// for 'this' call
+	bool updateBV(BoundingVolume* bv) const;
+	// default passing to pointer version
+	bool updateBV(PBoundingVolume bv) const;
+
+	void getCentroid(Point3d &c) const;
+	void getCovariance(const Point3d &centre,
+			Matrix3d &cov) const;
+
+	// closest point
+	double distanceToPoint(const Point3d &pnt, Point3d &nearest) const;
+
+	// always inf
+	double distanceToPoint(const Point3d &pnt, const Vector3d &dir, Point3d &nearest ) const;
+};
+
 // volumes
 class BoundingVolume {
 protected:
@@ -561,6 +593,8 @@ PBoundable nearest_boundable(const PBVTree bvh, const Point3d &p,
 		Point3d &nearestPoint);
 PBoundable nearest_boundable(const PBVTree bvh, const Point3d &p,
 		const Vector3d &dir, Point3d &nearestPoint);
+
+
 /*
 struct NearestBoundableData {
 	PBoundableList nearestBoundables;

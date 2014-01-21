@@ -211,7 +211,9 @@ void do_mesh_slicing(PBVTree bvtree1, LeafPolyMap &map1, PBVTree bvtree2, LeafPo
 	// collect polygons
 	for (PBVNode node : nodes1) {
 		PPolygonList polys;
-		for (PBoundable elem : node->elems) {
+		PBoundableList &elems = node->elems;
+
+		for (PBoundable elem : elems) {
 			PBoundablePolygon bpoly =
 				std::static_pointer_cast<BoundablePolygon>(elem);
 			polys.push_back(bpoly->polygon);
@@ -221,7 +223,9 @@ void do_mesh_slicing(PBVTree bvtree1, LeafPolyMap &map1, PBVTree bvtree2, LeafPo
 
 	for (PBVNode node : nodes2) {
 		PPolygonList polys;
-		for (PBoundable elem : node->elems) {
+		PBoundableList &elems = node->elems;
+
+		for (PBoundable elem : elems) {
 			PBoundablePolygon bpoly =
 				std::static_pointer_cast<BoundablePolygon>(elem);
 			polys.push_back(bpoly->polygon);
@@ -258,8 +262,6 @@ void do_mesh_slicing(PBVTree bvtree1, LeafPolyMap &map1, PBVTree bvtree2, LeafPo
 		if (f2clipped) {
 			map2[node2] = clipped2;
 		}
-		printf("Sliced %i/%i, (%i, %i)\n", i+1, nNodes, clipped1.size(), clipped2.size());
-		fflush(stdout);
 	}
 
 }
@@ -516,19 +518,13 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 
 	// for every face in mesh1, check if inside mesh2
 	//    inside -> keep, consistent coplanar -> keep, other -> discard
-	int nMap1 = map1.size();
-	int nMap2 = map2.size();
-	int idx1 = 0;
-	int idx2 = 0;
-
-	InsideMeshQueryData data;
 	for(auto keypair : map1) {
 		for (PPolygon poly : keypair.second) {
 
 			// get a point in middle of face
-			const Point3d &pnt = get_interior_point(poly);
+			Point3d pnt = get_interior_point(poly);
 
-			/*
+			InsideMeshQueryData data;
 			bool inside = is_inside(pnt, bvtree2, data, tol);
 			if (data.on) {
 				// check normal
@@ -539,8 +535,8 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 			} else if (data.in) {
 				out.push_back(poly);
 			}
-			*/
 
+			/*
 			int inside = is_inside_or_on(pnt, mesh2, bvtree2, data,
 					tol, numRetries, baryEpsilon);
 
@@ -555,11 +551,8 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 			} else if (data.in) {
 				out.push_back(poly);
 			}
-
+			*/
 		}
-		idx1++;
-		printf("Checked inside mesh2 (%i/%i)\n", idx1, nMap1);
-		fflush(stdout);
 	}
 
 	// for every face in mesh2, check if inside mesh1
@@ -568,17 +561,17 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 		for (PPolygon poly : keypair.second) {
 
 			// get a point in middle of face
-			const Point3d &pnt = get_interior_point(poly);
+			Point3d pnt = get_interior_point(poly);
 
-			/*
-			bool inside = is_inside(pnt, bvtree1, data, tol);
+			InsideMeshQueryData data;
+			bool inside = is_inside(pnt, bvtree2, data, tol);
 			if (data.on) {
 				// discard
 			} else if (data.in) {
 				out.push_back(poly);
 			}
-			*/
 
+			/*
 			int inside = is_inside_or_on(pnt, mesh1, bvtree1, data,
 					tol, numRetries, baryEpsilon);
 
@@ -589,10 +582,8 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 			} else if (data.in) {
 				out.push_back(poly);
 			}
+			*/
 		}
-		idx2++;
-		printf("Checked inside mesh2 (%i/%i)\n", idx2, nMap2);
-		fflush(stdout);
 	}
 
 	return true;
