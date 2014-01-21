@@ -15,6 +15,107 @@ bool Boundable::updateBV(PBoundingVolume bv) const {
 	return updateBV(bv.get());
 }
 
+BoundablePointSet::BoundablePointSet(int idx) : pnts(), idx(idx) {}
+BoundablePointSet::BoundablePointSet(const std::vector<Point3d> &pnts, int idx)
+	: pnts(pnts), idx(idx){}
+
+void BoundablePointSet::setPoints(const std::vector<Point3d> &pnts) {
+	this->pnts = pnts;
+}
+
+void BoundablePointSet::addPoint(const Point3d &pnt) {
+	pnts.push_back(pnt);
+}
+
+void BoundablePointSet::setIndex(int idx) {
+	this->idx = idx;
+}
+
+int BoundablePointSet::getIndex() {
+	return idx;
+}
+
+bool BoundablePointSet::updateBV(BoundingVolume* bv) const {
+
+	bool updated = false;
+	for (Point3d pnt : pnts) {
+		updated |= bv->updatePoint(pnt);
+	}
+
+	return updated;
+}
+
+// default passing to pointer version
+bool BoundablePointSet::updateBV(PBoundingVolume bv) const {
+	return updateBV(bv.get());
+}
+
+void BoundablePointSet::getCentroid(Point3d &c) const {
+	c.setZero();
+	for (Point3d pnt : pnts) {
+		c.add(pnt);
+	}
+	c.scale(1.0/pnts.size());
+
+}
+
+void BoundablePointSet::getCovariance(const Point3d &centre,
+			Matrix3d &cov) const {
+
+	cov.setZero();
+	Point3d diff;
+	for (Point3d pnt : pnts) {
+		diff.set(pnt);
+		diff.subtract(centre);
+		cov.addOuterProduct(diff, diff);
+	}
+	cov.scale(1.0/pnts.size());
+}
+
+// closest point
+double BoundablePointSet::distanceToPoint(const Point3d &pnt, Point3d &nearest) const {
+
+	double dmin = math::DOUBLE_INFINITY;
+
+	for (Point3d mpnt : pnts) {
+		double d = pnt.distance(mpnt);
+		if (d < dmin) {
+			dmin = d;
+			nearest.set(mpnt);
+		}
+	}
+
+	return dmin;
+
+}
+
+double BoundablePointSet::distanceToPoint(const Point3d &pnt, const Vector3d &dir, Point3d &nearest ) const {
+
+	double dmin = math::DOUBLE_INFINITY;
+
+	/*
+	 * Computes closest in direction
+	double q0 = pnt.dot(pnt);
+	double q1 = 2*pnt.dot(dir);
+	double q2 = dir.dot(dir);
+
+	Vector3d diff;
+	for (Point3d mpnt : pnts) {
+		diff.subtract(mpnt, pnt);
+		double d = diff.dot(dir)/q2;
+		d = sqrt(q0+d*q1+q2);
+
+		if (d < dmin) {
+			dmin = d;
+			nearest.set(mpnt);
+		}
+	}
+	*/
+
+	return dmin;
+
+}
+
 // Bounding Volume
 BoundingVolume::BoundingVolume()
 : margin(0) {}

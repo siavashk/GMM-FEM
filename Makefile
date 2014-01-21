@@ -15,6 +15,11 @@ else
 CPPFLAGS:=$(CPPFLAGS) -O3
 endif
 
+# Library extension
+ifndef LIB_EXT
+LIB_EXT:=dll
+endif
+
 # Matlab folders
 ifndef MATLAB_ROOT
 MATLAB_ROOT:="C:/Program Files/MATLAB/R2012b"
@@ -31,9 +36,12 @@ endif
 MEX_CPPFLAGS:=$(CPPFLAGS) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I"$(MATLAB_INCLUDEDIR)" -Wall
 MEX_LDFLAGS:= -shared -L"$(MATLAB_BINDIR)" -lstdc++ -lmex -lmx -lmat
 
-
-FLAC_FILES = $(shell find flac/ -type f -name '*.flac')
-MP3_FILES = $(patsubst flac/%.flac, mp3/%.mp3, $(FLAC_FILES))
+MEXLIB_SOURCES = $(shell find $(SRCDIR)/ -type f -name '*_mex_shared.cpp')
+MEXLIB_OBJECTS = $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.mexlibo, $(MEXLIB_SOURCES))
+MEXLIB = $(patsubst $(SRCDIR)/%.cpp, $(BINDIR)/%.$(LIB_EXT), $(MEXLIB_SOURCES))
+MEXLIB_LDFLAGS = $(patsubst %.$(LIB_EXT), -l%, $(notdir $(MEXLIB)))
+MEXLIB_LDFLAGS := $(addprefix -L, $(dir $(MEXLIB))) $(MEXLIB_LDFLAGS)
+MEX_LDFLAGS := $(MEXLIB_LDFLAGS) $(MEX_LDFLAGS) 
 
 MEX_SOURCES = $(shell find $(SRCDIR)/ -type f -name '*_mex.cpp')
 MEX_OBJECTS = $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.mexo, $(MEX_SOURCES))
@@ -44,9 +52,9 @@ CMD_OBJECTS =  $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(CMD_SOURCES))
 CMD =  $(patsubst $(SRCDIR)/%_cmd.cpp, $(BINDIR)/%, $(CMD_SOURCES))
 
 SOURCES := $(shell find $(SRCDIR)/ -type f -name '*.cpp')
-SOURCES := $(filter-out $(MEX_SOURCES) $(CMD_SOURCES),$(SOURCES))
+SOURCES := $(filter-out $(MEXLIB_SOURCES) $(MEX_SOURCES) $(CMD_SOURCES),$(SOURCES))
 OBJECTS := $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(SOURCES))
-LIB := $(BINDIR)/maslib.a
+LIB := $(BINDIR)/maslib.$(LIB_EXT)
 
 
 HEADERS := $(shell find $(INCLUDEDIR)/ -type f -name '*.h')
@@ -57,10 +65,10 @@ MKDIR_CMD=mkdir -p $(@D)
 default: all
 
 cleanup:
-	rm -rf $(OBJECTS) $(MEX_OBJECTS) $(CMD_OBJECTS)
+	rm -rf $(OBJECTS) $(MEX_OBJECTS) $(CMD_OBJECTS) $(MEXLIB_OBJECTS)
 
 clean: cleanup
-	rm -rf $(CMD) $(MEX) $(LIB)
+	rm -rf $(CMD) $(MEX) $(LIB) $(MEX_LIB)
 
 # do not delete intermediates
 .SECONDARY:
@@ -71,11 +79,16 @@ vars:
 	@echo "CMD: $(CMD)"
 	@echo "MEX_OBJECTS: $(MEX_OBJECTS)"
 	@echo "MEX_CPPFLAGS: $(MEX_CPPFLAGS)"
+	@echo "MEX_LDFLAGS: $(MEX_LDFLAGS)"
 	@echo "MEX: $(MEX)"
+	@echo "MEXLIB_OBJECTS: $(MEXLIB_OBJECTS)"
+	@echo "MEXLIB: $(MEXLIB)"
+	@echo "MEXLIB_LDFLAGS: $(MEXLIB_LDFLAGS)"
+	
 
 all: cmd mex lib
 
-mex: $(MEX)
+mex: $(MEXLIB) $(MEX)
 
 cmd: $(CMD)
 
@@ -97,6 +110,16 @@ $(BINDIR)/%.$(MEX_EXT): $(BUILDDIR)/%_mex.mexo $(OBJECTS)
 	$(LD) -o $@ $(MEX_LDFLAGS) $(OBJECTS) $<
 	@echo Complete!
 	
+$(BUILDDIR)/%.mexlibo: $(SRCDIR)/%.cpp
+	@$(MKDIR_CMD)
+	@echo Compiling $@...
+	@$(CC) $(CPPFLAGS) -o $@ -c $<
+	
+$(BINDIR)/%mex_shared.$(LIB_EXT): $(BUILDDIR)/%mex_shared.mexlibo
+	@$(MKDIR_CMD)
+	@echo Assembling $@ ...
+	$(LD) -o $@ $(LDFLAGS) -fPIC -shared $<
+	
 # Command-line programs
 $(BINDIR)/%: $(BUILDDIR)/%_cmd.o $(OBJECTS)
 	@$(MKDIR_CMD)
@@ -107,5 +130,6 @@ $(BINDIR)/%: $(BUILDDIR)/%_cmd.o $(OBJECTS)
 $(LIB) : $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	ar rcs $@ $(OBJECTS)
-	ranlib $@
+	# ar rcs $@ $(OBJECTS)
+	# ranlib $@
+	$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(OBJECTS)

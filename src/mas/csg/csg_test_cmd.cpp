@@ -650,18 +650,15 @@ bool doDiceTest(const char filename1[], const char filename2[], const char *outf
 	POBBTree obbt1 = mas::mesh::get_obb_tree(mesh1, 1e-10);
 	POBBTree obbt2 = mas::mesh::get_obb_tree(mesh2, 1e-10);
 
-	// printTree(obbt1);
-	// printTree(obbt2);
+	// mas::mesh::PPolygonList isect;
+	// mas::csg::cheap_intersect(mesh1, obbt1, mesh2, obbt2, isect, 1e-12);
 
-	PBVNodeList nodes1;
-	PBVNodeList nodes2;
-	obbt1->intersectTree(obbt2, nodes1, nodes2);
-
-	printf("# Intersecting nodes: %i\n", nodes1.size());
 	double d = mas::csg::dice(mesh1, obbt1, mesh2, obbt2, 1e-15);
 
 	printf("# Dice: %lg\n", d);
 	fflush(stdout);
+
+	return true;
 
 	int res[] = {30, 30, 30};
 	d = mas::csg::dice_estimate(mesh1, mesh2, res);
