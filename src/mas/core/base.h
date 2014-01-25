@@ -2,6 +2,7 @@
 #define MAS_BASE_H
 
 #include <stdio.h>
+#include <string>
 
 #ifdef MAS_DEBUG
 #define LOG(fmt,...) \
@@ -86,6 +87,8 @@ public:
 	bool normalize();
 
 	void interpolate(Vector3d v1, double t, Vector3d v2);
+
+	std::string toString(std::string fmt) const;
 };
 
 class Point3d : public Vector3d {

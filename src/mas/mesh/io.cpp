@@ -326,6 +326,7 @@ void SimpleObjWriter::write(std::ostream &fout) {
 			}
 			fout << std::endl;
 		}
+		fout.flush();
 
 	}
 }

@@ -5,3 +5,6 @@
 *.obj
 bin
 build
+.project
+.cproject
+.settings

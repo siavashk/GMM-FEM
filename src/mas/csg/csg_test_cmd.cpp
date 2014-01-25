@@ -513,7 +513,7 @@ bool doNearestTest(const char filename[], double pnt[]) {
 	PPolygon nearest = mas::mesh::nearest_polygon(p, mesh, nearestPoint);
 	int inside = mas::mesh::is_inside(p, mesh);
 
-	printf("Polygon: %d %d %d, Point: (%lf, %lf, %lf), ", 
+	printf("Polygon: %ld %ld %ld, Point: (%lf, %lf, %lf), ",
 			nearest->verts[0]->idx, nearest->verts[1]->idx, nearest->verts[2]->idx,
 			nearestPoint.x, nearestPoint.y, nearestPoint.z);
 
@@ -633,6 +633,159 @@ void printTree(POBBTree obbt) {
 
 }
 
+bool doSliceTest(const char filename1[], const char filename2[], const char out1[], const char out2[]){
+
+	using mas::mesh::PolygonMesh;
+	using mas::Vector3d;
+	mas::mesh::io::SimpleObjReader reader;
+	using namespace mas::bvtree;
+
+	reader.read(filename1);
+	PolygonMesh mesh1 = reader.getPolygonMesh();
+
+	reader.clear();
+	reader.read(filename2);
+	PolygonMesh mesh2 = reader.getPolygonMesh();
+
+	//	PAABBTree aabbt1 = mas::mesh::get_aabb_tree(mesh1, 1e-10);
+	//	PAABBTree aabbt2 = mas::mesh::get_aabb_tree(mesh2, 1e-10);
+
+	POBBTree bvtree1 = mas::mesh::get_obb_tree(mesh1, 1e-10);
+	POBBTree bvtree2 = mas::mesh::get_obb_tree(mesh2, 1e-10);
+
+	using namespace mas::mesh;
+	typedef std::unordered_map<PBVNode,mas::mesh::PPolygonList> LeafPolyMap;
+	LeafPolyMap map1;
+	LeafPolyMap map2;
+	mas::csg::do_mesh_slicing(bvtree1, map1, bvtree2, map2, 1e-10);
+
+	PPolygonList sm1list;
+	PPolygonList sm2list;
+
+	for(auto keypair : map1) {
+		for (PPolygon poly : keypair.second) {
+			sm1list.push_back(poly);
+		}
+	}
+
+	for(auto keypair : map2) {
+		for (PPolygon poly : keypair.second) {
+			sm2list.push_back(poly);
+		}
+	}
+
+	PolygonMesh sm1(sm1list);
+	PolygonMesh sm2(sm2list);
+
+	mas::mesh::io::SimpleObjWriter writer;
+	if (out1 != NULL) {
+		writer.setPolygonMesh(&sm1);
+		writer.write(out1);
+	} else {
+		writer.setPolygonMesh(&sm1);
+		writer.write(std::cout);
+	}
+
+	if (out2 != NULL) {
+		writer.setPolygonMesh(&sm2);
+		writer.write(out2);
+	} else {
+		writer.setPolygonMesh(&sm2);
+		writer.write(std::cout);
+	}
+
+	fflush(stdout);
+}
+
+bool doSliceAndDiceTest(const char filename1[], const char filename2[], const char out1[], const char out2[],
+		const char outi[]){
+
+	using mas::mesh::PolygonMesh;
+	using mas::Vector3d;
+	mas::mesh::io::SimpleObjReader reader;
+	using namespace mas::bvtree;
+
+	reader.read(filename1);
+	PolygonMesh mesh1 = reader.getPolygonMesh();
+
+	reader.clear();
+	reader.read(filename2);
+	PolygonMesh mesh2 = reader.getPolygonMesh();
+
+	//	POBBTree bvtree1 = mas::mesh::get_obb_tree(mesh1, 1e-10);
+	//	POBBTree bvtree2 = mas::mesh::get_obb_tree(mesh2, 1e-10);
+
+	PAABBTree bvtree1 = mas::mesh::get_aabb_tree(mesh1, 1e-10);
+	PAABBTree bvtree2 = mas::mesh::get_aabb_tree(mesh2, 1e-10);
+
+	using namespace mas::mesh;
+	typedef std::unordered_map<PBVNode,mas::mesh::PPolygonList> LeafPolyMap;
+	LeafPolyMap map1;
+	LeafPolyMap map2;
+	double d = mas::csg::dice(mesh1, bvtree1, mesh2, bvtree2, 1e-10);
+	printf("# Dice : %lf\n", d);
+
+	mas::csg::do_mesh_slicing(bvtree1, map1, bvtree2, map2, 1e-10);
+
+	PPolygonList sm1list;
+	PPolygonList sm2list;
+	for(auto keypair : map1) {
+		for (PPolygon poly : keypair.second) {
+			sm1list.push_back(poly);
+		}
+	}
+
+	for(auto keypair : map2) {
+		for (PPolygon poly : keypair.second) {
+			sm2list.push_back(poly);
+		}
+	}
+	PolygonMesh sm1(sm1list);
+	PolygonMesh sm2(sm2list);
+
+	mas::mesh::io::SimpleObjWriter writer;
+	if (out1 != NULL) {
+		writer.setPolygonMesh(&sm1);
+		writer.write(out1);
+	} else {
+		writer.setPolygonMesh(&sm1);
+		writer.write(std::cout);
+	}
+
+	if (out2 != NULL) {
+		writer.setPolygonMesh(&sm2);
+		writer.write(out2);
+	} else {
+		writer.setPolygonMesh(&sm2);
+		writer.write(std::cout);
+	}
+
+
+	// dice
+	d = mas::csg::dice(mesh1, bvtree1, mesh2, bvtree2, 1e-15);
+	printf("# Dice: %lg\n", d);
+	fflush(stdout);
+
+	// return true;
+	int res[] = {30, 30, 30};
+	d = mas::csg::dice_estimate(mesh1, mesh2, res);
+	printf("# Approx Dice (%i, %i, %i): %lg\n", res[0], res[1], res[2], d);
+	fflush(stdout);
+
+	PolygonMesh meshi;
+	mas::csg::cheap_intersect(mesh1, bvtree1, mesh2, bvtree2, meshi, 1e-10);
+
+	if (outi != NULL) {
+		writer.setPolygonMesh(&meshi);
+		writer.write(outi);
+	} else {
+		writer.setPolygonMesh(&meshi);
+		writer.write(std::cout);
+	}
+
+	fflush(stdout);
+}
+
 bool doDiceTest(const char filename1[], const char filename2[], const char *outfilename){
 
 	using mas::mesh::PolygonMesh;
@@ -647,30 +800,34 @@ bool doDiceTest(const char filename1[], const char filename2[], const char *outf
 	reader.read(filename2);
 	PolygonMesh mesh2 = reader.getPolygonMesh();
 
-	POBBTree obbt1 = mas::mesh::get_obb_tree(mesh1, 1e-10);
-	POBBTree obbt2 = mas::mesh::get_obb_tree(mesh2, 1e-10);
+	PAABBTree aabbt1 = mas::mesh::get_aabb_tree(mesh1, 1e-10);
+	PAABBTree aabbt2 = mas::mesh::get_aabb_tree(mesh2, 1e-10);
+
+	// POBBTree obbt1 = mas::mesh::get_obb_tree(mesh1, 1e-10);
+	// POBBTree obbt2 = mas::mesh::get_obb_tree(mesh2, 1e-10);
 
 	// mas::mesh::PPolygonList isect;
 	// mas::csg::cheap_intersect(mesh1, obbt1, mesh2, obbt2, isect, 1e-12);
 
-	double d = mas::csg::dice(mesh1, obbt1, mesh2, obbt2, 1e-15);
+	double d = mas::csg::dice(mesh1, aabbt1, mesh2, aabbt2, 1e-15);
+	// double d = mas::csg::dice(mesh1, obbt1, mesh2, obbt2, 1e-15);
 
 	printf("# Dice: %lg\n", d);
 	fflush(stdout);
 
-	return true;
+	// return true;
 
 	int res[] = {30, 30, 30};
 	d = mas::csg::dice_estimate(mesh1, mesh2, res);
 	printf("# Approx Dice (%i, %i, %i): %lg\n", res[0], res[1], res[2], d);
 	fflush(stdout);
 
-	/*
 	PolygonMesh meshi;
 	mas::csg::cheap_intersect(mesh1, mesh2, meshi, 1e-10);
 
 	mas::mesh::io::SimpleObjWriter writer;
 	if (outfilename != NULL) {
+		writer.setPolygonMesh(&meshi);
 		writer.write(outfilename);
 	} else {
 		writer.setPolygonMesh(&meshi);
@@ -678,7 +835,6 @@ bool doDiceTest(const char filename1[], const char filename2[], const char *outf
 	}
 
 	fflush(stdout);
-	*/
 }
 
 bool doInsideTest(const char filename[], double pnt[], double dx[], int nx[]) {
@@ -851,14 +1007,14 @@ bool doObjectTests() {
 
 	vectorA.cross(vectorA, vectorB);
 	vectorA.normalize();
-	printf("Vector A x B: (%f, %f, %f), norm: %g\n", vectorA.x, vectorA.y, vectorA.z, vectorA.norm());	
+	printf("Vector A x B: (%lf, %lf, %lf), norm: %g\n", vectorA.x, vectorA.y, vectorA.z, vectorA.norm());
 
 	using mas::mesh::PVertex3d;
 	using mas::mesh::MeshFactory;
 
 	PVertex3d vertexA = MeshFactory::createVertex(vectorA);
 	PVertex3d vertexB = MeshFactory::createVertex(1,2,3,2);
-	printf("Vertex A: (%f, %f, %f, %d)\n", vertexA->x, vertexA->y, vertexA->z, vertexA->idx);	
+	printf("Vertex A: (%lf, %lf, %lf, %ld)\n", vertexA->x, vertexA->y, vertexA->z, vertexA->idx);
 
 	vertexA->set(1, 2, 3);
 	vertexB->set(1, 3, 5);
@@ -904,7 +1060,7 @@ bool doObjectTests() {
 
 	for (int i=0; i<tris.size(); i++) {
 		Polygon &p = *tris.at(i);
-		printf("Face %d: (%d, %d, %d)\n", i, 
+		printf("Face %d: (%ld, %ld, %ld)\n", i,
 				p.verts.at(0)->idx, p.verts.at(1)->idx, p.verts.at(2)->idx);
 	}
 
@@ -917,7 +1073,7 @@ bool doObjectTests() {
 	mesh.triangulate();
 	for (int i=0; i<mesh.faces.size(); i++) {
 		Polygon &p = *(mesh.faces.at(i));
-		printf("Face %d: (%d, %d, %d)\n", i, 
+		printf("Face %d: (%ld, %ld, %ld)\n", i,
 				p.verts.at(0)->idx, p.verts.at(1)->idx, p.verts.at(2)->idx);
 	}	
 
@@ -936,7 +1092,7 @@ void printSVD(const Matrix3d &mat, const Matrix3d &U, const Vector3d &S,
 	printf("% 2.3lf % 2.3lf % 2.3lf     % 2.3lf % 2.3lf % 2.3lf     "
 			"% 2.3lf % 2.3lf % 2.3lf     % 2.3lf % 2.3lf % 2.3lf\n",
 			mat.m[3], mat.m[4], mat.m[5],   U.m[3], U.m[4], U.m[5],
-			0.0, S.y, 0, V.m[3], V.m[4], V.m[5]);
+			0.0, S.y, 0.0, V.m[3], V.m[4], V.m[5]);
 	printf("% 2.3lf % 2.3lf % 2.3lf     % 2.3lf % 2.3lf % 2.3lf     "
 			"% 2.3lf % 2.3lf % 2.3lf     % 2.3lf % 2.3lf % 2.3lf\n",
 			mat.m[6], mat.m[7], mat.m[8],   U.m[6], U.m[7], U.m[8],
@@ -983,11 +1139,16 @@ int main( int argc, const char* argv[] ) {
 	} else if (argc == 4) {
 		doDiceTest(argv[1], argv[2], argv[3]);
 	} else if (argc ==5) {
-		double pnt[3];
-		for (int i=0; i<3; i++) {
-			sscanf(argv[i+2], "%lf", &pnt[i]);
-		}
-		doNearestTest(argv[1], pnt);
+
+		doSliceTest(argv[1], argv[2], argv[3], argv[4]);
+
+		//		double pnt[3];
+		//		for (int i=0; i<3; i++) {
+		//			sscanf(argv[i+2], "%lf", &pnt[i]);
+		//		}
+		// doNearestTest(argv[1], pnt);
+	} else if (argc == 6) {
+		doSliceAndDiceTest(argv[1], argv[2], argv[3], argv[4], argv[5]);
 	} else if (argc == 8) {
 		double pnt[3];
 		double dir[3];
@@ -1026,5 +1187,7 @@ int main( int argc, const char* argv[] ) {
 		//doBoundTest();
 		doDiceTestMatlab();
 	}
+
+	return 0;
 }
 

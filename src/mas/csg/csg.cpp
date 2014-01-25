@@ -130,15 +130,30 @@ bool clip_polygons(const PPolygonList &polys, const Plane &plane,
 
 }
 
-void print_poly(PPolygon poly, std::string header) {
+void print_poly(PPolygon poly) {
 
-	printf("%s ", header.c_str());
 	for (PVertex3d vtx : poly->verts) {
-		printf(" ( %.2lf, %.2lf, %.2lf ) ", vtx->x, vtx->y, vtx->z);
+		printf("  (%.2lf %.2lf %.2lf)", vtx->x, vtx->y, vtx->z);
 	}
+	fflush(stdout);
+
+}
+
+void print_poly(std::string header, PPolygon poly) {
+
+	printf("%s", header.c_str());
+	print_poly(poly);
 	printf("\n");
 	fflush(stdout);
 
+}
+
+void print_polys(std::string header, PPolygonList &polys) {
+	printf("%s \n", header.c_str());
+	for (PPolygon poly : polys) {
+		print_poly(poly);
+		printf("\n");
+	}
 }
 
 bool clip_polygons(const PPolygonList &polys, const PPolygonList &cutters,
@@ -208,6 +223,12 @@ void do_mesh_slicing(PBVTree bvtree1, LeafPolyMap &map1, PBVTree bvtree2, LeafPo
 	bvtree1->getLeaves(nodes1);
 	bvtree2->getLeaves(nodes2);
 
+	map1.clear();
+	map2.clear();
+
+	LeafPolyMap knifeMap1;
+	LeafPolyMap knifeMap2;
+
 	// collect polygons
 	for (PBVNode node : nodes1) {
 		PPolygonList polys;
@@ -217,6 +238,7 @@ void do_mesh_slicing(PBVTree bvtree1, LeafPolyMap &map1, PBVTree bvtree2, LeafPo
 			polys.push_back(bpoly->polygon);
 		}
 		map1.insert(LeafPolyMap::value_type(node, polys));
+		knifeMap1.insert(LeafPolyMap::value_type(node, polys));
 	}
 
 	for (PBVNode node : nodes2) {
@@ -227,6 +249,7 @@ void do_mesh_slicing(PBVTree bvtree1, LeafPolyMap &map1, PBVTree bvtree2, LeafPo
 			polys.push_back(bpoly->polygon);
 		}
 		map2.insert(LeafPolyMap::value_type(node, polys));
+		knifeMap2.insert(LeafPolyMap::value_type(node, polys));
 	}
 
 	// step #1 intersect bvtrees
@@ -247,18 +270,36 @@ void do_mesh_slicing(PBVTree bvtree1, LeafPolyMap &map1, PBVTree bvtree2, LeafPo
 		PPolygonList clipped2;
 
 		// cut faces in 1 by planes in 2
-		bool f1clipped = clip_polygons(faces1, faces2, tol, clipped1);
+		PPolygonList &knives2 = knifeMap2[node2];
+		bool f1clipped = clip_polygons(faces1, knives2, tol, clipped1);
+
 		// cut faces in 2 by planes in 1
-		bool f2clipped = clip_polygons(faces2, faces1, tol, clipped2);
+		PPolygonList &knives1 = knifeMap1[node1];
+		bool f2clipped = clip_polygons(faces2, knives1, tol, clipped2);
+
+		//		print_polys("Node 1:", knives1);
+		//		print_polys("Node 2:", knives2);
+		//		print_polys("Clipped 1:", clipped1);
+		//		print_polys("Clipped 2:", clipped2);
+		//		printf("\n");
 
 		// XXX note sure if this is efficient, maybe only do if changed
+		// printf("Sliced: %i/%i (%li, %li)\n", i+1, nNodes, clipped1.size(), clipped2.size());
 		if (f1clipped) {
-			map1[node1] = clipped1;
+			// print_polys("  knifes:", knives2);
+			// print_polys("  cheese:", clipped1);
+			// map1[node1] = clipped1;
+			faces1.clear();
+			faces1.insert(faces1.begin(), clipped1.begin(), clipped1.end());
 		}
 		if (f2clipped) {
-			map2[node2] = clipped2;
+			// print_polys("  knifes:", knives1);
+			// print_polys("  cheese:", clipped2);
+			//map2[node2] = clipped2;
+			faces2.clear();
+			faces2.insert(faces2.begin(), clipped2.begin(), clipped2.end());
 		}
-		printf("Sliced %i/%i, (%i, %i)\n", i+1, nNodes, clipped1.size(), clipped2.size());
+
 		fflush(stdout);
 	}
 
@@ -523,26 +564,61 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 
 	InsideMeshQueryData data;
 	for(auto keypair : map1) {
+		idx1++;
+		int pidx = 0;
 		for (PPolygon poly : keypair.second) {
 
 			// get a point in middle of face
 			const Point3d &pnt = get_interior_point(poly);
+			//print_poly("Poly:\n", poly);
+			//std::string pntStr = pnt.toString("%.2lf %.2lf %.2lf");
+			//printf("Pnt: %s\n", pntStr.c_str());
+			//fflush(stdout);
 
-			/*
+
 			bool inside = is_inside(pnt, bvtree2, data, tol);
-			if (data.on) {
-				// check normal
-				PPolygon face = data.nearestFace->polygon;
-				if (poly->plane.normal.dot(face->plane.normal) > 0) {
-					out.push_back(poly);
-				}
-			} else if (data.in) {
-				out.push_back(poly);
-			}
-			*/
+//			if (data.on) {
+//				// check normal
+//				PPolygon face = data.nearestFace->polygon;
+//				if (poly->plane.normal.dot(face->plane.normal) > 0) {
+//					out.push_back(poly);
+//				}
+//			} else if (data.in) {
+//				out.push_back(poly);
+//			}
 
-			int inside = is_inside_or_on(pnt, mesh2, bvtree2, data,
-					tol, numRetries, baryEpsilon);
+
+			//			int inside = is_inside_or_on(pnt, mesh2, bvtree2, data,
+			//					tol, numRetries, baryEpsilon);
+
+			//			if (poly->numVertices() > 3) {
+			//				if (data.in) {
+			//					printf("HUH?!?!?!\n");
+			//					print_poly("Inside polygon:", poly);
+			//					const Point3d &pntb = get_interior_point(poly);
+			//					std::string pntStr = pnt.toString("%.2lf %.2lf %.2lf");
+			//					printf("Pntb: %s\n", pntStr.c_str());
+			//
+			//				}
+			//			}
+
+			double fabs1 = fabs(pnt.x-0.4) + fabs(pnt.y) + fabs(pnt.z);
+			//			if (fabs1 > 1+tol) {
+			//				// outside
+			//				if (data.in) {
+			//					printf("ERROR!\n");
+			//				}
+			//			} else if  (fabs1 > 1-tol) {
+			//				// on
+			//				if (!data.on) {
+			//					printf("ERROR!\n");
+			//				}
+			//			} else {
+			//				// inside
+			//				if (!data.in) {
+			//					printf("ERROR!\n");
+			//				}
+			//			}
 
 			if (data.unsure) {
 				return false;
@@ -555,23 +631,39 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 			} else if (data.in) {
 				out.push_back(poly);
 			}
-
+			pidx++;
+			//printf("Polygon %i:%i is ", idx1, pidx);
+			//if (data.on) {
+			//	printf("on");
+			//} else if (data.in) {
+			//	printf("in");
+			//} else {
+			//	printf("out");
+			//}
+			//printf("\n");
 		}
-		idx1++;
-		printf("Checked inside mesh2 (%i/%i)\n", idx1, nMap1);
+		// printf("Checked inside mesh2 (%i/%i)\n", idx1, nMap1);
 		fflush(stdout);
 	}
 
 	// for every face in mesh2, check if inside mesh1
 	//    inside -> keep, other -> discard
 	for(auto keypair : map2) {
+		int pidx = 0;
+		idx2++;
 		for (PPolygon poly : keypair.second) {
 
 			// get a point in middle of face
 			const Point3d &pnt = get_interior_point(poly);
+			//print_poly("Poly:\n", poly);
+			//std::string pntStr = pnt.toString("%.2lf %.2lf %.2lf");
+			//printf("Pnt: %s\n", pntStr.c_str());
+			//fflush(stdout);
+
+
+			bool inside = is_inside(pnt, bvtree1, data, tol);
 
 			/*
-			bool inside = is_inside(pnt, bvtree1, data, tol);
 			if (data.on) {
 				// discard
 			} else if (data.in) {
@@ -579,8 +671,31 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 			}
 			*/
 
-			int inside = is_inside_or_on(pnt, mesh1, bvtree1, data,
-					tol, numRetries, baryEpsilon);
+//			int inside = is_inside_or_on(pnt, mesh1, bvtree1, data,
+//					tol, numRetries, baryEpsilon);
+
+			double fabs1 = fabs(pnt.x) + fabs(pnt.y) + fabs(pnt.z);
+//			if (fabs1 > 1+tol) {
+//				// outside
+//				if (data.in) {
+//					printf("ERROR!\n");
+//				}
+//			} else if  (fabs1 > 1-tol) {
+//				// on
+//				if (!data.on) {
+//					printf("ERROR!\n");
+//				}
+//			} else {
+//				// inside
+//				if (!data.in) {
+//					printf("ERROR!\n");
+//				}
+//			}
+
+//			if (data.nearestFace!= NULL) {
+//				pntStr = data.nearestPoint.toString("%.2lf %.2lf %.2lf");
+//				printf("Nearest: %s\n", pntStr.c_str());
+//			}
 
 			if (data.unsure) {
 				return false;
@@ -589,9 +704,19 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 			} else if (data.in) {
 				out.push_back(poly);
 			}
+			pidx++;
+
+//			printf("Polygon %i:%i is ", idx2, pidx);
+//			if (data.on) {
+//				printf("on");
+//			} else if (data.in) {
+//				printf("in");
+//			} else {
+//				printf("out");
+//			}
+//			printf("\n");
 		}
-		idx2++;
-		printf("Checked inside mesh2 (%i/%i)\n", idx2, nMap2);
+		// printf("Checked inside mesh1 (%i/%i)\n", idx2, nMap2);
 		fflush(stdout);
 	}
 
