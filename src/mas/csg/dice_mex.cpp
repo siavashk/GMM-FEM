@@ -200,9 +200,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     fillMesh(mesh1, verts1, nVerts1, faces1, nFaceVerts1, nFaces1);
     fillMesh(mesh2, verts2, nVerts2, faces2, nFaceVerts2, nFaces2);
 
-    using mas::bvtree::POBBTree;
-    POBBTree bvtree1 = mas::mesh::get_obb_tree(mesh1, eps);
-    POBBTree bvtree2 = mas::mesh::get_obb_tree(mesh2, eps);
+    using mas::bvtree::PAABBTree;
+    PAABBTree bvtree1 = mas::mesh::get_aabb_tree(mesh1, eps);
+    PAABBTree bvtree2 = mas::mesh::get_aabb_tree(mesh2, eps);
 
     double voli = mas::csg::intersection_volume(mesh1, bvtree1,
     	mesh2, bvtree2, eps);

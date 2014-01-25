@@ -173,6 +173,13 @@ namespace mas {
       	z = (1 - t) * p1.z + t * p2.z;
 	}
 
+	std::string Vector3d::toString(std::string fmt) const {
+		char buffer[80];
+		snprintf(buffer, 80, fmt.c_str(), x, y, z);
+		std::string out(buffer);
+		return out;
+	}
+
 	// Point implementation
 	Point3d::Point3d() 
 		: Vector3d(0,0,0) {}

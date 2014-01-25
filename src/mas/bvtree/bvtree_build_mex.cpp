@@ -10,8 +10,8 @@
  *=================================================================*/
 
 #include "mas/bvtree/bvtree.h"
-#include "mas/bvtree/bvtree_mex_shared.h"
 #include "mex.h"
+#include "mas/mexhandle/mexhandle.h"
 #include <math.h>
 
 #define PNTS_IDX 0
@@ -23,35 +23,6 @@
 #define DIM 3
 
 using namespace mas::bvtree;
-
-void printNode(PBVNode node, int depth) {
-
-	std::shared_ptr<OBB> obb = std::static_pointer_cast<OBB>(node->bv);
-	mas::Point3d &c = obb->c;
-	mas::Vector3d &hw = obb->halfWidths;
-
-	for (int i=0; i<depth; i++) {
-		printf("----");
-	}
-	printf("c: %.3lf %.3lf %.3lf\n", c.x, c.y, c.z);
-	for (int i=0; i<depth; i++) {
-		printf("    ");
-	}
-	printf("hw: %.3lf %.3lf %.3lf\n", hw.x, hw.y, hw.z);
-
-	for (PBVNode child : node->children) {
-		printNode(child, depth+1);
-	}
-
-
-}
-
-void printTree(PBVTree obbt) {
-
-	PBVNode root = obbt->getRoot();
-	printNode(root, 0);
-
-}
 
  // Main entry function
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -68,7 +39,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     std::vector<mas::Point3d> points;
     std::vector<PBoundable> boundableGroups;
-
 
     // Get data
     if (nrhs > PNTS_IDX && mxIsDouble(prhs[PNTS_IDX])) {
@@ -138,6 +108,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double *eptr = mxGetPr(prhs[TOL_IDX]);
         tol = eptr[0];
     }
+
     if (tol < 0) {
     	mas::Point3d sum(0,0,0);
     	for (mas::Point3d pnt : points) {
@@ -155,16 +126,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     	tol = r*1e-12;
     }
 
-    PBVTree obbt = BVTreeFactory::createTree<OBB>(boundableGroups, tol);
-    int treeIdx = mas::bvtree::mex::mxBVTreeManager.addTree(obbt);
+    // construct the actual BVTree using an AABB as a base
+    POBB bv = BVFactory::createBV<AABB>();
+    mex::class_handle<BVTree> *tree = new mex::class_handle<BVTree>(bv, boundableGroups, tol);
 
-    // mexPrintf("Built a tree with index %i (%i)\n", treeIdx,mas::bvtree::mex::mxBVTreeManager.getNumTrees() );
-    // printTree(obbt);
-
-    // return tree index
-    // fill outputs
+    // return tree
     if (nlhs > TREE_IDX) {
-    	plhs[TREE_IDX] = mxCreateDoubleScalar(treeIdx);
+    	plhs[TREE_IDX] = mex::get_mex_handle<BVTree>(tree);
     }
 
 }

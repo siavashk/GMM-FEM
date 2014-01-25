@@ -1,4 +1,5 @@
 #include "mas/core/math.h"
+#include <math.h>
 #include "mas/mesh/meshbv.h"
 
 namespace mas {
@@ -264,7 +265,7 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 			}
 
 			if (intersectFound) {
-				return dmin;
+				return fabs(dmin);
 			}
 
 		} else {
@@ -288,7 +289,7 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 					*(polygon->verts[1]), *(polygon->verts[2]),
 					bary)) {
 				tri.set(*polygon);
-				return t*dir.norm();
+				return fabs(t*dir.norm());
 			}
 		} else {
 
@@ -299,7 +300,7 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 				bool inside = point_in_triangle(nearest, *(ltri->verts[0]),
 						*(ltri->verts[1]), *(ltri->verts[2]), bary);
 				if (inside) {
-					return t*dir.norm();
+					return fabs(t*dir.norm());
 				}
 			}
 
@@ -404,6 +405,7 @@ int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
 		double baryEpsilon) {
 
 	data.in = false;
+	data.on = false;
 	data.nHits = 0;
 	data.nRetries = 0;
 	data.unsure = false;
@@ -460,7 +462,7 @@ int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
 					// intersect ray with face
 					Vector3d bary;
 					Polygon tri;
-					double d = poly->distanceToPoint(pnt, dir, data.nearestPoint, tri, bary);
+					double d = fabs(poly->distanceToPoint(pnt, dir, data.nearestPoint, tri, bary));
 
 					// check if close to face
 					if (d < tol) {
@@ -587,7 +589,7 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 	dir.subtract(pnt);
 
 	// check if on
-	if (dir.norm() < tol) {
+	if (dir.norm() <= tol) {
 		data.in = true;
 		data.on = true;
 		return true;
@@ -595,7 +597,6 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 	data.on = false;
 
 	// check if on edge or vertex
-
 
 	Vector3d bary;
 	Polygon tri;
@@ -612,7 +613,7 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 		}
 	}
 
-	// resort to raycast
+	// resort to continuously ray-casting until we hit mid-face
 	Point3d centroid;
 	tri.computeCentroid(centroid);
 	dir.set(centroid);
@@ -622,11 +623,14 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 	do {
 		data.nHits = 0;
 		data.unsure = false;
+		PBoundablePolygon unsureFace = NULL;
 
 		PBVNodeList bvnodes;
 		bvt->intersectRay(pnt, dir, bvnodes);
-		PBoundablePolygon unsureFace;
+		double dmin = mas::math::DOUBLE_INFINITY;
+		data.in = false;
 
+		// find closest face among nodes in direction of dir
 		for (PBVNode node : bvnodes) {
 			for (PBoundable boundable : node->elems) {
 
@@ -634,47 +638,46 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 				PBoundablePolygon poly =
 						std::dynamic_pointer_cast<BoundablePolygon>(boundable);
 				if (poly != NULL) {
+
 					// intersect ray with face
-					double d = poly->distanceToPoint(pnt, dir, data.nearestPoint, tri, bary);
+					double d = fabs(poly->distanceToPoint(pnt, dir, data.nearestPoint, tri, bary));
 
 					// check if ray hits face
-					if (d != math::DOUBLE_INFINITY && d != -math::DOUBLE_INFINITY) {
+					if (d < dmin) {
+
 						// check that it hits the face in the correct direction
 						Vector3d ndir(data.nearestPoint);
 						ndir.subtract(pnt);
 						if (ndir.dot(dir) > 0) {
+
+							dmin = d;
 							// make sure barycentric coordinates are not on edges
 							if (bary.x >= eps && bary.x <= 1-eps
 									&& bary.y >= eps && bary.y <= 1-eps
 									&& bary.z >= eps && bary.z <= 1-eps) {
 								data.nHits++;
+								data.unsure = false;
+								if (poly->polygon->plane.normal.dot(dir) > 0) {
+									data.in = true;
+								} else {
+									data.in = false;
+								}
 							} else {
 								data.unsure = true;
 								unsureFace = poly;
-								break;
 							}
 						}
 					}
 				}
 
 			}
-
-			if (data.unsure) {
-				break;
-			}
 		}
 
 		if (!data.unsure) {
-			// we are sure about our intersection count
-			if (data.nHits % 2 == 1) {
-				data.in = true;
-				return true;
-			} else {
-				return false;
-			}
+			return data.in;
 		}
 
-		// pick next direction as centroid of unsure face
+		// pick next direction as centroid of closest unsure face
 		unsureFace->getTriangulation()[0]->computeCentroid(centroid);
 		dir.set(centroid);
 		dir.subtract(pnt);

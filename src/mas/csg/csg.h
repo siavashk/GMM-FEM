@@ -46,6 +46,9 @@ bool cheap_intersect(const PolygonMesh &mesh1, const PBVTree bvtree1,
 		double tol = -1, int numRetries = 100,
 		double baryEpsilon = 1e-12);
 
+typedef std::unordered_map<PBVNode,PPolygonList> LeafPolyMap;
+void do_mesh_slicing(PBVTree bvtree1, LeafPolyMap &map1, PBVTree bvtree2, LeafPolyMap &map2, double tol);
+
 }
 }
 

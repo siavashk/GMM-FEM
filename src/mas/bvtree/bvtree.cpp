@@ -1044,7 +1044,7 @@ void AABB::split(const PBoundableList &blist,
 		for (PBoundableList::const_iterator pit = blist.begin();
 				pit < blist.end(); pit++) {
 			(*pit)->getCentroid(centroid);
-			if (centroid.dot(normal) + d >= 0) {
+			if (centroid.dot(normal) + d < 0) {
 				out[0].push_back(*pit);
 			} else {
 				out[1].push_back(*pit);
@@ -1440,7 +1440,7 @@ void OBB::split(const PBoundableList &blist,
 		for (PBoundableList::const_iterator pit = blist.begin();
 				pit < blist.end(); pit++) {
 			(*pit)->getCentroid(centroid);
-			if (normal.dot(centroid) + d >= 0) {
+			if (normal.dot(centroid) + d < 0) {
 				out[0].push_back(*pit);
 			} else {
 				out[1].push_back(*pit);
@@ -1743,10 +1743,8 @@ void BVTree::intersectPointRecursively(const Point3d &p,
 		if (node->isLeaf()) {
 			out.push_back(node);
 		} else {
-			for (typename PBVNodeList::const_iterator nit =
-					node->children.begin();
-					nit < node->children.end(); nit++) {
-				intersectPointRecursively(p, out, *nit);
+			for (PBVNode child : node->children) {
+				intersectPointRecursively(p, out, child);
 			}
 		}
 	}
@@ -1759,10 +1757,8 @@ void BVTree::intersectSphereRecursively(const Point3d &c, double r,
 		if (node->isLeaf()) {
 			out.push_back(node);
 		} else {
-			for (typename PBVNodeList::const_iterator
-					nit = node->children.begin();
-					nit < node->children.end(); nit++) {
-				intersectSphereRecursively(c, r, out, *nit);
+			for (PBVNode child : node->children) {
+				intersectSphereRecursively(c, r, out, child);
 			}
 		}
 	}
@@ -1775,10 +1771,8 @@ void BVTree::intersectLineRecursively(const Point3d &p,
 		if (node->isLeaf()) {
 			out.push_back(node);
 		} else {
-			for (typename PBVNodeList::const_iterator
-					nit = node->children.begin();
-					nit < node->children.end(); nit++) {
-				intersectLineRecursively(p, dir, out, *nit);
+			for (PBVNode child : node->children) {
+				intersectLineRecursively(p, dir, out, child);
 			}
 		}
 	}
@@ -1791,10 +1785,8 @@ void BVTree::intersectRayRecursively(const Point3d &p,
 		if (node->isLeaf()) {
 			out.push_back(node);
 		} else {
-			for (typename PBVNodeList::const_iterator
-					nit = node->children.begin();
-					nit < node->children.end(); nit++) {
-				intersectRayRecursively(p, dir, out, *nit);
+			for (PBVNode child : node->children) {
+				intersectRayRecursively(p, dir, out, child);
 			}
 		}
 	}
@@ -1807,10 +1799,8 @@ void BVTree::intersectPlaneRecursively(const Plane &plane,
 		if (node->isLeaf()) {
 			out.push_back(node);
 		} else {
-			for (typename PBVNodeList::const_iterator
-					nit = node->children.begin();
-					nit < node->children.end(); nit++) {
-				intersectPlaneRecursively(plane, out, *nit);
+			for (PBVNode child : node->children) {
+				intersectPlaneRecursively(plane, out, child);
 			}
 		}
 	}
@@ -1824,10 +1814,8 @@ void BVTree::intersectBVRecursively(const BoundingVolume* bv,
 		if (node->isLeaf()) {
 			out.push_back(node);
 		} else {
-			for (typename PBVNodeList::const_iterator
-					nit = node->children.begin();
-					nit < node->children.end(); nit++) {
-				intersectBVRecursively(bv, out, *nit);
+			for (PBVNode child : node->children) {
+				intersectBVRecursively(bv, out, child);
 			}
 		}
 	}
@@ -1843,29 +1831,21 @@ void BVTree::intersectTreeRecursively(const PBVNode me,
 			hers.push_back(her);
 		} else {
 			if (me->isLeaf()) {
-				for (typename PBVNodeList::iterator
-						nit = her->children.begin();
-						nit < her->children.end(); nit++) {
-					intersectTreeRecursively(me, *nit, mine, hers);
+				for (PBVNode herChild : her->children) {
+					intersectTreeRecursively(me, herChild, mine, hers);
 				}
 			} else if (her->isLeaf()) {
-				for (typename PBVNodeList::const_iterator
-						nit = me->children.begin();
-						nit < me->children.end(); nit++) {
-					intersectTreeRecursively(*nit, her, mine, hers);
+				for (PBVNode myChild : me->children) {
+					intersectTreeRecursively(myChild, her, mine, hers);
 				}
 			} else {
-				for (typename PBVNodeList::const_iterator
-						nit = her->children.begin();
-						nit < her->children.end(); nit++) {
 
-					for (typename PBVNodeList::const_iterator
-							mit = me->children.begin();
-							mit < me->children.end(); mit++) {
-						intersectTreeRecursively(*mit, *nit,
-								mine, hers);
+				for (PBVNode myChild : me->children) {
+					for (PBVNode herChild : her->children) {
+						intersectTreeRecursively(myChild, herChild, mine, hers);
 					}
 				}
+
 			}
 		}
 	}
@@ -1878,10 +1858,8 @@ void BVTree::intersectBVRecursively(const PBoundingVolume bv,
 		if (node->isLeaf()) {
 			out.push_back(node);
 		} else {
-			for (typename PBVNodeList::const_iterator
-					nit = node->children.begin();
-					nit < node->children.end(); nit++) {
-				intersectBVRecursively(bv, out, *nit);
+			for (PBVNode child : node->children) {
+				intersectBVRecursively(bv, out, child);
 			}
 		}
 	}
@@ -1894,10 +1872,8 @@ void BVTree::getLeavesRecursively(PBVNodeList &leaves,
 	if (node->isLeaf()) {
 		leaves.push_back(node);
 	} else {
-		for (typename PBVNodeList::const_iterator
-				nit = node->children.begin();
-				nit < node->children.end(); nit++) {
-			getLeavesRecursively(leaves, *nit);
+		for (PBVNode child : node->children) {
+			getLeavesRecursively(leaves, child);
 		}
 	}
 }

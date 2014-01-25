@@ -1,6 +1,6 @@
 #include "mas/bvtree/bvtree.h"
-#include "mas/bvtree/bvtree_mex_shared.h"
 #include "mex.h"
+#include "mas/mexhandle/mexhandle.h"
 #include <math.h>
 
 #define TREE_IDX 0
@@ -57,18 +57,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     // Get data
-    PBVTree tree = NULL;
-    if (nrhs > TREE_IDX && mxIsDouble(prhs[TREE_IDX])) {
-
-    	double *vals = mxGetPr(prhs[TREE_IDX]);
-    	int id = (int)vals[0];
-
-    	// mexPrintf("Searching for tree with index %i\n",  id );
-    	tree = mas::bvtree::mex::mxBVTreeManager.getTree(id);
+    mex::class_handle<BVTree> *tree = NULL;
+    if (nrhs > TREE_IDX) {
+    	tree = mex::get_class_handle<BVTree>(prhs[TREE_IDX]);
 
     	if (tree == NULL) {
-    		mexPrintf("Searching for tree id: %i\n", id);
-    		mexPrintf("Hmm... tree not found.  Checking how many exist: %i\n", mas::bvtree::mex::mxBVTreeManager.getNumTrees());
+    		mexPrintf("Unable to recover tree");
     	}
 
     	if (tree == NULL) {
@@ -112,6 +106,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     // build output
     mxArray *cells = mxCreateCellMatrix(1, nPoints);
+
+	// #pragma omp parallel for
     for (int i=0; i<nPoints; i++) {
    		mas::Point3d pnt(pnts[3*i], pnts[3*i+1], pnts[3*i+2]);
    		PBVNodeList bvnodes;
