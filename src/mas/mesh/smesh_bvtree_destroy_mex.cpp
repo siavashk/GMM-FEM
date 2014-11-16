@@ -1,5 +1,5 @@
 #include "mas/bvtree/bvtree.h"
-#include "mas/bvtree/bvtree_mex.h"
+#include "mas/mesh/smesh_bvtree_mex.h"
 #include "mex.h"
 #include "mas/mexhandle/mexhandle.h"
 #include <math.h>
@@ -23,9 +23,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // Get data
     if (nrhs > TREE_IDX) {
     	// mexPrintf("Finding tree to cut down... \n");
-    	mex::class_handle<BVTree> *tree = mex::get_class_handle<BVTree>(POINTSET_TREE_SIGNATURE, prhs[TREE_IDX]);
-    	// mexPrintf("Destroying tree\n");
-    	if (tree->isValid(POINTSET_TREE_SIGNATURE)) {
+    	mex::class_holder<PBVTree> *tree = mex::get_class_holder<PBVTree>(MESH_TREE_SIGNATURE, prhs[TREE_IDX]);
+    	//    	mexPrintf("Destroying smesh tree\n");
+    	if (tree->isValid(MESH_TREE_SIGNATURE)) {
     		delete tree;
 			tree = NULL;
     	}

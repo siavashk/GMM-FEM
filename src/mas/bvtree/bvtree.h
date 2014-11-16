@@ -66,6 +66,15 @@ class BVTreeFactory;
 // objects that can be bounded
 class Boundable {
 public:
+	int idx;
+
+public:
+
+	Boundable(int idx);
+
+	int getIndex();
+	void setIndex(int idx);
+
 	// for 'this' call
 	virtual bool updateBV(BoundingVolume* bv) const = 0;
 	// default passing to pointer version
@@ -86,16 +95,12 @@ public:
 class BoundablePointSet : public Boundable {
 public:
 	std::vector<Point3d> pnts;
-	int idx;
 
 public:
 	BoundablePointSet(int idx);
 	BoundablePointSet(const std::vector<Point3d> &pnts, int idx);
 	void setPoints(const std::vector<Point3d> &pnts);
 	void addPoint(const Point3d &pnt);
-
-	void setIndex(int idx);
-	int getIndex();
 
 	// for 'this' call
 	bool updateBV(BoundingVolume* bv) const;
@@ -358,6 +363,9 @@ public:
 	virtual PBoundingVolume copy()const ;
 
 private:
+	static bool boxesIntersect ( const Vector3d &hw1, const Vector3d &hw2,
+			const RotationMatrix3d &R1, const RotationMatrix3d &R2,
+			const Vector3d &pd, const Vector3d &px);
 	static bool boxesIntersect(const Vector3d &hw1, const Vector3d &hw2,
 			const RotationMatrix3d &R21, const Vector3d &t21);
 };
@@ -437,6 +445,7 @@ public:
 	virtual ~BVTree() {};
 
 	PBVNode getRoot();
+	double getRadius() const;
 
 	virtual void build(const PBoundingVolume rootbv,
 			const PBoundableList &elems, double margin = 0);

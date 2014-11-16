@@ -1,12 +1,15 @@
 #include "mas/core/math.h"
 #include <math.h>
+#include <random>
 #include "mas/mesh/meshbv.h"
+
+#include <stdlib.h>
 
 namespace mas {
 namespace mesh {
 
 BoundablePolygon::BoundablePolygon(const PPolygon poly)
-: polygon(), tris() {
+	: Boundable(-1), polygon(), tris() {
 	setPolygon(poly);
 }
 
@@ -534,15 +537,15 @@ int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
 
 }
 
-bool poly_contains_coordinate(Point3d pnt, PBoundablePolygon bpoly, Polygon &tri, Vector3d &bary) {
+bool poly_contains_coordinate(Point3d &pnt, PBoundablePolygon bpoly, Polygon &tri, Vector3d &bary) {
 	// check if is inside triangles
 	PPolygon &polygon = bpoly->polygon;
 	if (polygon->numVertices() == 3) {
+	   tri.set(*polygon);
 		// check if is in triangle
 		if (point_in_triangle(pnt, *(polygon->verts[0]),
 				*(polygon->verts[1]), *(polygon->verts[2]),
 				bary)) {
-			tri.set(*polygon);
 			return true;
 		}
 		return false;
@@ -552,12 +555,10 @@ bool poly_contains_coordinate(Point3d pnt, PBoundablePolygon bpoly, Polygon &tri
 		const PPolygonList &ltris = bpoly->getTriangulation();
 
 		for (PPolygon ltri : ltris) {
-			Vector3d baryTmp;
+		   tri.set(*ltri);
 			bool inside = point_in_triangle(pnt, *(ltri->verts[0]),
-					*(ltri->verts[1]), *(ltri->verts[2]), baryTmp);
+					*(ltri->verts[1]), *(ltri->verts[2]), bary);
 			if (inside) {
-				bary.set(baryTmp);
-				tri.set(*ltri);
 				return true;
 			}
 		}
@@ -613,11 +614,17 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 		}
 	}
 
-	// resort to continuously ray-casting until we hit mid-face
+	// resort to continuously, starting with aimed at mid-face
 	Point3d centroid;
 	tri.computeCentroid(centroid);
 	dir.set(centroid);
 	dir.subtract(pnt);
+
+	// uniform random distribution for direction generation
+	std::uniform_real_distribution<double> uniform(-1,1);
+	std::default_random_engine randomengine;
+
+	Polygon *prevPoly = &tri;
 
 	data.nRetries = 0;
 	do {
@@ -678,9 +685,23 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 		}
 
 		// pick next direction as centroid of closest unsure face
-		unsureFace->getTriangulation()[0]->computeCentroid(centroid);
-		dir.set(centroid);
-		dir.subtract(pnt);
+		PPolygon nextPoly = unsureFace->getTriangulation()[0];
+		if (nextPoly.get() == prevPoly) {
+		   // randomize direction
+		   do {
+		      dir.x = uniform(randomengine);
+		      dir.y = uniform(randomengine);
+		      dir.z = uniform(randomengine);
+		   } while (dir.norm() == 0);
+		   dir.normalize();
+
+		   prevPoly = NULL;
+		} else {
+		   nextPoly->computeCentroid(centroid);
+		   dir.set(centroid);
+		   dir.subtract(pnt);
+		   prevPoly = nextPoly.get();
+		}
 
 		data.nRetries++;
 	} while (data.nRetries < maxRetries);

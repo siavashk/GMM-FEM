@@ -10,7 +10,8 @@
  *=================================================================*/
 
 #include "mas/bvtree/bvtree.h"
-#include "mas/bvtree/bvtree_mex.h"
+#include "mas/mesh/smesh_bvtree_mex.h"
+#include "mas/mesh/meshbv.h"
 #include "mex.h"
 #include "mas/mexhandle/mexhandle.h"
 #include <math.h>
@@ -24,6 +25,7 @@
 #define DIM 3
 
 using namespace mas::bvtree;
+using namespace mas::mesh;
 
  // Main entry function
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -38,14 +40,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 "Too many output arguments.");
     }
 
-    std::vector<mas::Point3d> points;
+    PVertex3dList vtxs;
     std::vector<PBoundable> boundableGroups;
 
     // Get data
     if (nrhs > PNTS_IDX && mxIsDouble(prhs[PNTS_IDX])) {
     	double *pnts = mxGetPr(prhs[PNTS_IDX]);
         int nPnts = mxGetN(prhs[PNTS_IDX]);
-        points.reserve(nPnts);
+        vtxs.reserve(nPnts);
 
         int dim = mxGetM(prhs[PNTS_IDX]);
         if (dim != DIM) {
@@ -54,7 +56,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
 
         for (int i=0; i<nPnts; i++) {
-        	points.push_back(mas::Point3d(pnts[3*i], pnts[3*i+1], pnts[3*i+2]));
+        	mas::Point3d loc(pnts[3*i], pnts[3*i+1], pnts[3*i+2]);
+        	PVertex3d vtx = MeshFactory::createVertex(loc);
+        	vtx->idx = i;
+        	vtxs.push_back(vtx);
         }
 
     } else {
@@ -77,22 +82,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     			p = mxGetPr(cellElement);
     			int M = mxGetNumberOfElements(cellElement);
 
-    			std::vector<mas::Point3d> pointset;
+    			PVertex3dList polyvtxs;
     			for (int m = 0; m<M; m++) {
-    				pointset.push_back(points[ (int)p[m]-1 ]);
+    				polyvtxs.push_back(vtxs[ (int)p[m]-1 ]);
     			}
-    			boundableGroups.push_back(std::make_shared<BoundablePointSet>(pointset, idx++));
-    		}
 
-    		// mexPrintf("Boundable Point Sets: \n");
-    		//    		for (PBoundable boundable : boundableGroups) {
-    		//    			std::shared_ptr<BoundablePointSet> bps = std::static_pointer_cast<BoundablePointSet>(boundable);
-    		//    			mexPrintf("BPS[%i]: ", bps->idx);
-    		//    			for (mas::Point3d pnt : bps->pnts) {
-    		//   					mexPrintf("  (%.2lf, %.2lf, %.2lf) ", pnt.x, pnt.y, pnt.z);
-    		//   				}
-    		//   				mexPrintf("\n");
-    		//    		}
+    			PPolygon poly = MeshFactory::createPolygon(polyvtxs);
+    			PBoundablePolygon bpoly = std::make_shared<mas::mesh::BoundablePolygon>(poly);
+    			bpoly->setIndex(idx++);
+    			boundableGroups.push_back(bpoly);
+    		}
 
     	} else if (mxIsDouble(prhs[GROUP_IDX])) {
     		double *dgroup = mxGetPr(prhs[GROUP_IDX]);
@@ -102,11 +101,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     		int idx = 1; // start at index 1 (matlab rules)
 
 			for (int n = 0; n < N; n++) {
-				std::vector<mas::Point3d> pointset;
+				PVertex3dList polyvtxs;
 				for (int m = 0; m<M; m++ ) {
-					pointset.push_back( points[ (int)dgroup[n*M+m]-1 ] );
+					unsigned int gidx = (int)dgroup[n*M+m];
+					if (gidx > vtxs.size()) {
+						mexPrintf("Bad index!!");
+						return;
+					}
+					polyvtxs.push_back( vtxs[ gidx-1 ] );
 				}
-				boundableGroups.push_back(std::make_shared<BoundablePointSet>(pointset, idx++));
+				PPolygon poly = MeshFactory::createPolygon(polyvtxs);
+				PBoundablePolygon bpoly = std::make_shared<mas::mesh::BoundablePolygon>(poly);
+				bpoly->setIndex(idx++);
+				boundableGroups.push_back(bpoly);
 			}
     	} else {
             mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidInputType",
@@ -123,13 +130,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     if (tol < 0) {
     	mas::Point3d sum(0,0,0);
-    	for (mas::Point3d pnt : points) {
-    		sum.add(pnt);
+    	for (PVertex3d vtx : vtxs) {
+    		sum.add(*vtx);
     	}
-    	sum.scale(1.0/points.size());
+    	sum.scale(1.0/vtxs.size());
     	double r = 0;
-    	for (mas::Point3d pnt : points) {
-    		double d = pnt.distance(sum);
+    	for (PVertex3d vtx : vtxs) {
+    		double d = vtx->distance(sum);
     		if (d > r) {
     			r = d;
     		}
@@ -138,13 +145,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     	tol = r*1e-12;
     }
 
-    // construct the actual BVTree using an AABB as a base
-    PBoundingVolume bv = BVFactory::createBV<OBB>();
-    mex::class_handle<BVTree> *tree = new mex::class_handle<BVTree>(POINTSET_TREE_SIGNATURE, bv, boundableGroups, tol);
+    // construct the actual BVTree using an OBB as a base
+    PBVTree tree = BVTreeFactory::createTree<OBB>(boundableGroups, tol);
+    mex::class_holder<PBVTree> *treeHolder = new mex::class_holder<PBVTree>(MESH_TREE_SIGNATURE, tree);
 
     // return tree
     if (nlhs > TREE_IDX) {
-    	plhs[TREE_IDX] = mex::get_mex_handle<BVTree>(tree);
+    	mxArray* mhandle = mex::get_mex_handle<PBVTree>(treeHolder);
+    	plhs[TREE_IDX]  = mhandle;
+
+    	// recover
+    	mex::class_holder<PBVTree>* treeHolderTest = mex::get_class_holder<PBVTree>(MESH_TREE_SIGNATURE, mhandle);
+    	if (!treeHolderTest->isValid(MESH_TREE_SIGNATURE)) {
+    		mexPrintf("Signature invalid.\n");
+    	}
+
     }
 
 }

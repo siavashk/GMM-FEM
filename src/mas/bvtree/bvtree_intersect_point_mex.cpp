@@ -1,4 +1,5 @@
 #include "mas/bvtree/bvtree.h"
+#include "mas/bvtree/bvtree_mex.h"
 #include "mex.h"
 #include "mas/mexhandle/mexhandle.h"
 #include <math.h>
@@ -59,7 +60,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // Get data
     mex::class_handle<BVTree> *tree = NULL;
     if (nrhs > TREE_IDX) {
-    	tree = mex::get_class_handle<BVTree>(prhs[TREE_IDX]);
+    	tree = mex::get_class_handle<BVTree>(POINTSET_TREE_SIGNATURE, prhs[TREE_IDX]);
 
     	if (tree == NULL) {
     		mexPrintf("Unable to recover tree");
@@ -125,14 +126,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
    		double *elemIdxs = mxGetPr(elemIdxsArray);
 
    		int eidx = 0;
+
+   		//   		mexPrintf("Point:  (%.2lf, %.2lf, %.2lf)\n", pnt.x, pnt.y, pnt.z);
    		for (PBVNode node : bvnodes) {
    			for (PBoundable elem : node->elems) {
    				std::shared_ptr<BoundablePointSet> bps = std::static_pointer_cast<BoundablePointSet>(elem);
    				elemIdxs[eidx++] = bps->idx;
 
-   				//   				mexPrintf("Points (%i): \n", bps->pnts.size());
+   				//   				mexPrintf("BoundedPoints[%i] (%i): \n", bps->idx, bps->pnts.size());
    				//   				for (mas::Point3d pnt : bps->pnts) {
-   				//   					mexPrintf("  (%lf, %lf, %lf) ", pnt.x, pnt.y, pnt.z);
+   				//   					mexPrintf("  (%.2lf, %.2lf, %.2lf) ", pnt.x, pnt.y, pnt.z);
    				//   				}
    				//   				mexPrintf("\n");
    			}
