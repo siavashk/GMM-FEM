@@ -69,27 +69,27 @@ bool doOBBTreeTest(const char filename1[], const char filename2[]) {
 	reader.read(filename2);
 	PolygonMesh mesh2 = reader.getPolygonMesh();
 
-	std::chrono::time_point<std::chrono::system_clock> start, end;
+	//std::chrono::time_point<std::chrono::system_clock> start, end;
 
 	printf("Constructing OBBTrees... \n");
 
-	start = std::chrono::high_resolution_clock::now();
+	//start = std::chrono::high_resolution_clock::now();
 	POBBTree obbt1 = get_obb_tree(mesh1, 0);
-	end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed_seconds = end-start;
-	double contime = elapsed_seconds.count();
-	printf(" tree 1: %g s, ", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//std::chrono::duration<double> elapsed_seconds = end-start;
+	//double contime = elapsed_seconds.count();
+	//printf(" tree 1: %g s, ", contime);
 
 	PBVNodeList nodes1;
 	obbt1->getLeaves(nodes1);
 	printf("has %ld leaves\n", nodes1.size());
 
-	start = std::chrono::high_resolution_clock::now();
+	//start = std::chrono::high_resolution_clock::now();
 	POBBTree obbt2 = get_obb_tree(mesh2, 0);
-	end = std::chrono::high_resolution_clock::now();
-	elapsed_seconds = end-start;
-	contime = elapsed_seconds.count();
-	printf(" tree 2: %g s, ", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed_seconds = end-start;
+	//contime = elapsed_seconds.count();
+	//printf(" tree 2: %g s, ", contime);
 
 	PBVNodeList nodes2;
 	obbt2->getLeaves(nodes2);
@@ -123,14 +123,14 @@ bool doOBBTreeTest(const char filename1[], const char filename2[]) {
 	 */
 	nodes1.clear();
 	nodes2.clear();
-	start = std::chrono::high_resolution_clock::now();
+	//start = std::chrono::high_resolution_clock::now();
 	obbt1->intersectTree(obbt2, nodes1, nodes2);
-	end = std::chrono::high_resolution_clock::now();
-	elapsed_seconds = end-start;
-	contime = elapsed_seconds.count();
-	printf(" %g s\n", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed_seconds = end-start;
+	//contime = elapsed_seconds.count();
+	//printf(" %g s\n", contime);
 
-	printf("Intersection sizes: %ld, %ld\n\n", nodes1.size(), nodes2.size());
+	//printf("Intersection sizes: %ld, %ld\n\n", nodes1.size(), nodes2.size());
 
 
 	return true;
@@ -158,13 +158,13 @@ bool doAABBTreeTest(const char filename1[], const char filename2[]) {
 
 	printf("Constructing AABBTrees... \n");
 
-	std::chrono::time_point<std::chrono::system_clock> start, end;
-	start = std::chrono::high_resolution_clock::now();
+	//std::chrono::time_point<std::chrono::system_clock> start, end;
+	//start = std::chrono::high_resolution_clock::now();
 	PAABBTree aabbt1 = get_aabb_tree(mesh1, 0);
-	end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double>  elapsed_seconds = end-start;
-	double contime = elapsed_seconds.count();
-	printf(" tree 1: %g s, ", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//std::chrono::duration<double>  elapsed_seconds = end-start;
+	//double contime = elapsed_seconds.count();
+	//printf(" tree 1: %g s, ", contime);
 
 	PBVNodeList nodes1;
 	aabbt1->getLeaves(nodes1);
@@ -181,12 +181,12 @@ bool doAABBTreeTest(const char filename1[], const char filename2[]) {
 	}
 	 */
 
-	start = std::chrono::high_resolution_clock::now();
+	//start = std::chrono::high_resolution_clock::now();
 	PAABBTree aabbt2 = get_aabb_tree(mesh2, 0);
-	end = std::chrono::high_resolution_clock::now();
-	elapsed_seconds = end-start;
-	contime = elapsed_seconds.count();
-	printf(" tree 2: %g s, ", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed_seconds = end-start;
+	//contime = elapsed_seconds.count();
+	//printf(" tree 2: %g s, ", contime);
 
 	PBVNodeList nodes2;
 	aabbt2->getLeaves(nodes2);
@@ -220,12 +220,12 @@ bool doAABBTreeTest(const char filename1[], const char filename2[]) {
 
 	nodes1.clear();
 	nodes2.clear();
-	start = std::chrono::high_resolution_clock::now();
+	//start = std::chrono::high_resolution_clock::now();
 	aabbt1->intersectTree(aabbt2, nodes1, nodes2);
-	end = std::chrono::high_resolution_clock::now();
-	elapsed_seconds = end-start;
-	contime = elapsed_seconds.count();
-	printf(" %g s\n", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed_seconds = end-start;
+	//contime = elapsed_seconds.count();
+	//printf(" %g s\n", contime);
 
 	printf("Intersection sizes: %ld, %ld\n\n", nodes1.size(), nodes2.size());
 	return true;
@@ -252,24 +252,24 @@ bool doBSTreeTest(const char filename1[], const char filename2[]) {
 
 	printf("Constructing BSTrees... \n");
 
-	std::chrono::time_point<std::chrono::system_clock> start, end;
-	start = std::chrono::high_resolution_clock::now();
+	//std::chrono::time_point<std::chrono::system_clock> start, end;
+	//start = std::chrono::high_resolution_clock::now();
 	PBSTree bst1 = get_bs_tree(mesh1, 0);
-	end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed_seconds = end-start;
-	double contime = elapsed_seconds.count();
-	printf(" tree 1: %g s, ", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//std::chrono::duration<double> elapsed_seconds = end-start;
+	//double contime = elapsed_seconds.count();
+	//printf(" tree 1: %g s, ", contime);
 
 	PBVNodeList nodes1;
 	bst1->getLeaves(nodes1);
 	printf("has %ld leaves\n", nodes1.size());
 
-	start = std::chrono::high_resolution_clock::now();
+	//start = std::chrono::high_resolution_clock::now();
 	mas::bvtree::PBSTree bst2 = get_bs_tree(mesh2, 0);
-	end = std::chrono::high_resolution_clock::now();
-	elapsed_seconds = end-start;
-	contime = elapsed_seconds.count();
-	printf(" tree 2: %g s, ", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed_seconds = end-start;
+	//contime = elapsed_seconds.count();
+	//printf(" tree 2: %g s, ", contime);
 
 	PBVNodeList nodes2;
 	bst2->getLeaves(nodes2);
@@ -303,12 +303,12 @@ bool doBSTreeTest(const char filename1[], const char filename2[]) {
 
 	nodes1.clear();
 	nodes2.clear();
-	start = std::chrono::high_resolution_clock::now();
+	//start = std::chrono::high_resolution_clock::now();
 	bst1->intersectTree(bst2, nodes1, nodes2);
-	end = std::chrono::high_resolution_clock::now();
-	elapsed_seconds = end-start;
-	contime = elapsed_seconds.count();
-	printf(" %g s\n", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed_seconds = end-start;
+	//contime = elapsed_seconds.count();
+	//printf(" %g s\n", contime);
 
 	printf("Intersection sizes: %ld, %ld\n\n", nodes1.size(), nodes2.size());
 	return true;
@@ -343,24 +343,24 @@ bool doCrossTreeTest(const char filename1[], const char filename2[]) {
 
 	printf("Constructing BVTrees... \n");
 
-	std::chrono::time_point<std::chrono::system_clock> start, end;
-	start = std::chrono::high_resolution_clock::now();
+	//std::chrono::time_point<std::chrono::system_clock> start, end;
+	//start = std::chrono::high_resolution_clock::now();
 	PBVTree bvt1 = get_bv_tree<BV1>(mesh1, 0);
-	end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed_seconds = end-start;
-	double contime = elapsed_seconds.count();
-	printf(" tree 1: %g s, ", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//std::chrono::duration<double> elapsed_seconds = end-start;
+	//double contime = elapsed_seconds.count();
+	//printf(" tree 1: %g s, ", contime);
 
 	PBVNodeList nodes1;
 	bvt1->getLeaves(nodes1);
 	printf("has %ld leaves\n", nodes1.size());
 
-	start = std::chrono::high_resolution_clock::now();
+	//start = std::chrono::high_resolution_clock::now();
 	PBVTree bvt2 = get_bv_tree<BV2>(mesh2, 0);
-	end = std::chrono::high_resolution_clock::now();
-	elapsed_seconds = end-start;
-	contime = elapsed_seconds.count();
-	printf(" tree 2: %g s, ", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed_seconds = end-start;
+	//contime = elapsed_seconds.count();
+	//printf(" tree 2: %g s, ", contime);
 
 	PBVNodeList nodes2;
 	bvt2->getLeaves(nodes2);
@@ -393,12 +393,12 @@ bool doCrossTreeTest(const char filename1[], const char filename2[]) {
 
 	nodes1.clear();
 	nodes2.clear();
-	start = std::chrono::high_resolution_clock::now();
+	//start = std::chrono::high_resolution_clock::now();
 	bvt1->intersectTree(bvt2, nodes1, nodes2);
-	end = std::chrono::high_resolution_clock::now();
-	elapsed_seconds = end-start;
-	contime = elapsed_seconds.count();
-	printf(" %g s\n", contime);
+	//end = std::chrono::high_resolution_clock::now();
+	//elapsed_seconds = end-start;
+	//contime = elapsed_seconds.count();
+	//printf(" %g s\n", contime);
 
 	printf("Intersection sizes: %ld, %ld\n\n", nodes1.size(), nodes2.size());
 	return true;
@@ -712,11 +712,11 @@ bool doSliceAndDiceTest(const char filename1[], const char filename2[], const ch
 	reader.read(filename2);
 	PolygonMesh mesh2 = reader.getPolygonMesh();
 
-	//	POBBTree bvtree1 = mas::mesh::get_obb_tree(mesh1, 1e-10);
-	//	POBBTree bvtree2 = mas::mesh::get_obb_tree(mesh2, 1e-10);
+	POBBTree bvtree1 = mas::mesh::get_obb_tree(mesh1, 1e-10);
+	POBBTree bvtree2 = mas::mesh::get_obb_tree(mesh2, 1e-10);
 
-	PAABBTree bvtree1 = mas::mesh::get_aabb_tree(mesh1, 1e-10);
-	PAABBTree bvtree2 = mas::mesh::get_aabb_tree(mesh2, 1e-10);
+	//	PAABBTree bvtree1 = mas::mesh::get_aabb_tree(mesh1, 1e-10);
+	//	PAABBTree bvtree2 = mas::mesh::get_aabb_tree(mesh2, 1e-10);
 
 	using namespace mas::mesh;
 	typedef std::unordered_map<PBVNode,mas::mesh::PPolygonList> LeafPolyMap;
@@ -786,6 +786,41 @@ bool doSliceAndDiceTest(const char filename1[], const char filename2[], const ch
 	fflush(stdout);
 }
 
+int printBox(OBB &obb, int vidx) {
+
+	double x = obb.halfWidths.x;
+	double y = obb.halfWidths.y;
+	double z = obb.halfWidths.z;
+
+	Point3d p[8] = {
+			Point3d(-x, -y, -z),
+			Point3d( x, -y, -z),
+			Point3d( x,  y, -z),
+			Point3d(-x,  y, -z),
+			Point3d(-x, -y,  z),
+			Point3d( x, -y,  z),
+			Point3d( x,  y,  z),
+			Point3d(-x,  y,  z)
+	};
+
+	Point3d pout;
+	for (int i=0; i<8; i++) {
+		obb.getWorldCoords(p[i], pout);
+		printf("v %lf %lf %lf\n", pout.x, pout.y, pout.z);
+	}
+
+	// faces
+	printf("f %d %d %d %d\n", vidx, vidx+3, vidx+2, vidx+1);
+	printf("f %d %d %d %d\n", vidx+4, vidx+5, vidx+6, vidx+7);
+	printf("f %d %d %d %d\n", vidx, vidx+1, vidx+5, vidx+4);
+	printf("f %d %d %d %d\n", vidx+2, vidx+3, vidx+7, vidx+6);
+	printf("f %d %d %d %d\n", vidx+1, vidx+2, vidx+6, vidx+5);
+	printf("f %d %d %d %d\n", vidx+3, vidx, vidx+4, vidx+7);
+
+	return vidx+8;
+
+}
+
 bool doDiceTest(const char filename1[], const char filename2[], const char *outfilename){
 
 	using mas::mesh::PolygonMesh;
@@ -800,16 +835,84 @@ bool doDiceTest(const char filename1[], const char filename2[], const char *outf
 	reader.read(filename2);
 	PolygonMesh mesh2 = reader.getPolygonMesh();
 
-	PAABBTree aabbt1 = mas::mesh::get_aabb_tree(mesh1, 1e-10);
-	PAABBTree aabbt2 = mas::mesh::get_aabb_tree(mesh2, 1e-10);
+	PBVTree bvtree1 = mas::mesh::get_obb_tree(mesh1, 1e-10);
+	PBVTree bvtree2 = mas::mesh::get_obb_tree(mesh2, 1e-10);
 
 	// POBBTree obbt1 = mas::mesh::get_obb_tree(mesh1, 1e-10);
 	// POBBTree obbt2 = mas::mesh::get_obb_tree(mesh2, 1e-10);
 
+	PBVNodeList nodes1;
+	PBVNodeList nodes2;
+
+	//	bvtree1->getLeaves(nodes1);
+	//	bvtree2->getLeaves(nodes2);
+	//	printf("# Boxes #1:\n");
+	//	int vidx = 1;
+	//	int bidx = 0;
+	//	for (PBVNode node : nodes1) {
+	//		PBoundingVolume pbv = node->bv;
+	//		POBB pobb = std::static_pointer_cast<OBB>(pbv);
+	//		printf("g m1_b%d\n", bidx++);
+	//		vidx = printBox(*pobb, vidx);
+	//	}
+	//
+	//
+	//	printf("# Boxes #2:\n");
+	//	vidx = 1;
+	//	bidx = 0;
+	//	for (PBVNode node : nodes2) {
+	//		PBoundingVolume pbv = node->bv;
+	//		POBB pobb = std::static_pointer_cast<OBB>(pbv);
+	//		printf("g m2_b%d\n", bidx++);
+	//		vidx = printBox(*pobb, vidx);
+	//	}
+	// return true;
+
+	nodes1.clear();
+	nodes2.clear();
+	bvtree1->intersectTree(bvtree2, nodes1, nodes2);
+
+	/*
+	printf("--------------------------\n");
+
+	int ilen = nodes1.size();
+	for (int i=0; i<ilen; i++) {
+		printf("Intersection %i: \n", i);
+		PBVNode node1 = nodes1[i];
+		PBVNode node2 = nodes2[i];
+
+		printf("   Node 1: ");
+		for (PBoundable elem : node1->elems) {
+			mesh::PBoundablePolygon poly = std::static_pointer_cast<mesh::BoundablePolygon>(elem);
+			printf(" (");
+			for (mesh::PVertex3d v : poly->polygon->verts) {
+				printf(" %i", v->idx);
+			}
+			printf(" ) ");
+		}
+		printf("\n");
+		printf("   Node 2: ");
+		for (PBoundable elem : node2->elems) {
+			mesh::PBoundablePolygon poly = std::static_pointer_cast<mesh::BoundablePolygon>(elem);
+			printf(" (");
+			for (mesh::PVertex3d v : poly->polygon->verts) {
+				printf(" %i", v->idx);
+			}
+			printf(" ) ");
+		}
+		printf("\n");
+
+		fflush(stdout);
+	}
+	*/
+
+
+	// return true;
+
 	// mas::mesh::PPolygonList isect;
 	// mas::csg::cheap_intersect(mesh1, obbt1, mesh2, obbt2, isect, 1e-12);
 
-	double d = mas::csg::dice(mesh1, aabbt1, mesh2, aabbt2, 1e-15);
+	double d = mas::csg::dice(mesh1, bvtree1, mesh2, bvtree2, 1e-15);
 	// double d = mas::csg::dice(mesh1, obbt1, mesh2, obbt2, 1e-15);
 
 	printf("# Dice: %lg\n", d);
@@ -835,6 +938,24 @@ bool doDiceTest(const char filename1[], const char filename2[], const char *outf
 	}
 
 	fflush(stdout);
+}
+
+bool doSliceIntersectionTest() {
+
+	OBB obb1( Point3d(0.5, -0.25, -0.25),
+			RotationMatrix3d( 0.81649658092772603, 1.1102230246251565e-016, 0.57735026918962573, 0.40824829046386307, -0.70710678118654757, -0.57735026918962573, 0.40824829046386302, 0.70710678118654746, -0.57735026918962573),
+					Vector3d( 0.61237243579579459, 0.70710678128654769, 1.0000004163336343e-010));
+
+	OBB obb2( Point3d( -0.099999999999999978, -0.25000000000000011, -0.24999999999999994),
+			RotationMatrix3d(0.81649658092772603, -1.1102230246251565e-016, -0.57735026918962573, -0.40824829046386307, -0.70710678118654757, -0.57735026918962573, -0.40824829046386302, 0.70710678118654746, -0.57735026918962573),
+					Vector3d(0.61237243579579459, 0.70710678128654758, 1.0000005551115123e-010));
+
+
+	bool isect = obb1.intersects(&obb2);
+	printf("%s\n", isect ? "yes" : "no");
+
+	return true;
+
 }
 
 bool doInsideTest(const char filename[], double pnt[], double dx[], int nx[]) {
@@ -1128,6 +1249,9 @@ bool doSVDTest(double *mat) {
 
 int main( int argc, const char* argv[] ) {
 
+	//	doSliceIntersectionTest();
+	//
+	//	return 0;
 
 	if (argc == 2) {
 		// doBVLeafTest(argv[1]);

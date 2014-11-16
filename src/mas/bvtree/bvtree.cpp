@@ -11,13 +11,24 @@
 namespace mas {
 namespace bvtree {
 
+Boundable::Boundable(int idx)
+	: idx(idx) {}
+
+void Boundable::setIndex(int idx) {
+	this->idx = idx;
+}
+
+int Boundable::getIndex() {
+	return idx;
+}
+
 bool Boundable::updateBV(PBoundingVolume bv) const {
 	return updateBV(bv.get());
 }
 
-BoundablePointSet::BoundablePointSet(int idx) : pnts(), idx(idx) {}
+BoundablePointSet::BoundablePointSet(int idx) : Boundable(idx), pnts() {}
 BoundablePointSet::BoundablePointSet(const std::vector<Point3d> &pnts, int idx)
-	: pnts(pnts), idx(idx){}
+: Boundable(idx), pnts(pnts) {}
 
 void BoundablePointSet::setPoints(const std::vector<Point3d> &pnts) {
 	this->pnts = pnts;
@@ -25,14 +36,6 @@ void BoundablePointSet::setPoints(const std::vector<Point3d> &pnts) {
 
 void BoundablePointSet::addPoint(const Point3d &pnt) {
 	pnts.push_back(pnt);
-}
-
-void BoundablePointSet::setIndex(int idx) {
-	this->idx = idx;
-}
-
-int BoundablePointSet::getIndex() {
-	return idx;
 }
 
 bool BoundablePointSet::updateBV(BoundingVolume* bv) const {
@@ -60,7 +63,7 @@ void BoundablePointSet::getCentroid(Point3d &c) const {
 }
 
 void BoundablePointSet::getCovariance(const Point3d &centre,
-			Matrix3d &cov) const {
+		Matrix3d &cov) const {
 
 	cov.setZero();
 	Point3d diff;
@@ -110,7 +113,7 @@ double BoundablePointSet::distanceToPoint(const Point3d &pnt, const Vector3d &di
 			nearest.set(mpnt);
 		}
 	}
-	*/
+	 */
 
 	return dmin;
 
@@ -473,11 +476,11 @@ bool BoundingBox::intersectsPoint(const Point3d &p) const {
 	getLocalCoords(p, pl);
 
 	bool status =  ( pl.x >= - halfWidths.x)
-										&& ( pl.x <= halfWidths.x)
-										&& ( pl.y >= - halfWidths.y)
-										&& ( pl.y <= halfWidths.y)
-										&& ( pl.z >= - halfWidths.z)
-										&& ( pl.z <= halfWidths.z);
+														&& ( pl.x <= halfWidths.x)
+														&& ( pl.y >= - halfWidths.y)
+														&& ( pl.y <= halfWidths.y)
+														&& ( pl.z >= - halfWidths.z)
+														&& ( pl.z <= halfWidths.z);
 
 	return status;
 }
@@ -487,11 +490,11 @@ bool BoundingBox::intersectsSphere(const Point3d &c, double r) const {
 	Point3d pl;
 	getLocalCoords(c, pl);
 	bool status =  ( pl.x + r >= - halfWidths.x)
-										&& ( pl.x - r <= halfWidths.x)
-										&& ( pl.y + r >= - halfWidths.y)
-										&& ( pl.y - r <= halfWidths.y)
-										&& ( pl.z + r >= - halfWidths.z)
-										&& ( pl.z - r <= halfWidths.z);
+														&& ( pl.x - r <= halfWidths.x)
+														&& ( pl.y + r >= - halfWidths.y)
+														&& ( pl.y - r <= halfWidths.y)
+														&& ( pl.z + r >= - halfWidths.z)
+														&& ( pl.z - r <= halfWidths.z);
 
 	return status;
 }
@@ -1060,6 +1063,137 @@ void AABB::split(const PBoundableList &blist,
 
 const unsigned long OBB::UNIQUE_ID = BVTREE_BVID_OBB;
 
+// Game Physics, David Eberly, Pg. 445
+bool OBB::boxesIntersect (
+		const Vector3d &hw1, const Vector3d &hw2, const RotationMatrix3d &R1,
+		const RotationMatrix3d &R2, const Vector3d &pd, const Vector3d &px) {
+
+	double t;
+	double cutoff = 1-1e-10;
+
+	// mij and pi give the transformation from the argument obb to this obb.
+
+	// A1 x A2 = A0
+	double p_x = R1.m[IDX3D_00] * pd.x + R1.m[IDX3D_10] * pd.y + R1.m[IDX3D_20] * pd.z + px.x;
+	if ((t = p_x) < 0)
+		t = -t;
+	double m00 = R1.m[IDX3D_00] * R2.m[IDX3D_00] + R1.m[IDX3D_10] * R2.m[IDX3D_10] + R1.m[IDX3D_20] * R2.m[IDX3D_20];
+	double m01 = R1.m[IDX3D_00] * R2.m[IDX3D_01] + R1.m[IDX3D_10] * R2.m[IDX3D_11] + R1.m[IDX3D_20] * R2.m[IDX3D_21];
+	double m02 = R1.m[IDX3D_00] * R2.m[IDX3D_02] + R1.m[IDX3D_10] * R2.m[IDX3D_12] + R1.m[IDX3D_20] * R2.m[IDX3D_22];
+	double abs00 = (m00 >= 0 ? m00 : -m00);
+	double abs01 = (m01 >= 0 ? m01 : -m01);
+	double abs02 = (m02 >= 0 ? m02 : -m02);
+	if (t > (hw1.x + hw2.x * abs00 + hw2.y * abs01 + hw2.z * abs02))
+		return false;
+
+	// B1 x B2 = B0
+	double m10 = R1.m[IDX3D_01] * R2.m[IDX3D_00] + R1.m[IDX3D_11] * R2.m[IDX3D_10] + R1.m[IDX3D_21] * R2.m[IDX3D_20];
+	double m20 = R1.m[IDX3D_02] * R2.m[IDX3D_00] + R1.m[IDX3D_12] * R2.m[IDX3D_10] + R1.m[IDX3D_22] * R2.m[IDX3D_20];
+	double p_y = R1.m[IDX3D_01] * pd.x + R1.m[IDX3D_11] * pd.y + R1.m[IDX3D_21] * pd.z + px.y;
+	double p_z = R1.m[IDX3D_02] * pd.x + R1.m[IDX3D_12] * pd.y + R1.m[IDX3D_22] * pd.z + px.z;
+	if ((t = p_x * m00 + p_y * m10 + p_z * m20) < 0)
+		t = -t;
+	double abs10 = (m10 >= 0 ? m10 : -m10);
+	double abs20 = (m20 >= 0 ? m20 : -m20);
+	if (t > (hw2.x + hw1.x * abs00 + hw1.y * abs10 + hw1.z * abs20))
+		return false;
+
+	// A2 x A0 = A1
+	if ((t = p_y) < 0)
+		t = -t;
+	double m11 = R1.m[IDX3D_01] * R2.m[IDX3D_01] + R1.m[IDX3D_11] * R2.m[IDX3D_11] + R1.m[IDX3D_21] * R2.m[IDX3D_21];
+	double m12 = R1.m[IDX3D_01] * R2.m[IDX3D_02] + R1.m[IDX3D_11] * R2.m[IDX3D_12] + R1.m[IDX3D_21] * R2.m[IDX3D_22];
+	double abs11 = (m11 >= 0 ? m11 : -m11);
+	double abs12 = (m12 >= 0 ? m12 : -m12);
+	if (t > (hw1.y + hw2.x * abs10 + hw2.y * abs11 + hw2.z * abs12))
+		return false;
+
+	// A0 x A1 = A2
+	if ((t = p_z) < 0)
+		t = -t;
+	double m21 = R1.m[IDX3D_02] * R2.m[IDX3D_01] + R1.m[IDX3D_12] * R2.m[IDX3D_11] + R1.m[IDX3D_22] * R2.m[IDX3D_21];
+	double m22 = R1.m[IDX3D_02] * R2.m[IDX3D_02] + R1.m[IDX3D_12] * R2.m[IDX3D_12] + R1.m[IDX3D_22] * R2.m[IDX3D_22];
+	double abs21 = (m21 >= 0 ? m21 : -m21);
+	double abs22 = (m22 >= 0 ? m22 : -m22);
+	if (t > (hw1.z + hw2.x * abs20 + hw2.y * abs21 + hw2.z * abs22))
+		return false;
+
+	// B2 x B0 = B1
+	if ((t = p_x * m01 + p_y * m11 + p_z * m21) < 0)
+		t = -t;
+	if (t > (hw2.y + hw1.x * abs01 + hw1.y * abs11 + hw1.z * abs21))
+		return false;
+
+	// B0 x B1 = B2
+	if ((t = p_x * m02 + p_y * m12 + p_z * m22) < 0)
+		t = -t;
+	if (t > (hw2.z + hw1.x * abs02 + hw1.y * abs12 + hw1.z * abs22))
+		return false;
+
+	// parallel, so only needed to check face normal directions
+	if (   abs00 > cutoff || abs01 > cutoff || abs02 > cutoff
+		|| abs10 > cutoff || abs11 > cutoff || abs12 > cutoff
+		|| abs20 > cutoff || abs21 > cutoff || abs22 > cutoff) {
+		return true;
+	}
+
+	// A0 x B0
+	if ((t = p_z * m10 - p_y * m20) < 0)
+		t = -t;
+	if (t > (hw1.y * abs20 + hw1.z * abs10 + hw2.y * abs02 + hw2.z * abs01))
+		return false;
+
+	// A0 x B1
+	if ((t = p_z * m11 - p_y * m21) < 0)
+		t = -t;
+	if (t > (hw1.y * abs21 + hw1.z * abs11 + hw2.x * abs02 + hw2.z * abs00))
+		return false;
+
+	// A0 x B2
+	if ((t = p_z * m12 - p_y * m22) < 0)
+		t = -t;
+	if (t > (hw1.y * abs22 + hw1.z * abs12 + hw2.x * abs01 + hw2.y * abs00))
+		return false;
+
+	// A1 x B0
+	if ((t = p_x * m20 - p_z * m00) < 0)
+		t = -t;
+	if (t > (hw1.x * abs20 + hw1.z * abs00 + hw2.y * abs12 + hw2.z * abs11))
+		return false;
+
+	// A1 x B1
+	if ((t = p_x * m21 - p_z * m01) < 0)
+		t = -t;
+	if (t > (hw1.x * abs21 + hw1.z * abs01 + hw2.x * abs12 + hw2.z * abs10))
+		return false;
+
+	// A1 x B2
+	if ((t = p_x * m22 - p_z * m02) < 0)
+		t = -t;
+	if (t > (hw1.x * abs22 + hw1.z * abs02 + hw2.x * abs11 + hw2.y * abs10))
+		return false;
+
+	// A2 x B0
+	if ((t = p_y * m00 - p_x * m10) < 0)
+		t = -t;
+	if (t > (hw1.x * abs10 + hw1.y * abs00 + hw2.y * abs22 + hw2.z * abs21))
+		return false;
+
+	// A2 x B1
+	if ((t = p_y * m01 - p_x * m11) < 0)
+		t = -t;
+	if (t > (hw1.x * abs11 + hw1.y * abs01 + hw2.x * abs22 + hw2.z * abs20))
+		return false;
+
+	// A2 x B2
+	if ((t = p_y * m02 - p_x * m12) < 0)
+		t = -t;
+	if (t > (hw1.x * abs12 + hw1.y * abs02 + hw2.x * abs21 + hw2.y * abs20))
+		return false;
+
+	return true;
+}
+
 bool OBB::boxesIntersect(const Vector3d &hw1,
 		const Vector3d &hw2, const RotationMatrix3d &R21,
 		const Vector3d &t21) {
@@ -1068,6 +1202,8 @@ bool OBB::boxesIntersect(const Vector3d &hw1,
 	if (t21.norm() > hw1.norm() + hw2.norm()) {
 		return false;
 	}
+
+	double cutoff = 1.0-1e-10;
 
 	// OBB intersection:
 	// OBBTree: A Hierarchichal Structure for Rapid Interference
@@ -1131,105 +1267,112 @@ bool OBB::boxesIntersect(const Vector3d &hw1,
 	}
 
 	// B2 x B0 = B1
-			if ((t = t21.x * m01 + t21.y * m11 + t21.z * m21) < 0) {
-				t = -t;
-			}
-			if (t > (hw2.y + hw1.x * abs01 + hw1.y * abs11 + hw1.z * abs21)) {
-				return false;
-			}
+	if ((t = t21.x * m01 + t21.y * m11 + t21.z * m21) < 0) {
+		t = -t;
+	}
+	if (t > (hw2.y + hw1.x * abs01 + hw1.y * abs11 + hw1.z * abs21)) {
+		return false;
+	}
 
 
-			// B0 x B1 = B2
-			if ((t = t21.x * m02 + t21.y * m12 + t21.z * m22) < 0) {
-				t = -t;
-			}
-			if (t > (hw2.z + hw1.x * abs02 + hw1.y * abs12 + hw1.z * abs22)) {
-				return false;
-			}
+	// B0 x B1 = B2
+	if ((t = t21.x * m02 + t21.y * m12 + t21.z * m22) < 0) {
+		t = -t;
+	}
+	if (t > (hw2.z + hw1.x * abs02 + hw1.y * abs12 + hw1.z * abs22)) {
+		return false;
+	}
 
-			// A0 x B0
-			if ((t = t21.z * m10 - t21.y * m20) < 0) {
-				t = -t;
-			}
-			if (t > (hw1.y * abs20 + hw1.z * abs10 + hw2.y * abs02
-					+ hw2.z * abs01)) {
-				return false;
-			}
+	// parallel, so only needed to check face normal directions
+	if (   abs00 > cutoff || abs01 > cutoff || abs02 > cutoff
+		|| abs10 > cutoff || abs11 > cutoff || abs12 > cutoff
+		|| abs20 > cutoff || abs21 > cutoff || abs22 > cutoff) {
+		return true;
+	}
 
-			// A0 x B1
-			if ((t = t21.z * m11 - t21.y * m21) < 0) {
-				t = -t;
-			}
-			if (t > (hw1.y * abs21 + hw1.z * abs11 + hw2.x * abs02
-					+ hw2.z * abs00)) {
-				return false;
-			}
+	// A0 x B0
+	if ((t = t21.z * m10 - t21.y * m20) < 0) {
+		t = -t;
+	}
+	if (t > (hw1.y * abs20 + hw1.z * abs10 + hw2.y * abs02
+			+ hw2.z * abs01)) {
+		return false;
+	}
 
-			// A0 x B2
-			if ((t = t21.z * m12 - t21.y * m22) < 0) {
-				t = -t;
-			}
-			if (t > (hw1.y * abs22 + hw1.z * abs12 + hw2.x * abs01
-					+ hw2.y * abs00)) {
-				return false;
-			}
+	// A0 x B1
+	if ((t = t21.z * m11 - t21.y * m21) < 0) {
+		t = -t;
+	}
+	if (t > (hw1.y * abs21 + hw1.z * abs11 + hw2.x * abs02
+			+ hw2.z * abs00)) {
+		return false;
+	}
 
-			// A1 x B0
-			if ((t = t21.x * m20 - t21.z * m00) < 0) {
-				t = -t;
-			}
-			if (t > (hw1.x * abs20 + hw1.z * abs00 + hw2.y * abs12
-					+ hw2.z * abs11)) {
-				return false;
-			}
+	// A0 x B2
+	if ((t = t21.z * m12 - t21.y * m22) < 0) {
+		t = -t;
+	}
+	if (t > (hw1.y * abs22 + hw1.z * abs12 + hw2.x * abs01
+			+ hw2.y * abs00)) {
+		return false;
+	}
 
-			// A1 x B1
-			if ((t = t21.x * m21 - t21.z * m01) < 0) {
-				t = -t;
-			}
-			if (t > (hw1.x * abs21 + hw1.z * abs01 + hw2.x * abs12
-					+ hw2.z * abs10)) {
-				return false;
-			}
+	// A1 x B0
+	if ((t = t21.x * m20 - t21.z * m00) < 0) {
+		t = -t;
+	}
+	if (t > (hw1.x * abs20 + hw1.z * abs00 + hw2.y * abs12
+			+ hw2.z * abs11)) {
+		return false;
+	}
 
-			// A1 x B2
-			if ((t = t21.x * m22 - t21.z * m02) < 0) {
-				t = -t;
-			}
-			if (t > (hw1.x * abs22 + hw1.z * abs02 + hw2.x * abs11
-					+ hw2.y * abs10)) {
-				return false;
-			}
+	// A1 x B1
+	if ((t = t21.x * m21 - t21.z * m01) < 0) {
+		t = -t;
+	}
+	if (t > (hw1.x * abs21 + hw1.z * abs01 + hw2.x * abs12
+			+ hw2.z * abs10)) {
+		return false;
+	}
 
-			// A2 x B0
-			if ((t = t21.y * m00 - t21.x * m10) < 0) {
-				t = -t;
-			}
-			if (t > (hw1.x * abs10 + hw1.y * abs00 + hw2.y * abs22
-					+ hw2.z * abs21)) {
-				return false;
-			}
+	// A1 x B2
+	if ((t = t21.x * m22 - t21.z * m02) < 0) {
+		t = -t;
+	}
+	if (t > (hw1.x * abs22 + hw1.z * abs02 + hw2.x * abs11
+			+ hw2.y * abs10)) {
+		return false;
+	}
 
-			// A2 x B1
-			if ((t = t21.y * m01 - t21.x * m11) < 0) {
-				t = -t;
-			}
-			if (t > (hw1.x * abs11 + hw1.y * abs01 + hw2.x * abs22
-					+ hw2.z * abs20)) {
-				return false;
-			}
+	// A2 x B0
+	if ((t = t21.y * m00 - t21.x * m10) < 0) {
+		t = -t;
+	}
+	if (t > (hw1.x * abs10 + hw1.y * abs00 + hw2.y * abs22
+			+ hw2.z * abs21)) {
+		return false;
+	}
 
-			// A2 x B2
-			if ((t = t21.y * m02 - t21.x * m12) < 0) {
-				t = -t;
-			}
+	// A2 x B1
+	if ((t = t21.y * m01 - t21.x * m11) < 0) {
+		t = -t;
+	}
+	if (t > (hw1.x * abs11 + hw1.y * abs01 + hw2.x * abs22
+			+ hw2.z * abs20)) {
+		return false;
+	}
 
-			if (t > (hw1.x * abs12 + hw1.y * abs02 + hw2.x * abs21
-					+ hw2.y * abs20)) {
-				return false;
-			}
+	// A2 x B2
+	if ((t = t21.y * m02 - t21.x * m12) < 0) {
+		t = -t;
+	}
 
-			return true;
+	if (t > (hw1.x * abs12 + hw1.y * abs02 + hw2.x * abs21
+			+ hw2.y * abs20)) {
+		return false;
+	}
+
+	return true;
 
 }
 
@@ -1357,15 +1500,61 @@ bool OBB::intersects(const PAABB bv) const {
 	return intersects(bv.get());
 }
 
-bool OBB::intersects(const OBB* bv) const {
-	RotationMatrix3d R21 = bv->R;
-	R21.transpose();
-	Vector3d t21 = c;
-	t21.subtract(bv->c);
-	R21.multiply(t21, t21);
-	R21.multiply(R);
+void printBoxDetails(const OBB &obb) {
+	printf("hw: %.17g %.17g %.17g\n", obb.halfWidths.x, obb.halfWidths.y, obb.halfWidths.z);
+	printf(" c: %.17g %.17g %.17g\n", obb.c.x, obb.c.y, obb.c.z);
+	printf(" R: %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g\n",
+			obb.R.m[0], obb.R.m[1], obb.R.m[2],
+			obb.R.m[3], obb.R.m[4], obb.R.m[5],
+			obb.R.m[6], obb.R.m[7], obb.R.m[8]);
+}
 
-	return boxesIntersect(bv->halfWidths, halfWidths, R21, t21);
+int printBox(const OBB &obb, int vidx) {
+
+	double x = obb.halfWidths.x;
+	double y = obb.halfWidths.y;
+	double z = obb.halfWidths.z;
+
+	Point3d p[8] = {
+			Point3d(-x, -y, -z),
+			Point3d( x, -y, -z),
+			Point3d( x,  y, -z),
+			Point3d(-x,  y, -z),
+			Point3d(-x, -y,  z),
+			Point3d( x, -y,  z),
+			Point3d( x,  y,  z),
+			Point3d(-x,  y,  z)
+	};
+
+	Point3d pout;
+	for (int i=0; i<8; i++) {
+		obb.getWorldCoords(p[i], pout);
+		printf("v %lf %lf %lf\n", pout.x, pout.y, pout.z);
+	}
+
+	// faces
+	printf("f %d %d %d %d\n", vidx, vidx+3, vidx+2, vidx+1);
+	printf("f %d %d %d %d\n", vidx+4, vidx+5, vidx+6, vidx+7);
+	printf("f %d %d %d %d\n", vidx, vidx+1, vidx+5, vidx+4);
+	printf("f %d %d %d %d\n", vidx+2, vidx+3, vidx+7, vidx+6);
+	printf("f %d %d %d %d\n", vidx+1, vidx+2, vidx+6, vidx+5);
+	printf("f %d %d %d %d\n", vidx+3, vidx, vidx+4, vidx+7);
+
+	return vidx+8;
+
+}
+
+bool OBB::intersects(const OBB* bv) const {
+
+	Vector3d pd;
+	pd.subtract (bv->c, c);
+
+	bool isect = boxesIntersect(
+			halfWidths, bv->halfWidths,
+			R, bv->R,
+			pd, Vector3d::ZERO);
+
+	return isect;
 }
 
 bool OBB::intersects(const POBB bv) const {
@@ -1824,7 +2013,11 @@ void BVTree::intersectBVRecursively(const BoundingVolume* bv,
 void BVTree::intersectTreeRecursively(const PBVNode me,
 		const PBVNode her, PBVNodeList &mine, PBVNodeList &hers) const {
 
-
+	//	if (me->bv->intersects(her->bv)) {
+	//		printf("yes\n");
+	//	} else {
+	//		printf("no\n");
+	//	}
 	if (me->bv->intersects(her->bv)) {
 		if (me->isLeaf() && her->isLeaf()) {
 			mine.push_back(me);
@@ -1863,6 +2056,10 @@ void BVTree::intersectBVRecursively(const PBoundingVolume bv,
 			}
 		}
 	}
+}
+
+double BVTree::getRadius() const {
+	return _root->getBoundingSphere().getRadius();
 }
 
 
