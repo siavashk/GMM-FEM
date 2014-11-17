@@ -111,14 +111,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	// #pragma omp parallel for
     for (int i=0; i<nPoints; i++) {
    		mas::Point3d pnt(pnts[3*i], pnts[3*i+1], pnts[3*i+2]);
-   		PBVNodeList bvnodes;
+   		std::vector<BVNode*> bvnodes;
    		tree->intersectSphere(pnt, rad, bvnodes);
 
    		// mexPrintf(" Found %i nodes that intersect point (%lf, %lf, %lf)\n", bvnodes.size(), pnt.x, pnt.y, pnt.z);
 
    		// count elems
    		int nelems = 0;
-   		for (PBVNode node : bvnodes) {
+   		for (BVNode* node : bvnodes) {
    			nelems += node->numElements();
    		}
 
@@ -128,9 +128,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
    		int eidx = 0;
 
    		//   		mexPrintf("Point:  (%.2lf, %.2lf, %.2lf)\n", pnt.x, pnt.y, pnt.z);
-   		for (PBVNode node : bvnodes) {
-   			for (PBoundable elem : node->elems) {
-   				std::shared_ptr<BoundablePointSet> bps = std::static_pointer_cast<BoundablePointSet>(elem);
+   		for (BVNode* node : bvnodes) {
+   			for (PBoundable& elem : node->elems) {
+   				std::shared_ptr<BoundablePointSet>& bps = std::static_pointer_cast<BoundablePointSet>(elem);
    				elemIdxs[eidx++] = bps->idx;
 
    				//   				mexPrintf("BoundedPoints[%i] (%i): \n", bps->idx, bps->pnts.size());

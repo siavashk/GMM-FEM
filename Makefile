@@ -9,7 +9,7 @@ SRCDIR = ./src
 INCLUDEDIR = ./src
 BINDIR = ./bin
 
-CPPFLAGS=-I$(INCLUDEDIR) --std=c++11
+CPPFLAGS=-I$(INCLUDEDIR) -fPIC --std=c++11
 ifdef DEBUG
 CPPFLAGS:=$(CPPFLAGS) -g -O0 -DMAS_DEBUG
 else
@@ -90,7 +90,10 @@ vars:
 	@echo "MEX: $(MEX)"
 	
 
-all: cmd mex lib
+all: cmd lib # mex
+
+doc:
+	@doxygen doc/maslib.doxyfile
 
 mex: $(MEX) $(M_FILES_OUT)
 
