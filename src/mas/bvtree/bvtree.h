@@ -84,7 +84,7 @@ public:
 	void setIndex(int idx);
 
 	// Update supplied BV using info from THIS
-	virtual bool updateBV(BoundingVolume* bv) const = 0;
+	virtual bool updateBV(BoundingVolume& bv) const = 0;
 
 	virtual void getCentroid(Point3d& c) const = 0;
 	virtual void getCovariance(const Point3d& centre,
@@ -111,11 +111,37 @@ public:
 	void setPoints(std::vector<Point3d>&& pnts);  // move semantics
 	void addPoint(const Point3d& pnt);
 
-	bool updateBV(BoundingVolume* bv) const;
+	bool updateBV(BoundingVolume& bv) const;
 
 	void getCentroid(Point3d& c) const;
 	void getCovariance(const Point3d& centre,
 			Matrix3d& cov) const;
+
+	// closest point
+	double distanceToPoint(const Point3d& pnt, Point3d& nearest) const;
+
+	// always inf
+	double distanceToPoint(const Point3d& pnt, const Vector3d& dir, Point3d& nearest ) const;
+};
+
+class IndexedBoundablePointSet : public Boundable {
+public:
+	std::vector<std::shared_ptr<IndexedPoint3d> > pnts;
+public:
+	IndexedBoundablePointSet(int idx);
+	IndexedBoundablePointSet(const std::vector<std::shared_ptr<IndexedPoint3d> >&  pnts, int idx);
+	IndexedBoundablePointSet(std::vector<std::shared_ptr<IndexedPoint3d> >&& pnts, int idx);  // move semantics
+
+	void setPoints(const std::vector<std::shared_ptr<IndexedPoint3d> >& pnts);
+	void setPoints(std::vector<std::shared_ptr<IndexedPoint3d> >&& pnts);
+
+	void addPoint(const std::shared_ptr<IndexedPoint3d>& pnt);
+	void addPoint(std::shared_ptr<IndexedPoint3d>&& pnt);
+
+	bool updateBV(BoundingVolume& bv) const;
+
+	void getCentroid(Point3d& c) const;
+	void getCovariance(const Point3d& centre, Matrix3d& cov) const;
 
 	// closest point
 	double distanceToPoint(const Point3d& pnt, Point3d& nearest) const;
@@ -174,13 +200,12 @@ public:
 	virtual bool update(const Boundable& b);
 
 	// Bound a set of boundables, can use centroid and covariance
-	virtual void bound(const std::vector<UniqueBoundable>& b) = 0;  // unique boundables
 	virtual void bound(const std::vector<SharedBoundable>& b) = 0;  // shared boundables
 
 	// Split into smaller groups for inserting into a tree
-	virtual void split(const std::vector<SharedBoundable>& b,               // copy shared boundables
+	virtual bool split(const std::vector<SharedBoundable>& b,               // copy shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const = 0;
-	virtual void split(std::vector<SharedBoundable>&& b,                    // move shared boundables
+	virtual bool split(std::vector<SharedBoundable>&& b,                    // move shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const = 0;
 
 	virtual BoundingVolume* clone();
@@ -232,18 +257,17 @@ public:
 	virtual bool updateSphere(const Point3d& c, double r);
 
 	// Bound a set of boundables, can use centroid and covariance
-	virtual void bound(const std::vector<UniqueBoundable>& b);  // unique boundables
 	virtual void bound(const std::vector<SharedBoundable>& b);  // shared boundables
 
 	// Split into smaller groups for inserting into a tree
 	// oct-tree style
-	virtual void split(const std::vector<SharedBoundable>& b,               // copy shared boundables
+	virtual bool split(const std::vector<SharedBoundable>& b,               // copy shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const;
-	virtual void split(std::vector<SharedBoundable>&& b,                    // move shared boundables
+	virtual bool split(std::vector<SharedBoundable>&& b,                    // move shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const;
 
-	virtual BoundingSphere* clone();
-	virtual BoundingSphere* newInstance();
+	virtual BoundingSphere* clone() const;
+	virtual BoundingSphere* newInstance() const;
 };
 
 
@@ -263,7 +287,7 @@ public:
 
 	void set(const Point3d& c, const Vector3d& hw);
 	void setHalfWidths(const Vector3d& hw);
-	void getHalfWidths(Vector3d& hw);
+	void getHalfWidths(Vector3d& hw) const;
 	void setCentre(const Point3d& c);
 	void getCentre(Point3d& c) const;
 
@@ -278,10 +302,8 @@ public:
 
 	virtual bool intersectsPoint(const Point3d& p) const;
 	virtual bool intersectsSphere(const Point3d& c, double r) const;
-	virtual bool intersectsLine(const Point3d& p, const Vector3d& v)
-	const;
-	virtual bool intersectsRay(const Point3d& p, const Vector3d& v)
-	const;
+	virtual bool intersectsLine(const Point3d& p, const Vector3d& v) const;
+	virtual bool intersectsRay(const Point3d& p, const Vector3d& v) const;
 	virtual bool intersectsPlane(const Plane& p) const;
 
 	virtual double distanceToPoint(const Point3d& pnt,
@@ -319,14 +341,13 @@ public:
 
 
 	// Bound a set of boundables, can use centroid and covariance
-	virtual void bound(const std::vector<UniqueBoundable>& b);  // unique boundables
 	virtual void bound(const std::vector<SharedBoundable>& b);  // shared boundables
 
 	// Split into smaller groups for inserting into a tree
 	// Split along longest axis
-	virtual void split(const std::vector<SharedBoundable>& b,               // copy shared boundables
+	virtual bool split(const std::vector<SharedBoundable>& b,               // copy shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const;
-	virtual void split(std::vector<SharedBoundable>&& b,                    // move shared boundables
+	virtual bool split(std::vector<SharedBoundable>&& b,                    // move shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const;
 
 	virtual AABB* clone();
@@ -367,14 +388,13 @@ public:
 	virtual bool intersectsVisitor(const BoundingVolume& bv) const;
 
 	// Bound a set of boundables, can use centroid and covariance
-	virtual void bound(const std::vector<UniqueBoundable>& b);  // unique boundables
 	virtual void bound(const std::vector<SharedBoundable>& b);  // shared boundables
 
 	// Split into smaller groups for inserting into a tree
 	// Split along longest axis
-	virtual void split(const std::vector<SharedBoundable>& b,               // copy shared boundables
+	virtual bool split(const std::vector<SharedBoundable>& b,               // copy shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const;
-	virtual void split(std::vector<SharedBoundable>&& b,                    // move shared boundables
+	virtual bool split(std::vector<SharedBoundable>&& b,                    // move shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const;
 
 	virtual OBB* clone();
@@ -451,6 +471,7 @@ protected:
 	BVNode* spawnChild(std::vector<SharedBoundable>&& elems);
 
 	virtual void updateBoundsUp(const Boundable& b);
+	virtual void updateBoundsDown(BVNode& node);
 
 };
 
