@@ -453,6 +453,36 @@ double Point3d::distanceSquared(double x, double y, double z) const {
    return dx*dx+dy*dy+dz*dz;
 }
 
+// Indexed point
+// Point implementation
+IndexedPoint3d::IndexedPoint3d()
+: Point3d(0,0,0), idx(-1) {}
+
+IndexedPoint3d::IndexedPoint3d(const IndexedPoint3d& copyMe)
+: Point3d(copyMe), idx(copyMe.idx) {}
+
+IndexedPoint3d::IndexedPoint3d(const Vector3d& pointMe, int index)
+: Point3d(pointMe), idx(index) {}
+
+IndexedPoint3d::IndexedPoint3d(double x, double y, double z, int index)
+: Point3d(x,y,z), idx(index) {}
+
+IndexedPoint3d& IndexedPoint3d::operator=(const IndexedPoint3d& assignMe) {
+   x = assignMe.x;
+   y = assignMe.y;
+   z = assignMe.z;
+   idx = assignMe.idx;
+   return *this;
+}
+
+void IndexedPoint3d::setIndex(int index) {
+	idx = index;
+}
+
+int IndexedPoint3d::getIndex() const {
+	return idx;
+}
+
 // Matrix implementation
 
 const Matrix3d Matrix3d::IDENTITY = Matrix3d(1,0,0,0,1,0,0,0,1);

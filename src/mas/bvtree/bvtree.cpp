@@ -22,6 +22,10 @@ int Boundable::getIndex() {
 	return idx;
 }
 
+aaa
+
+/*
+
 bool Boundable::updateBV(PBoundingVolume bv) const {
 	return updateBV(bv.get());
 }
@@ -96,24 +100,23 @@ double BoundablePointSet::distanceToPoint(const Point3d &pnt, const Vector3d &di
 
 	double dmin = math::DOUBLE_INFINITY;
 
-	/*
-	 * Computes closest in direction
-	double q0 = pnt.dot(pnt);
-	double q1 = 2*pnt.dot(dir);
-	double q2 = dir.dot(dir);
+//	 // Computes closest in direction
+//	 double q0 = pnt.dot(pnt);
+//	 double q1 = 2*pnt.dot(dir);
+//	 double q2 = dir.dot(dir);
+//
+//	Vector3d diff;
+//	for (Point3d mpnt : pnts) {
+//		diff.subtract(mpnt, pnt);
+//		double d = diff.dot(dir)/q2;
+//		d = sqrt(q0+d*q1+q2);
+//
+//		if (d < dmin) {
+//			dmin = d;
+//			nearest.set(mpnt);
+//		}
+//	}
 
-	Vector3d diff;
-	for (Point3d mpnt : pnts) {
-		diff.subtract(mpnt, pnt);
-		double d = diff.dot(dir)/q2;
-		d = sqrt(q0+d*q1+q2);
-
-		if (d < dmin) {
-			dmin = d;
-			nearest.set(mpnt);
-		}
-	}
-	 */
 
 	return dmin;
 
@@ -2129,7 +2132,7 @@ PBVTree BVTreeFactory::createTree(const PBoundingVolume bv,
 	return tree;
 }
 
-/* Static routines */
+//  Static routines
 class BVNodeDistance {
 public:
 	PBVNode node;
@@ -2263,137 +2266,135 @@ PBoundable nearest_boundable(const PBVTree bvh, const Point3d &pnt,
 	return nearest;
 }
 
-/*
 
-
-PBoundable nearest_boundable(const PBVTree bvh, const Point3d &pnt,
-		double tol, NearestBoundableData &data) {
-
-	PBoundable nearest = NULL;
-	Point3d p;
-
-	data.dist = math::DOUBLE_INFINITY;
-	data.tol = tol;
-	data.nearestBoundables.clear();
-	data.nearestPoints.clear();
-
-	std::priority_queue<BVNodeDistance, std::vector<BVNodeDistance>,
-	BVNodeDistanceComparator> queue;
-
-	queue.push( BVNodeDistance(bvh->getRoot(),pnt) );
-	while (queue.size() > 0) {
-
-		BVNodeDistance bvd = queue.top();
-		queue.pop();
-		if (bvd.dist > data.dist+tol) {
-			// remaining nodes are further
-			break;
-		}
-
-		PBVNode node = bvd.node;
-		if (node->isLeaf()) {
-
-			PBoundableList elems = node->elems;
-			for (PBoundable elem : node->elems) {
-
-				double d = elem->distanceToPoint(pnt, p);
-				if (d < data.dist-tol) {
-					// clear current list of nearest
-					data.dist = d;
-					nearest = elem;
-					data.nearestBoundables.clear();
-					data.nearestBoundables.push_back(nearest);
-					data.nearestPoints.clear();
-					data.nearestPoints.push_back(p);
-				} else if (d < data.dist) {
-					// add new nearest to front of list
-					data.dist = d;
-					data.nearestPoints.insert(data.nearestPoints.begin(), p);
-					data.nearestBoundables.insert(data.nearestBoundables.begin(), elem);
-				} else if (d <= data.dist+tol) {
-					// add new nearest to back of list
-					data.nearestBoundables.push_back(elem);
-					data.nearestPoints.push_back(p);
-				}
-			}
-		} else {
-
-			// add children to queue
-			for (PBVNode child : node->children) {
-				double d = child->bv->distanceToPoint(pnt, p);
-				if (d <= data.dist+tol) {
-					queue.push (BVNodeDistance(child, p, d));
-				}
-			}
-		}
-	}
-
-	return nearest;
-
-}
-PBoundable nearest_boundable(const PBVTree bvh, const Point3d &pnt,
-		const Vector3d &dir, double tol, NearestBoundableData &data) {
-
-	PBoundable nearest = NULL;
-	Point3d p;
-
-	data.dist = math::DOUBLE_INFINITY;
-	data.tol = tol;
-	data.nearestBoundables.clear();
-	data.nearestPoints.clear();
-
-	std::priority_queue<BVNodeDistance, std::vector<BVNodeDistance>,
-	BVNodeDistanceComparator> queue;
-
-	queue.push( BVNodeDistance(bvh->getRoot(), pnt, dir) );
-	while (queue.size() > 0) {
-
-		BVNodeDistance bvd = queue.top();
-		queue.pop();
-		if (bvd.dist > data.dist+tol) {
-			// remaining nodes are further
-			break;
-		}
-
-		PBVNode node = bvd.node;
-		if (node->isLeaf()) {
-			for (PBoundable elem : node->elems) {
-				double d = elem->distanceToPoint(pnt, dir, p);
-				if (d < data.dist-tol) {
-					// clear current list of nearest
-					data.dist = d;
-					nearest = elem;
-					data.nearestBoundables.clear();
-					data.nearestBoundables.push_back(nearest);
-					data.nearestPoints.clear();
-					data.nearestPoints.push_back(p);
-				} else if (d < data.dist) {
-					// add new nearest to front of list
-					data.dist = d;
-					data.nearestPoints.insert(data.nearestPoints.begin(), p);
-					data.nearestBoundables.insert(data.nearestBoundables.begin(), elem);
-				} else if (d <= data.dist+tol) {
-					// add new nearest to back of list
-					data.nearestBoundables.push_back(elem);
-					data.nearestPoints.push_back(p);
-				}
-
-			}
-		} else {
-
-			// add children to queue
-			for (PBVNode child : node->children) {
-				double d = child->bv->distanceToPoint(pnt, dir, p);
-				if (d <= data.dist+tol) {
-					queue.push (BVNodeDistance(child, p, d));
-				}
-			}
-		}
-	}
-
-	return nearest;
-
-}
+//PBoundable nearest_boundable(const PBVTree bvh, const Point3d &pnt,
+//		double tol, NearestBoundableData &data) {
+//
+//	PBoundable nearest = NULL;
+//	Point3d p;
+//
+//	data.dist = math::DOUBLE_INFINITY;
+//	data.tol = tol;
+//	data.nearestBoundables.clear();
+//	data.nearestPoints.clear();
+//
+//	std::priority_queue<BVNodeDistance, std::vector<BVNodeDistance>,
+//	BVNodeDistanceComparator> queue;
+//
+//	queue.push( BVNodeDistance(bvh->getRoot(),pnt) );
+//	while (queue.size() > 0) {
+//
+//		BVNodeDistance bvd = queue.top();
+//		queue.pop();
+//		if (bvd.dist > data.dist+tol) {
+//			// remaining nodes are further
+//			break;
+//		}
+//
+//		PBVNode node = bvd.node;
+//		if (node->isLeaf()) {
+//
+//			PBoundableList elems = node->elems;
+//			for (PBoundable elem : node->elems) {
+//
+//				double d = elem->distanceToPoint(pnt, p);
+//				if (d < data.dist-tol) {
+//					// clear current list of nearest
+//					data.dist = d;
+//					nearest = elem;
+//					data.nearestBoundables.clear();
+//					data.nearestBoundables.push_back(nearest);
+//					data.nearestPoints.clear();
+//					data.nearestPoints.push_back(p);
+//				} else if (d < data.dist) {
+//					// add new nearest to front of list
+//					data.dist = d;
+//					data.nearestPoints.insert(data.nearestPoints.begin(), p);
+//					data.nearestBoundables.insert(data.nearestBoundables.begin(), elem);
+//				} else if (d <= data.dist+tol) {
+//					// add new nearest to back of list
+//					data.nearestBoundables.push_back(elem);
+//					data.nearestPoints.push_back(p);
+//				}
+//			}
+//		} else {
+//
+//			// add children to queue
+//			for (PBVNode child : node->children) {
+//				double d = child->bv->distanceToPoint(pnt, p);
+//				if (d <= data.dist+tol) {
+//					queue.push (BVNodeDistance(child, p, d));
+//				}
+//			}
+//		}
+//	}
+//
+//	return nearest;
+//
+//}
+//PBoundable nearest_boundable(const PBVTree bvh, const Point3d &pnt,
+//		const Vector3d &dir, double tol, NearestBoundableData &data) {
+//
+//	PBoundable nearest = NULL;
+//	Point3d p;
+//
+//	data.dist = math::DOUBLE_INFINITY;
+//	data.tol = tol;
+//	data.nearestBoundables.clear();
+//	data.nearestPoints.clear();
+//
+//	std::priority_queue<BVNodeDistance, std::vector<BVNodeDistance>,
+//	BVNodeDistanceComparator> queue;
+//
+//	queue.push( BVNodeDistance(bvh->getRoot(), pnt, dir) );
+//	while (queue.size() > 0) {
+//
+//		BVNodeDistance bvd = queue.top();
+//		queue.pop();
+//		if (bvd.dist > data.dist+tol) {
+//			// remaining nodes are further
+//			break;
+//		}
+//
+//		PBVNode node = bvd.node;
+//		if (node->isLeaf()) {
+//			for (PBoundable elem : node->elems) {
+//				double d = elem->distanceToPoint(pnt, dir, p);
+//				if (d < data.dist-tol) {
+//					// clear current list of nearest
+//					data.dist = d;
+//					nearest = elem;
+//					data.nearestBoundables.clear();
+//					data.nearestBoundables.push_back(nearest);
+//					data.nearestPoints.clear();
+//					data.nearestPoints.push_back(p);
+//				} else if (d < data.dist) {
+//					// add new nearest to front of list
+//					data.dist = d;
+//					data.nearestPoints.insert(data.nearestPoints.begin(), p);
+//					data.nearestBoundables.insert(data.nearestBoundables.begin(), elem);
+//				} else if (d <= data.dist+tol) {
+//					// add new nearest to back of list
+//					data.nearestBoundables.push_back(elem);
+//					data.nearestPoints.push_back(p);
+//				}
+//
+//			}
+//		} else {
+//
+//			// add children to queue
+//			for (PBVNode child : node->children) {
+//				double d = child->bv->distanceToPoint(pnt, dir, p);
+//				if (d <= data.dist+tol) {
+//					queue.push (BVNodeDistance(child, p, d));
+//				}
+//			}
+//		}
+//	}
+//
+//	return nearest;
+//
+//}
  */
 
 }

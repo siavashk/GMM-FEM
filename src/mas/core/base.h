@@ -149,6 +149,20 @@ public:
    double distanceSquared(double x, double y, double z) const;
 };
 
+class IndexedPoint3d : public Point3d {
+private:
+	int idx;
+public:
+   IndexedPoint3d();
+   IndexedPoint3d(const IndexedPoint3d& copyMe);
+   IndexedPoint3d(const Vector3d& pointMe, int index);
+   IndexedPoint3d(double x, double y, double z, int index);
+   virtual IndexedPoint3d& operator=(const IndexedPoint3d& assignMe);
+
+   int getIndex() const;
+   void setIndex(int index);
+};
+
 // Generic 3D matrix
 class Matrix3d {
 public:

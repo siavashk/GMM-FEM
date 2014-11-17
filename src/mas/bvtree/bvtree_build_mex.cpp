@@ -23,6 +23,8 @@
 
 #define DIM 3
 
+#include <memory>
+
 using namespace mas::bvtree;
 
  // Main entry function
@@ -39,7 +41,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     std::vector<mas::Point3d> points;
-    std::vector<PBoundable> boundableGroups;
 
     // Get data
     if (nrhs > PNTS_IDX && mxIsDouble(prhs[PNTS_IDX])) {
@@ -62,7 +63,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             "Point array must be of type double.");
     }
 
-
+    std::vector<std::unique_ptr<Boundable>> boundableGroups;
     if (nrhs > GROUP_IDX) {
 
     	if (mxIsCell(prhs[GROUP_IDX])) {
@@ -81,7 +82,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     			for (int m = 0; m<M; m++) {
     				pointset.push_back(points[ (int)p[m]-1 ]);
     			}
-    			boundableGroups.push_back(std::make_shared<BoundablePointSet>(pointset, idx++));
+
+    			// move unique boundable into vector
+    			boundableGroups.push_back(std::move(std::make_unique<BoundablePointSet>(pointset, idx++)));
     		}
 
     		// mexPrintf("Boundable Point Sets: \n");
@@ -106,7 +109,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				for (int m = 0; m<M; m++ ) {
 					pointset.push_back( points[ (int)dgroup[n*M+m]-1 ] );
 				}
-				boundableGroups.push_back(std::make_shared<BoundablePointSet>(pointset, idx++));
+
+				// movie unique boundable into vector
+				boundableGroups.push_back(std::move(std::make_unique<BoundablePointSet>(pointset, idx++)));
 			}
     	} else {
             mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidInputType",
