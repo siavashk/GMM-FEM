@@ -34,9 +34,11 @@ namespace mas {
  *  order would be different, the %priority_queue will not re-sort
  *  the elements for you.  (How could it know to do so?)
  */
-template<typename _Tp, typename _Sequence = vector<_Tp>,
-		typename _Compare = less<typename _Sequence::value_type> >
+template<typename _Tp, typename _Sequence = std::vector<_Tp>,
+		typename _Compare = std::less<typename _Sequence::value_type> >
 class priority_queue: std::priority_queue<_Tp, _Sequence, _Compare> {
+public:
+	typedef typename _Sequence::value_type value_type;
 public:
 	/**
 	 *  @brief  Default constructor creates no elements.
@@ -48,42 +50,25 @@ public:
 	: std::priority_queue(__x, __s) {}
 #else
 	explicit priority_queue(const _Compare& __x, const _Sequence& __s) :
-			std::priority_queue(__x, __s) {
+			std::priority_queue<_Tp, _Sequence, _Compare>(__x, __s) {
 	}
 
 	explicit priority_queue(const _Compare& __x = _Compare(), _Sequence&& __s =
 			_Sequence()) :
-			std::priority_queue(std::move(__s), __x) {
+			std::priority_queue<_Tp, _Sequence, _Compare>(__x, std::move(__s)) {
 	}
 #endif
 
-	/**
-	 *  Returns a read-only (constant) reference to the data at the first
-	 *  element of the %queue.
-	 */
-	const_reference top() const {
-		__glibcxx_requires_nonempty();
-		return c.front();
-	}
-
-	/**
-	 *  @brief  Removes first element.
-	 *
-	 *  This is a typical %queue operation.  It shrinks the %queue
-	 *  by one.  The time complexity of the operation depends on the
-	 *  underlying sequence.
-	 *
-	 *  Note that no data is returned, and if the first element's
-	 *  data is needed, it should be retrieved before pop() is
-	 *  called.
-	 */
-	void pop() {
-		__glibcxx_requires_nonempty();
-		std::pop_heap(c.begin(), c.end(), comp);
-		c.pop_back();
-	}
+	using std::priority_queue<_Tp, _Sequence, _Compare>::empty;
+	using std::priority_queue<_Tp, _Sequence, _Compare>::size;
+	using std::priority_queue<_Tp, _Sequence, _Compare>::top;
+	using std::priority_queue<_Tp, _Sequence, _Compare>::push;
+	using std::priority_queue<_Tp, _Sequence, _Compare>::pop;
 
 #if __cplusplus >= 201103L
+
+	using std::priority_queue<_Tp, _Sequence, _Compare>::emplace;
+	using std::priority_queue<_Tp, _Sequence, _Compare>::swap;
 
 	/**
 	 *  @brief  Removes and returns the first element.
@@ -100,9 +85,9 @@ public:
 		__glibcxx_requires_nonempty();
 
 		// arrange so that back contains desired
-		std::pop_heap(c.begin(), c.end(), comp);
-		value_type top = std::move(c.back());
-		c.pop_back();
+		std::pop_heap(this->c.begin(), this->c.end(), this->comp);
+		value_type top = std::move(this->c.back());
+		this->c.pop_back();
 		return top;
 	}
 
