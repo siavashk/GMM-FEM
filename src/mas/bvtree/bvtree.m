@@ -33,5 +33,8 @@ classdef bvtree < handle
             eIdxs = bvtree_intersect_point(this.cpp_handle_, pnts, r);
             % disp(['Used bvtree with handle: ' num2str(this.cpp_handle_)]);
         end
+        function update(this, pnts)
+        	bvtree_update(this.cpp_handle_, pnts);
+        end
     end
 end

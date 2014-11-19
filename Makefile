@@ -90,7 +90,7 @@ vars:
 	@echo "MEX: $(MEX)"
 	
 
-all: cmd lib # mex
+all: cmd lib mex
 
 doc:
 	@doxygen doc/maslib.doxyfile

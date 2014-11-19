@@ -475,11 +475,11 @@ IndexedPoint3d& IndexedPoint3d::operator=(const IndexedPoint3d& assignMe) {
    return *this;
 }
 
-void IndexedPoint3d::setIndex(int index) {
+void IndexedPoint3d::setIndex(size_t index) {
 	idx = index;
 }
 
-int IndexedPoint3d::getIndex() const {
+size_t IndexedPoint3d::getIndex() const {
 	return idx;
 }
 

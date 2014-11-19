@@ -157,7 +157,7 @@ protected:
 protected:
 	BoundingVolume();
 	BoundingVolume(double margin);
-	virtual ~BoundingVolume() {};
+
 public:
 	// used for optimized static casting
 	virtual unsigned long uniqueClassId() const = 0;
@@ -465,13 +465,11 @@ public:
 	bool growRecursively();
 
 	void updateBounds();
+	void updateBoundsUp(const Boundable& b);
 
 protected:
 	BVNode* spawnChild(const std::vector<SharedBoundable>& elems);
 	BVNode* spawnChild(std::vector<SharedBoundable>&& elems);
-
-	virtual void updateBoundsUp(const Boundable& b);
-	virtual void updateBoundsDown(BVNode& node);
 
 };
 
@@ -486,17 +484,17 @@ private:
 protected:
 	BVTree();
 public:
-	BVTree(UniqueBV rootbv, double margin = 0);
-	BVTree(UniqueBV rootbv,	const std::vector<SharedBoundable>& elems, double margin = 0);
-	BVTree(UniqueBV rootbv,	std::vector<SharedBoundable>&& elems, double margin = 0);
+	BVTree(UniqueBV&& rootbv, double margin = 0);
+	BVTree(UniqueBV&& rootbv, const std::vector<SharedBoundable>& elems, double margin = 0);
+	BVTree(UniqueBV&& rootbv, std::vector<SharedBoundable>&& elems, double margin = 0);
 
 	BVTree(SharedBVNode&& root);
 
-	SharedBVNode getRoot();
+	SharedBVNode& getRoot();
 	double getRadius() const;
 
-	virtual void build(UniqueBV rootbv,	const std::vector<SharedBoundable>& elems, double margin = 0);
-	virtual void build(UniqueBV rootbv,	std::vector<SharedBoundable>&& elems, double margin = 0);
+	virtual void build(UniqueBV&& rootbv, const std::vector<SharedBoundable>& elems, double margin = 0);
+	virtual void build(UniqueBV&& rootbv, std::vector<SharedBoundable>&& elems, double margin = 0);
 
 	// margin around objects, for robustness
 	virtual void setMargin(double tol);
@@ -531,38 +529,43 @@ public:
 protected:
 	// intersection, return number of leaves
 	virtual void intersectPointRecursively(const Point3d& p,
-			std::vector<SharedBVNode>& out, const BVNode& node) const;
+			std::vector<SharedBVNode>& out, const SharedBVNode& node) const;
 	virtual void intersectPointRecursively(const Point3d& p,
-				std::vector<BVNode*>& out, const BVNode& node) const;
+				std::vector<BVNode*>& out, BVNode* node) const;
 
 	virtual void intersectSphereRecursively(const Point3d& c, double r,
-			std::vector<SharedBVNode>& out, const BVNode& node) const;
+			std::vector<SharedBVNode>& out, const SharedBVNode& node) const;
 	virtual void intersectSphereRecursively(const Point3d& c, double r,
-			std::vector<BVNode*>& out, const BVNode& node) const;
+			std::vector<BVNode*>& out, BVNode* node) const;
 
 	virtual void intersectLineRecursively(const Point3d& p,	const Vector3d& dir,
-			std::vector<SharedBVNode>& out, const BVNode& node) const;
+			std::vector<SharedBVNode>& out, const SharedBVNode& node) const;
 	virtual void intersectLineRecursively(const Point3d& p,	const Vector3d& dir,
-			std::vector<BVNode*>& out, const BVNode& node) const;
+			std::vector<BVNode*>& out, BVNode* node) const;
 
 	virtual void intersectRayRecursively(const Point3d& p, const Vector3d& dir,
-			std::vector<SharedBVNode>& out, const BVNode& node) const;
+			std::vector<SharedBVNode>& out, const SharedBVNode& node) const;
+	virtual void intersectRayRecursively(const Point3d& p, const Vector3d& dir,
+	            std::vector<BVNode*>& out, BVNode* node) const;
+
 	virtual void intersectPlaneRecursively(const Plane& plane,
-			std::vector<BVNode*>& out, const BVNode& node) const;
+			std::vector<SharedBVNode>& out, const SharedBVNode& node) const;
+	virtual void intersectPlaneRecursively(const Plane& plane,
+	            std::vector<BVNode*>& out, BVNode* node) const;
 
 	virtual void intersectBVRecursively(const BoundingVolume& bv,
-			std::vector<SharedBVNode>& out, const BVNode& node) const;
+			std::vector<SharedBVNode>& out, const SharedBVNode& node) const;
 	virtual void intersectBVRecursively(const BoundingVolume& bv,
-				std::vector<BVNode*>& out, const BVNode& node) const;
+				std::vector<BVNode*>& out, BVNode* node) const;
 
-	virtual void intersectTreeRecursively(const BVNode& me, const BVNode& her,
+	virtual void intersectTreeRecursively(const SharedBVNode& me, const SharedBVNode& her,
 			std::vector<SharedBVNode>& mine, std::vector<SharedBVNode>& hers) const;
-	virtual void intersectTreeRecursively(const BVNode& me, const BVNode& her,
+	virtual void intersectTreeRecursively(BVNode* me, BVNode* her,
 				std::vector<BVNode*>& mine, std::vector<BVNode*>& hers) const;
 
 
-	virtual void getLeavesRecursively(std::vector<SharedBVNode>& leaves, const BVNode& node) const;
-	virtual void getLeavesRecursively(std::vector<BVNode*>& leaves, const BVNode& node) const;
+	virtual void getLeavesRecursively(std::vector<SharedBVNode>& leaves, const SharedBVNode& node) const;
+	virtual void getLeavesRecursively(std::vector<BVNode*>& leaves, BVNode* node) const;
 
 };
 
@@ -608,7 +611,49 @@ public:
 	virtual void build(std::vector<SharedBoundable>&& elems, double margin = 0);
 };
 
+class BVTreeFactory {
+public:
+    // generic template
+    template <typename BV>
+    static UniqueBVNode createNode(double margin = 0);
+    template <typename BV>
+    static UniqueBVNode createNode(const std::vector<SharedBoundable>& elems, double margin = 0);
+    template <typename BV>
+    static UniqueBVNode createNode(std::vector<SharedBoundable>&& elems, double margin = 0);
 
+    // 'differentiated', fixed template type
+    template <typename BV>
+    static std::unique_ptr<BVNodeT<BV> > createNodeT(double margin = 0);
+    template <typename BV>
+    static std::unique_ptr<BVNodeT<BV> > createNodeT(const std::vector<SharedBoundable>& elems, double margin = 0);
+    template <typename BV>
+    static std::unique_ptr<BVNodeT<BV> > createNodeT(std::vector<SharedBoundable>&& elems, double margin = 0);
+
+    // generic template
+    template <typename BV>
+    static UniqueBVTree createTree(double margin = 0);
+    template <typename BV>
+    static UniqueBVTree createTree(const std::vector<SharedBoundable>& elems, double margin = 0);
+    template <typename BV>
+    static UniqueBVTree createTree(std::vector<SharedBoundable>&& elems, double margin = 0);
+
+    // 'differentiated' fixed type
+    template <typename BV>
+    static std::unique_ptr<BVTreeT<BV> > createTreeT(double margin = 0);
+    template <typename BV>
+    static std::unique_ptr<BVTreeT<BV> > createTreeT(const std::vector<SharedBoundable>& elems, double margin = 0);
+    template <typename BV>
+    static std::unique_ptr<BVTreeT<BV> > createTreeT(std::vector<SharedBoundable>&& elems, double margin = 0);
+};
+
+// static routines
+SharedBoundable nearest_boundable(const BVTree& bvh, const Point3d& p, Point3d& nearestPoint);
+SharedBoundable nearest_boundable(const BVTree& bvh, const Point3d& p, const Vector3d& dir, Point3d& nearestPoint);
+
+Boundable* nearest_boundable_raw(const BVTree& bvh, const Point3d& p, Point3d& nearestPoint);
+Boundable* nearest_boundable_raw(const BVTree& bvh, const Point3d& p, const Vector3d& dir, Point3d& nearestPoint);
+
+/*
 class BVFactory {
 public:
 	static UniqueBS createBoundingSphere();
@@ -673,11 +718,7 @@ public:
 	template <typename BV>
 	static std::unique_ptr<BVTreeT<BV> > createTreeT(std::vector<SharedBoundable>&& elems, double margin = 0);
 };
-
-// static routines
-Boundable* nearest_boundable(const BVTree& bvh, const Point3d& p, Point3d& nearestPoint);
-Boundable* nearest_boundable(const BVTree& bvh, const Point3d& p, const Vector3d& dir, Point3d& nearestPoint);
-
+*/
 
 /*
 struct NearestBoundableData {
