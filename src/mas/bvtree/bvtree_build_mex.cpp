@@ -27,129 +27,130 @@
 
 using namespace mas::bvtree;
 
- // Main entry function
+// Main entry function
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
-
     if (nrhs < 2) {
-        mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidNumInputs",
-                        "Must have at least 2 inputs.");
+        mexErrMsgIdAndTxt("MATLAB:bvtree_build:invalidNumInputs",
+                "Must have at least 2 inputs.");
     }
-    if (nlhs > 1){
-        mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:maxlhs",
+    if (nlhs > 1) {
+        mexErrMsgIdAndTxt("MATLAB:bvtree_build:maxlhs",
                 "Too many output arguments.");
     }
 
-    std::vector<mas::Point3d> points;
+    // Create shared indexed points
+    using SharedPoint = std::shared_ptr<mas::IndexedPoint3d>;
+    std::vector<SharedPoint> points;
 
-    // Get data
+    // Get point data
     if (nrhs > PNTS_IDX && mxIsDouble(prhs[PNTS_IDX])) {
-    	double *pnts = mxGetPr(prhs[PNTS_IDX]);
+        double *pnts = mxGetPr(prhs[PNTS_IDX]);
         int nPnts = mxGetN(prhs[PNTS_IDX]);
         points.reserve(nPnts);
 
         int dim = mxGetM(prhs[PNTS_IDX]);
         if (dim != DIM) {
-            mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidInput",
-                "Point array must be of size 3xN.");
+            mexErrMsgIdAndTxt("MATLAB:bvtree_build:invalidInput",
+                    "Point array must be of size 3xN.");
         }
 
-        for (int i=0; i<nPnts; i++) {
-        	points.push_back(mas::Point3d(pnts[3*i], pnts[3*i+1], pnts[3*i+2]));
+        for (int i = 0; i < nPnts; i++) {
+            points.push_back(
+                    std::make_shared<mas::IndexedPoint3d>(pnts[3 * i],
+                            pnts[3 * i + 1], pnts[3 * i + 2], i));
         }
 
     } else {
-        mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidInputType",
-            "Point array must be of type double.");
+        mexErrMsgIdAndTxt("MATLAB:bvtree_build:invalidInputType",
+                "Point array must be of type double.");
     }
 
-    std::vector<std::unique_ptr<Boundable>> boundableGroups;
+    std::vector<std::shared_ptr<Boundable>> boundableGroups;
     if (nrhs > GROUP_IDX) {
 
-    	if (mxIsCell(prhs[GROUP_IDX])) {
+        if (mxIsCell(prhs[GROUP_IDX])) {
 
-    		double  *p;
-    		mxArray *cellElement;
-    		int N = mxGetNumberOfElements(prhs[GROUP_IDX]);
+            double *p;
+            mxArray *cellElement;
+            int N = mxGetNumberOfElements(prhs[GROUP_IDX]);
 
-    		int idx = 1;	// start at index 1 (matlab rules)
-    		for (int i=0; i<N; i++) {
-    			cellElement = mxGetCell(prhs[GROUP_IDX],i);
-    			p = mxGetPr(cellElement);
-    			int M = mxGetNumberOfElements(cellElement);
+            int idx = 0;	// start at index 0
+            for (int i = 0; i < N; i++) {
+                cellElement = mxGetCell(prhs[GROUP_IDX], i);
+                p = mxGetPr(cellElement);
+                int M = mxGetNumberOfElements(cellElement);
 
-    			std::vector<mas::Point3d> pointset;
-    			for (int m = 0; m<M; m++) {
-    				pointset.push_back(points[ (int)p[m]-1 ]);
-    			}
+                std::vector<SharedPoint> pointset;
+                for (int m = 0; m < M; m++) {
+                    pointset.push_back(points[(int) p[m] - 1]); // -1 for matlab indexing, copying in case part of more than one boundable
+                }
 
-    			// move unique boundable into vector
-    			boundableGroups.push_back(std::move(std::make_unique<BoundablePointSet>(pointset, idx++)));
-    		}
+                // move unique boundable into vector
+                boundableGroups.push_back(
+                        std::make_shared<IndexedBoundablePointSet>(
+                                std::move(pointset), idx++));
+            }
 
-    		// mexPrintf("Boundable Point Sets: \n");
-    		//    		for (PBoundable boundable : boundableGroups) {
-    		//    			std::shared_ptr<BoundablePointSet> bps = std::static_pointer_cast<BoundablePointSet>(boundable);
-    		//    			mexPrintf("BPS[%i]: ", bps->idx);
-    		//    			for (mas::Point3d pnt : bps->pnts) {
-    		//   					mexPrintf("  (%.2lf, %.2lf, %.2lf) ", pnt.x, pnt.y, pnt.z);
-    		//   				}
-    		//   				mexPrintf("\n");
-    		//    		}
+        } else if (mxIsDouble(prhs[GROUP_IDX])) {
 
-    	} else if (mxIsDouble(prhs[GROUP_IDX])) {
-    		double *dgroup = mxGetPr(prhs[GROUP_IDX]);
-    		int M = mxGetM(prhs[GROUP_IDX]);
-    		int N = mxGetN(prhs[GROUP_IDX]);
+            double *dgroup = mxGetPr(prhs[GROUP_IDX]);
+            int M = mxGetM(prhs[GROUP_IDX]);
+            int N = mxGetN(prhs[GROUP_IDX]);
 
-    		int idx = 1; // start at index 1 (matlab rules)
+            int idx = 0; // start at index 0
 
-			for (int n = 0; n < N; n++) {
-				std::vector<mas::Point3d> pointset;
-				for (int m = 0; m<M; m++ ) {
-					pointset.push_back( points[ (int)dgroup[n*M+m]-1 ] );
-				}
+            for (int n = 0; n < N; n++) {
 
-				// movie unique boundable into vector
-				boundableGroups.push_back(std::move(std::make_unique<BoundablePointSet>(pointset, idx++)));
-			}
-    	} else {
-            mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidInputType",
-                "Groups of points must be an array or cell array of doubles (with integer values).");
+                std::vector<SharedPoint> pointset;
+                for (int m = 0; m < M; m++) {
+                    pointset.push_back(points[(int) dgroup[n * M + m] - 1]);
+                }
+
+                // movie unique boundable into vector
+                boundableGroups.push_back(
+                        std::make_shared<IndexedBoundablePointSet>(
+                                std::move(pointset), idx++));
+            }
+        } else {
+            mexErrMsgIdAndTxt("MATLAB:bvtree_build:invalidInputType",
+                    "Groups of points must be an array or cell array of doubles (with integer values).");
         }
     }
 
     double tol = -1;
     if (nrhs > TOL_IDX && !mxIsEmpty(prhs[TOL_IDX])
-        && mxIsDouble(prhs[TOL_IDX])) {
+            && mxIsDouble(prhs[TOL_IDX])) {
         double *eptr = mxGetPr(prhs[TOL_IDX]);
         tol = eptr[0];
     }
 
     if (tol < 0) {
-    	mas::Point3d sum(0,0,0);
-    	for (mas::Point3d pnt : points) {
-    		sum.add(pnt);
-    	}
-    	sum.scale(1.0/points.size());
-    	double r = 0;
-    	for (mas::Point3d pnt : points) {
-    		double d = pnt.distance(sum);
-    		if (d > r) {
-    			r = d;
-    		}
-    	}
+        mas::Point3d sum(0, 0, 0);
+        for (SharedPoint& pnt : points) {
+            sum.add(*pnt);
+        }
+        sum.scale(1.0 / points.size());
+        double r = 0;
+        for (SharedPoint& pnt : points) {
+            double d = pnt->distance(sum);
+            if (d > r) {
+                r = d;
+            }
+        }
 
-    	tol = r*1e-12;
+        tol = r * 1e-12;
     }
 
     // construct the actual BVTree using an AABB as a base
-    PBoundingVolume bv = BVFactory::createBV<OBB>();
-    mex::class_handle<BVTree> *tree = new mex::class_handle<BVTree>(POINTSET_TREE_SIGNATURE, bv, boundableGroups, tol);
+    UniqueBV bv(new OBB());
+    mex::class_handle<BVTree> *tree = new mex::class_handle<BVTree>(
+            POINTSET_TREE_SIGNATURE, std::move(bv), std::move(boundableGroups),
+            tol);
 
     // return tree
     if (nlhs > TREE_IDX) {
-    	plhs[TREE_IDX] = mex::get_mex_handle<BVTree>(tree);
+        plhs[TREE_IDX] = mex::get_mex_handle<BVTree>(tree);
     }
 
 }

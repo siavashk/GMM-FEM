@@ -14,140 +14,135 @@
 
 using namespace mas::bvtree;
 
-void printNode(PBVNode node, int depth) {
+void printNode(const BVNode& node, int depth) {
 
-	std::shared_ptr<OBB> obb = std::static_pointer_cast<OBB>(node->bv);
-	mas::Point3d &c = obb->c;
-	mas::Vector3d &hw = obb->halfWidths;
+    OBB* obb = static_cast<OBB*>(node.bv.get());
 
-	for (int i=0; i<depth; i++) {
-		printf("----");
-	}
-	printf("c: %.3lf %.3lf %.3lf\n", c.x, c.y, c.z);
-	for (int i=0; i<depth; i++) {
-		printf("    ");
-	}
-	printf("hw: %.3lf %.3lf %.3lf\n", hw.x, hw.y, hw.z);
+    const mas::Point3d &c = obb->c;
+    const mas::Vector3d &hw = obb->halfWidths;
 
-	for (PBVNode child : node->children) {
-		printNode(child, depth+1);
-	}
+    for (int i = 0; i < depth; i++) {
+        printf("----");
+    }
+    printf("c: %.3lf %.3lf %.3lf\n", c.x, c.y, c.z);
+    for (int i = 0; i < depth; i++) {
+        printf("    ");
+    }
+    printf("hw: %.3lf %.3lf %.3lf\n", hw.x, hw.y, hw.z);
 
-
-}
-
-void printTree(PBVTree obbt) {
-
-	PBVNode root = obbt->getRoot();
-	printNode(root, 0);
+    for (const SharedBVNode& child : node.children) {
+        printNode(*child, depth + 1);
+    }
 
 }
 
+void printTree(BVTree& obbt) {
+    SharedBVNode& root = obbt.getRoot();
+    printNode(*root, 0);
 
- // Main entry function
+}
+
+// Main entry function
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
-
     if (nrhs < 1) {
-        mexErrMsgIdAndTxt( "MATLAB:bvtree_intersect_point_mex:invalidNumInputs",
-                        "Must have at least 1 input.");
+        mexErrMsgIdAndTxt("MATLAB:bvtree_intersect_point:invalidNumInputs",
+                "Must have at least 1 input.");
     }
-    if (nlhs > 1){
-        mexErrMsgIdAndTxt( "MATLAB:bvtree_destroy_mex:maxlhs",
+    if (nlhs > 1) {
+        mexErrMsgIdAndTxt("MATLAB:bvtree_intersect_point:maxlhs",
                 "Too many output arguments.");
     }
 
     // Get data
     mex::class_handle<BVTree> *tree = NULL;
     if (nrhs > TREE_IDX) {
-    	tree = mex::get_class_handle<BVTree>(POINTSET_TREE_SIGNATURE, prhs[TREE_IDX]);
+        tree = mex::get_class_handle<BVTree>(POINTSET_TREE_SIGNATURE,
+                prhs[TREE_IDX]);
 
-    	if (tree == NULL) {
-    		mexPrintf("Unable to recover tree");
-    	}
+        if (tree == NULL) {
+            mexPrintf("Unable to recover tree");
+        }
 
-    	if (tree == NULL) {
-    		mexErrMsgIdAndTxt( "MATLAB:bvtree_intersect_point_mex:invalidInput",
-    		            "Cannot find BVTree with supplied id.");
-    	}
+        if (tree == NULL) {
+            mexErrMsgIdAndTxt("MATLAB:bvtree_intersect_point:invalidInput",
+                    "Cannot find BVTree with supplied id.");
+        }
 
-    	// printTree(tree);
+        // printTree(tree);
 
     } else {
-        mexErrMsgIdAndTxt( "MATLAB:bvtree_intersect_point_mex:invalidInputType",
-            "Expecting an integer id.");
+        mexErrMsgIdAndTxt("MATLAB:bvtree_intersect_point:invalidInputType",
+                "Expecting an integer id.");
     }
 
     // get Points
     // Get data
     double *pnts;
     int nPoints = 0;
-    if (nrhs > PNTS_IDX && !mxIsEmpty(prhs[PNTS_IDX]) && mxIsDouble(prhs[PNTS_IDX])) {
-    	pnts = mxGetPr(prhs[PNTS_IDX]);
-    	nPoints = mxGetN(prhs[PNTS_IDX]);
+    if (nrhs > PNTS_IDX && !mxIsEmpty(prhs[PNTS_IDX])
+            && mxIsDouble(prhs[PNTS_IDX])) {
+        pnts = mxGetPr(prhs[PNTS_IDX]);
+        nPoints = mxGetN(prhs[PNTS_IDX]);
 
-    	int dim = mxGetM(prhs[PNTS_IDX]);
-    	if (dim != DIM) {
-    		mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidInput",
-    				"Point array must be of size 3xN.");
-    	}
+        int dim = mxGetM(prhs[PNTS_IDX]);
+        if (dim != DIM) {
+            mexErrMsgIdAndTxt("MATLAB:bvtree_intersect_point:invalidInput",
+                    "Point array must be of size 3xN.");
+        }
     } else {
-    	mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidInputType",
-    			"Point array must be of type double.");
+        mexErrMsgIdAndTxt("MATLAB:bvtree_intersect_point:invalidInputType",
+                "Point array must be of type double.");
     }
 
     // radius
     double rad = 0;
     if (nrhs > RAD_IDX && !mxIsEmpty(prhs[RAD_IDX])
-        && mxIsDouble(prhs[RAD_IDX])) {
+            && mxIsDouble(prhs[RAD_IDX])) {
         double *eptr = mxGetPr(prhs[RAD_IDX]);
         rad = eptr[0];
     }
 
-
     // build output
     mxArray *cells = mxCreateCellMatrix(1, nPoints);
 
-	// #pragma omp parallel for
-    for (int i=0; i<nPoints; i++) {
-   		mas::Point3d pnt(pnts[3*i], pnts[3*i+1], pnts[3*i+2]);
-   		std::vector<BVNode*> bvnodes;
-   		tree->intersectSphere(pnt, rad, bvnodes);
+    // #pragma omp parallel for
+    for (int i = 0; i < nPoints; i++) {
+        mas::Point3d pnt(pnts[3 * i], pnts[3 * i + 1], pnts[3 * i + 2]);
+        std::vector<BVNode*> bvnodes;
+        tree->intersectSphere(pnt, rad, bvnodes);
 
-   		// mexPrintf(" Found %i nodes that intersect point (%lf, %lf, %lf)\n", bvnodes.size(), pnt.x, pnt.y, pnt.z);
+        // mexPrintf(" Found %i nodes that intersect point (%lf, %lf, %lf)\n", bvnodes.size(), pnt.x, pnt.y, pnt.z);
 
-   		// count elems
-   		int nelems = 0;
-   		for (BVNode* node : bvnodes) {
-   			nelems += node->numElements();
-   		}
+        // count elems
+        int nelems = 0;
+        for (BVNode* node : bvnodes) {
+            nelems += node->numElements();
+        }
 
-   		mxArray *elemIdxsArray = mxCreateDoubleMatrix(nelems, 1, mxREAL);
-   		double *elemIdxs = mxGetPr(elemIdxsArray);
+        mxArray *elemIdxsArray = mxCreateDoubleMatrix(nelems, 1, mxREAL);
+        double *elemIdxs = mxGetPr(elemIdxsArray);
 
-   		int eidx = 0;
+        int eidx = 0;
 
-   		//   		mexPrintf("Point:  (%.2lf, %.2lf, %.2lf)\n", pnt.x, pnt.y, pnt.z);
-   		for (BVNode* node : bvnodes) {
-   			for (PBoundable& elem : node->elems) {
-   				std::shared_ptr<BoundablePointSet>& bps = std::static_pointer_cast<BoundablePointSet>(elem);
-   				elemIdxs[eidx++] = bps->idx;
+        //   		mexPrintf("Point:  (%.2lf, %.2lf, %.2lf)\n", pnt.x, pnt.y, pnt.z);
+        for (BVNode* node : bvnodes) {
+            for (SharedBoundable& elem : node->elems) {
+                elemIdxs[eidx++] = (elem->idx + 1); // add one for matlab indexing
 
-   				//   				mexPrintf("BoundedPoints[%i] (%i): \n", bps->idx, bps->pnts.size());
-   				//   				for (mas::Point3d pnt : bps->pnts) {
-   				//   					mexPrintf("  (%.2lf, %.2lf, %.2lf) ", pnt.x, pnt.y, pnt.z);
-   				//   				}
-   				//   				mexPrintf("\n");
-   			}
-   		}
+                //   				mexPrintf("BoundedPoints[%i] (%i): \n", bps->idx, bps->pnts.size());
+                //   				for (mas::Point3d pnt : bps->pnts) {
+                //   					mexPrintf("  (%.2lf, %.2lf, %.2lf) ", pnt.x, pnt.y, pnt.z);
+                //   				}
+                //   				mexPrintf("\n");
+            }
+        }
 
-   		mxSetCell(cells, i, elemIdxsArray);
+        mxSetCell(cells, i, elemIdxsArray);
     }
 
     if (nlhs > IDXS_OUT) {
-    	plhs[0] = cells;
+        plhs[0] = cells;
     }
-
-
 
 }

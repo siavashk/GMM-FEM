@@ -7,20 +7,20 @@ namespace bvtree {
 
 template<typename BV>
 BVNodeT<BV>::BVNodeT(double margin)
-: BVNode(std::move(BVFactory::createBV<BV>())) {
+: BVNode(std::unique_ptr<BV>(new BV())) {
 	bv->setMargin(margin);
 }
 
 template<typename BV>
 BVNodeT<BV>::BVNodeT(const std::vector<SharedBoundable>& elems, double margin)
-: BVNode(std::move(BVFactory::createBV<BV>())) {
+: BVNode(std::unique_ptr<BV>(new BV())) {
 	bv->setMargin(margin);
 	bv->bound(elems);
 }
 
 template<typename BV>
 BVNodeT<BV>::BVNodeT(std::vector<SharedBoundable>&& elems, double margin)
-: BVNode(std::move(BVFactory::createBV<BV>())) {
+: BVNode(std::unique_ptr<BV>(new BV())) {
 	bv->setMargin(margin);
 	bv->bound(elems);
 }
@@ -97,28 +97,21 @@ void BVTreeT<BV>::build(std::vector<SharedBoundable>&& elems, double margin) {
 	root->growRecursively();
 }
 
-
-template <typename BV>
-std::unique_ptr<BV> BVFactory::createBV() {
-	return std::unique_ptr<BV>(new BV());
-}
-
-
 template <typename BV>
 UniqueBVNode BVTreeFactory::createNode(double margin) {
-	std::unique_ptr<BV> bv = BVFactory::createBV<BV>();
+	std::unique_ptr<BV> bv(new BV());
 	return std::unique_ptr<BVNode>(new BVNode(std::move(bv), margin) );
 }
 
 template <typename BV>
 UniqueBVNode BVTreeFactory::createNode(const std::vector<SharedBoundable>& elems, double margin) {
-	std::unique_ptr<BV> bv = BVFactory::createBV<BV>();
+	std::unique_ptr<BV> bv(new BV());
 	return std::unique_ptr<BVNode>( new BVNode(std::move(bv), elems, margin) );
 }
 
 template <typename BV>
 UniqueBVNode BVTreeFactory::createNode(std::vector<SharedBoundable>&& elems, double margin) {
-	std::unique_ptr<BV> bv = BVFactory::createBV<BV>();
+	std::unique_ptr<BV> bv(new BV());
 	return std::unique_ptr<BVNode>(new BVNode(std::move(bv), elems, margin) );
 }
 
@@ -143,21 +136,21 @@ std::unique_ptr<BVNodeT<BV> > BVTreeFactory::createNodeT(
 
 template <typename BV>
 UniqueBVTree BVTreeFactory::createTree(double margin) {
-	std::unique_ptr<BV> bv (std::move(BVFactory::createBV<BV>()));
+	std::unique_ptr<BV> bv (new BV());
 	return std::unique_ptr<BVTree>( new BVTree(std::move(bv), margin) );
 }
 
 template <typename BV>
 UniqueBVTree BVTreeFactory::createTree(const std::vector<SharedBoundable>& elems,
 		double margin) {
-	std::unique_ptr<BV> bv( std::move(BVFactory::createBV<BV>()) );
+	std::unique_ptr<BV> bv(new BV());
 	return std::unique_ptr<BVTree>( new BVTree(std::move(bv), elems, margin) );
 }
 
 template <typename BV>
 UniqueBVTree BVTreeFactory::createTree(std::vector<SharedBoundable>&& elems,
 		double margin) {
-	std::unique_ptr<BV> bv ( std::move(BVFactory::createBV<BV>()) );
+	std::unique_ptr<BV> bv (new BV());
 	return std::make_shared<BVTree>( new BVTree(std::move(bv), elems, margin) );
 }
 
