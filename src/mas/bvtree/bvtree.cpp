@@ -2035,7 +2035,7 @@ BVTree::BVTree(SharedBVNode&& root) {
     this->root = std::move(root);
 }
 
-SharedBVNode& BVTree::getRoot() {
+const SharedBVNode& BVTree::getRoot() const {
     return root;
 }
 

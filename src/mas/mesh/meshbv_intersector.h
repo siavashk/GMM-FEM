@@ -18,82 +18,71 @@ class TriangleIntersector {
 private:
 	double epsilon;
 
-	double dp1, dq1, dr1, dp2, dq2, dr2;
-   	Vector3d v1, v2, v, N1, N2, N;
-	Vector2d P1, Q1, R1, P2, Q2, R2;
-    double alpha;
-
-	Vector3d edge0, edge1, tvec, pvec, qvec;
-    double det, inv_det;
-
 private:
 	int check_min_max (
-      const Vector3d &p1, const Vector3d &q1, const Vector3d &r1, 
-		const Vector3d &p2, const Vector3d &q2, const Vector3d &r2);
+      const Vector3d& p1, const Vector3d& q1, const Vector3d& r1,
+		const Vector3d& p2, const Vector3d& q2, const Vector3d& r2) const;
 	int construct_intersection (
-      const Vector3d &p1, const Vector3d &q1, const Vector3d &r1, 
-		const Vector3d &p2, const Vector3d &q2, const Vector3d &r2, 
-		Point3d pnts[]);
+      const Vector3d& p1, const Vector3d& q1, const Vector3d& r1,
+		const Vector3d& p2, const Vector3d& q2, const Vector3d& r2,
+		std::vector<Point3d>& pnts) const;
 	int tri_tri_inter_3d (
-      const Vector3d &p1, const Vector3d &q1, const Vector3d &r1, 
-		const Vector3d &p2, const Vector3d &q2, const Vector3d &r2, 
-		double dp2, double dq2, double dr2, Point3d pnts[]);
+      const Vector3d& p1, const Vector3d& q1, const Vector3d& r1,
+		const Vector3d& p2, const Vector3d& q2, const Vector3d& r2,
+		double dp2, double dq2, double dr2, std::vector<Point3d>& pnts) const;
 public:
 	TriangleIntersector();
 	TriangleIntersector(double eps);
+
 	void setEpsilon(double eps);
-	double getEpsilon();
+	double getEpsilon() const;
+
 	int intersectTriangleTriangle (
-		const Vector3d &p1, const Vector3d &q1, const Vector3d &r1, 
-		const Vector3d &p2, const Vector3d &q2, const Vector3d &r2, Point3d pnts[]);
+		const Vector3d& p1, const Vector3d& q1, const Vector3d& r1,
+		const Vector3d& p2, const Vector3d& q2, const Vector3d& r2,
+		std::vector<Point3d>& pnts) const;
 	int intersectTriangleLine (
-      const Point3d &v0, const Point3d &v1, const Point3d &v2, 
-	  const Point3d &pos, const Vector3d &dir, Vector3d &duv);
-	int intersectTrianglePlane(const Point3d &p0, const Point3d &p1,
-      const Point3d &p2, const Plane &plane, Point3d pnts[]);
+      const Point3d& v0, const Point3d& v1, const Point3d& v2,
+	  const Point3d& pos, const Vector3d& dir, Vector3d& duv);
+	int intersectTrianglePlane(const Point3d& p0, const Point3d& p1,
+      const Point3d& p2, const Plane& plane, std::vector<Point3d>& pnts) const;
 	double nearestpoint (
-      const Point3d &v0, const Point3d &v1, const Point3d &v2, const Point3d &p, 
-		Point3d &closest, Vector3d &duv);
+      const Point3d& v0, const Point3d& v1, const Point3d& v2, const Point3d& p,
+		Point3d& closest, Vector3d& duv) const;
 
 };
 
 class TriangleLineIntersection {
 public:
-	PPolygon face;
+	SharedPolygon face;
 	std::shared_ptr<Line> line;
-	Point3d *points;
-	int numPoints;
+	std::vector<Point3d> points;
 
 public:
-	TriangleLineIntersection(PPolygon face, std::shared_ptr<Line> line, 
-		Point3d pnts[], int numPoints);
-	~TriangleLineIntersection();
+	TriangleLineIntersection(const SharedPolygon& face, const std::shared_ptr<Line>& line,
+		std::vector<Point3d>&& points);
 };
 
 class TrianglePlaneIntersection {
 public:
-	PPolygon face;
+	SharedPolygon face;
 	std::shared_ptr<Plane> plane;
-	Point3d *points;
-	int numPoints;
+	std::vector<Point3d> points;
 
 public:
-	TrianglePlaneIntersection(PPolygon face, std::shared_ptr<Plane> plane, 
-		Point3d pnts[], int numPoints);
-	~TrianglePlaneIntersection();
+	TrianglePlaneIntersection(const SharedPolygon& face, const std::shared_ptr<Plane>& plane,
+		std::vector<Point3d>&& pnts);
 };
 
 class TriangleTriangleIntersection {
 public:
-	PPolygon triangle0;
-	PPolygon triangle1;
-	Point3d *points;
-	int numPoints;
+	SharedPolygon triangle0;
+	SharedPolygon triangle1;
+	std::vector<Point3d> points;
 
 public:
-	TriangleTriangleIntersection(PPolygon tri0, PPolygon tri1, 
-		Point3d pnts[], int numPoints);
-	~TriangleTriangleIntersection();
+	TriangleTriangleIntersection(const SharedPolygon& tri0, const SharedPolygon& tri1,
+		std::vector<Point3d>&& pnts);
 };
 
 class BVIntersector {
@@ -105,35 +94,36 @@ private:
     Point3d myP0, myP1, myP2;
 private:
 	void intersectBoundingVolumeTriangles (
-      std::vector<TriangleTriangleIntersection> &intersections,
-      PBVNode node1, PBVNode node2);
+      std::vector<TriangleTriangleIntersection>& intersections,
+      const BVNode& node1, const BVNode& node2) const;
 	void intersectBoundingVolumeTriangleLines (
-      std::vector<TriangleLineIntersection> &intersections,
-      PBVNode node, Line &l);
+      std::vector<TriangleLineIntersection>& intersections,
+      const BVNode& node, const Line& l) const;
 	void intersectBoundingVolumeTrianglePlanes (
-      std::vector<TrianglePlaneIntersection> &intersections,
-      PBVNode node, const Plane &p);
+      std::vector<TrianglePlaneIntersection>& intersections,
+      const BVNode& node, const Plane& p) const;
 
 public:
 	BVIntersector();
 	BVIntersector(double epsilon);
+
 	void setEpsilon(double eps);
 	double getEpsilon();
 
 	std::vector<TriangleTriangleIntersection> intersectMeshMesh (
-      PolygonMesh &mesh1, PolygonMesh &mesh2);
+      const PolygonMesh& mesh1, const PolygonMesh& mesh2) const;
 	std::vector<TriangleTriangleIntersection> intersectMeshMesh (
-      PBVTree bvh1, PBVTree bvh2);
+      const BVTree& bvh1, const BVTree& bvh2) const;
 
     std::vector<TrianglePlaneIntersection> intersectMeshPlane (
-      PolygonMesh &mesh, Plane &plane);
+      const PolygonMesh& mesh, const Plane& plane) const;
     std::vector<TrianglePlaneIntersection> intersectMeshPlane (
-      PBVTree bvh, Plane &plane);
+      const BVTree& bvh, const Plane& plane) const;
 
 	std::vector<TriangleLineIntersection> intersectMeshLine (
-    	PBVTree bvh, Line &line);
+    	const BVTree& bvh, const Line& line) const;
 	std::vector<TriangleLineIntersection> intersectMeshLine (
-      PolygonMesh &mesh, Line &line);
+      const PolygonMesh& mesh, const Line& line) const;
 	
 };
 

@@ -150,13 +150,13 @@ public:
 };
 
 class IndexedPoint3d: public Point3d {
-private:
-    size_t idx;
+public:
+	size_t idx;
 public:
     IndexedPoint3d();
     IndexedPoint3d(const IndexedPoint3d& copyMe);
-    IndexedPoint3d(const Vector3d& pointMe, int index);
-    IndexedPoint3d(double x, double y, double z, int index);
+    IndexedPoint3d(const Vector3d& pointMe, size_t index);
+    IndexedPoint3d(double x, double y, double z, size_t index);
     virtual IndexedPoint3d& operator=(const IndexedPoint3d& assignMe);
 
     size_t getIndex() const;

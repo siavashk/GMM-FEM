@@ -8,27 +8,26 @@
 namespace mas {
 namespace mesh {
 
-BoundablePolygon::BoundablePolygon(const PPolygon poly)
-	: Boundable(-1), polygon(), tris() {
+BoundablePolygon::BoundablePolygon(const SharedPolygon& poly) :
+		Boundable(-1), polygon(), tris() {
 	setPolygon(poly);
 }
 
-void BoundablePolygon::getCentroid(Point3d &c) const {
+void BoundablePolygon::getCentroid(Point3d& c) const {
 	c.set(centroid);
 }
 
 void BoundablePolygon::computeCentroid() {
 	centroid.setZero();
-	PVertex3dList &verts = polygon->verts;
+	std::vector<SharedVertex3d>& verts = polygon->verts;
 	if (verts.size() == 0) {
 		return;
 	}
 
-	for (PVertex3dList::iterator pit = verts.begin();
-			pit < verts.end(); pit++) {
-		centroid.add( *(*pit) );
+	for (SharedVertex3d& vtx : verts) {
+		centroid.add(*vtx);
 	}
-	centroid.scale(1.0/polygon->verts.size());
+	centroid.scale(1.0 / verts.size());
 }
 
 void BoundablePolygon::triangulate() {
@@ -36,23 +35,20 @@ void BoundablePolygon::triangulate() {
 		tris.clear();
 		tris.push_back(polygon);
 	} else {
-		tris = MeshFactory::triangulate(polygon);
+		auto newtris = MeshFactory::triangulate(*polygon);
+		tris.clear();
+		tris.reserve(newtris.size());
+		for (auto& ntri : newtris) {
+			tris.push_back(std::move(ntri));
+		}
 	}
 }
 
-PPolygonList BoundablePolygon::getTriangulation() const {
-	PPolygonList out;
-	if (polygon->numVertices() == 3) {
-		out.push_back(polygon);
-	} else if (tris.size() == polygon->numVertices()-2) {
-		out = tris;
-	} else {
-		out = MeshFactory::triangulate(polygon);
-	}
-	return out;
+const std::vector<SharedPolygon>& BoundablePolygon::getTriangulation() const {
+	return tris;
 }
 
-void BoundablePolygon::setPolygon(const PPolygon poly) {
+void BoundablePolygon::setPolygon(const SharedPolygon& poly) {
 	polygon = poly;
 	computeCentroid();
 	triangulate();
@@ -60,61 +56,64 @@ void BoundablePolygon::setPolygon(const PPolygon poly) {
 
 void BoundablePolygon::update() {
 	computeCentroid();
+	// XXX verify triangulation is still valid?
+	// Then again, polygon is supposed to be planar, so
+	// are vertices allowed to move anyways?
+	triangulate();  // always retriangulate
 }
 
-void BoundablePolygon::getCovariance(const Point3d &center,
-		Matrix3d &cov) const {
+void BoundablePolygon::getCovariance(const Point3d& center,
+		Matrix3d& cov) const {
 
 	cov.setZero();
-	PVertex3dList &verts = polygon->verts;
+	std::vector<SharedVertex3d>& verts = polygon->verts;
 	if (verts.size() == 0) {
 		return;
 	}
 
 	Point3d diff;
-	for (PVertex3dList::iterator pit = verts.begin();
-			pit < verts.end(); pit++) {
-		diff.set(*(*pit));
+	for (SharedVertex3d& vtx : verts) {
+		diff.set(*vtx);
 		diff.subtract(center);
 		cov.addOuterProduct(diff, diff);
 	}
-	cov.scale(1.0/polygon->verts.size());
+	cov.scale(1.0 / verts.size());
 }
 
-bool BoundablePolygon::updateBV(BoundingVolume* bv) const {
-	PVertex3dList &verts = polygon->verts;
-	for (PVertex3dList::iterator pit = verts.begin();
-			pit < verts.end(); pit++) {
-		bv->updatePoint( *(*pit) );
+bool BoundablePolygon::updateBV(BoundingVolume& bv) const {
+	for (SharedVertex3d& vtx : polygon->verts) {
+		bv.updatePoint(*vtx);
 	}
 }
 
-double BoundablePolygon::distanceToPoint(const Point3d &pnt,
-		Point3d &nearest, Polygon &tri, Vector3d &bary) const {
+double BoundablePolygon::distanceToPoint(const Point3d& pnt, Point3d& nearest,
+		Vector3d& bary, SharedPolygon& tri) const {
 
 	double distance = 0;
+
 	// triangulate if required
 	if (polygon->numVertices() == 3) {
 		distance = distance_to_triangle(pnt, *(polygon->verts[0]),
 				*(polygon->verts[1]), *(polygon->verts[2]), nearest, bary);
-		tri.set(*polygon);
+		tri = polygon;
 	} else {
 
 		// triangulate if not already done
-		const PPolygonList &ltris = getTriangulation();
+		const std::vector<SharedPolygon>& ltris = getTriangulation();
 
 		double distMin = math::DOUBLE_INFINITY;
 		double distTmp;
 		Point3d nearestTmp;
 		Vector3d baryTmp;
-		for (PPolygon ltri : ltris) {
+		for (const SharedPolygon& ltri : ltris) {
 			distTmp = distance_to_triangle(pnt, *(ltri->verts[0]),
 					*(ltri->verts[1]), *(ltri->verts[2]), nearestTmp, baryTmp);
 			if (distTmp < distMin) {
 				distMin = distTmp;
 				nearest.set(nearestTmp);
 				bary.set(baryTmp);
-				tri.set(*ltri);
+
+				tri = ltri;
 			}
 		}
 		distance = distMin;
@@ -123,16 +122,16 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 	return distance;
 }
 
-double BoundablePolygon::distanceToPoint(const Point3d &pnt,
-		Point3d &nearest) const {
-	Polygon tri;
+double BoundablePolygon::distanceToPoint(const Point3d& pnt,
+		Point3d& nearest) const {
 	Vector3d bary;
-	return distanceToPoint(pnt, nearest, tri, bary);
+	SharedPolygon tri = nullptr;
+	return distanceToPoint(pnt, nearest, bary, tri);
 }
 
-double BoundablePolygon::distanceToPoint(const Point3d &pnt,
-		const Vector3d &dir, Point3d &nearest, Polygon &tri,
-		Vector3d &bary) const {
+double BoundablePolygon::distanceToPoint(const Point3d& pnt,
+		const Vector3d& dir, Point3d& nearest, Vector3d& bary,
+		SharedPolygon& tri) const {
 
 	// intersect line with plane
 	double distance = polygon->plane.distanceSigned(pnt);
@@ -146,25 +145,24 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 			if (polygon->numVertices() == 3) {
 				// check if is in triangle
 				if (point_in_triangle(pnt, *(polygon->verts[0]),
-						*(polygon->verts[1]), *(polygon->verts[2]),
-						bary)) {
+						*(polygon->verts[1]), *(polygon->verts[2]), bary)) {
 					nearest.set(pnt);
-					tri.set(*polygon);
+					tri = polygon;
 					return 0;
 				}
 			} else {
 
 				// triangulate if not already done
-				const PPolygonList &ltris = getTriangulation();
+				const std::vector<SharedPolygon>& ltris = getTriangulation();
 
-				for (PPolygon ltri : ltris) {
+				for (const SharedPolygon& ltri : ltris) {
 					Vector3d baryTmp;
 					bool inside = point_in_triangle(pnt, *(ltri->verts[0]),
 							*(ltri->verts[1]), *(ltri->verts[2]), baryTmp);
 					if (inside) {
 						nearest.set(pnt);
 						bary.set(baryTmp);
-						tri.set(*ltri);
+						tri = ltri;
 						return 0;
 					}
 				}
@@ -172,7 +170,7 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 			}
 
 			// not inside triangle, do 2D intersection
-			Vertex3d &o = *(polygon->verts[0]);
+			Vertex3d& o = *(polygon->verts[0]);
 			Vector3d v1 = Vector3d(*(polygon->verts[1]));
 			v1.subtract(o);
 			Vector3d v2;
@@ -193,52 +191,54 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 			// If zero or opposite signs, points cross line
 			double p0x, p0y, p1x, p1y, dpx, dpy;
 			double f0, f1;
-			PVertex3d prevVtx = (polygon->verts.back());
-			p1x = prevVtx->dot(v1);
-			p1y = prevVtx->dot(v2);
-			f1 = dx*(p1y-py)-dy*(p1x-px);
+
+			typedef std::vector<SharedVertex3d>::iterator VIt;
+
+			VIt prevVtx = std::prev(polygon->verts.end());
+			p1x = (*prevVtx)->dot(v1);
+			p1y = (*prevVtx)->dot(v2);
+			f1 = dx * (p1y - py) - dy * (p1x - px);
 			Point3d pint;
 
 			double dmin = math::DOUBLE_INFINITY;
 			bool intersectFound = false;
 
-			for (PVertex3dList::iterator pit = polygon->verts.begin();
-					pit < polygon->verts.end(); pit++) {
+			for (VIt vit = polygon->verts.begin();
+					vit < polygon->verts.end(); vit++) {
 
-				PVertex3d pvtx = *pit;
-				Vertex3d &vtx = *(*pit);
+				SharedVertex3d& vtx = *vit;
 				f0 = f1;
 				p0x = p1x;
 				p0y = p1y;
-				p1x = vtx.dot(v1);
-				p1y = vtx.dot(v1);
-				f1 = dx*(p1y-py)-dy*(p1x-px);
+				p1x = vtx->dot(v1);
+				p1y = vtx->dot(v1);
+				f1 = dx * (p1y - py) - dy * (p1x - px);
 
 				if (f1 == 0) {
 					// falls on the line
 					intersectFound = true;
-					double d = vtx.distance(pnt);
+					double d = vtx->distance(pnt);
 					if (d < dmin) {
 						dmin = d;
-						nearest.set(vtx);
+						nearest.set(*vtx);
 						// vertex is on the line
 						bary.x = 1;
 						bary.y = 0;
 						bary.z = 0;
 						// XXX might want to make true triangle
-						tri.set(pvtx, pvtx, pvtx);
+						tri = std::make_shared<Polygon>(vtx, vtx, vtx);
 					}
-				} else if (f0*f1 < 0) {
+				} else if (f0 * f1 < 0) {
 					// intersection
 					intersectFound = true;
-					dpx = p1x-p0x;
-					dpy = p1y-p0y;
+					dpx = p1x - p0x;
+					dpy = p1y - p0y;
 
-					double s = 1.0/(dx*dpy-dpx*dy);
-					double u = (-dpx*px*dy + dpx*dx*py + dx*dpy*p0x
-							- dx*dpx*p0y)*s;
-					double v = (-dpy*px*dy + dpy*dx*py + dy*dpy*p0x
-							- dy*dpx*p0y)*s;
+					double s = 1.0 / (dx * dpy - dpx * dy);
+					double u = (-dpx * px * dy + dpx * dx * py + dx * dpy * p0x
+							- dx * dpx * p0y) * s;
+					double v = (-dpy * px * dy + dpy * dx * py + dy * dpy * p0x
+							- dy * dpx * p0y) * s;
 					pint.setZero();
 					pint.scaledAdd(u, v1);
 					pint.scaledAdd(v, v2);
@@ -250,19 +250,19 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 
 						// point straddles
 						// XXX might want to make true triangle
-						tri.set(prevVtx, pvtx, pvtx);
+						tri =  std::make_shared<Polygon>(*prevVtx, vtx, vtx);
 						bary.z = 0;
 						Vector3d tmp = Vector3d(nearest);
-						tmp.subtract(vtx);
+						tmp.subtract(*vtx);
 
-						Vector3d tmp2 = Vector3d(*prevVtx);
-						tmp2.subtract(vtx);
+						Vector3d tmp2(**prevVtx);
+						tmp2.subtract(*vtx);
 
-						bary.x = tmp.dot(tmp2)/tmp2.dot(tmp2);
-						bary.y = 1.0-bary.x;
+						bary.x = tmp.dot(tmp2) / tmp2.dot(tmp2);
+						bary.y = 1.0 - bary.x;
 					}
 
-					prevVtx = *pit;
+					prevVtx = vit;
 				}
 
 			}
@@ -274,36 +274,35 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 		} else {
 			// parallel, doesn't intersect
 			// negative direction
-			nearest.x = math::signum(dir.x)*math::DOUBLE_INFINITY;
-			nearest.y = math::signum(dir.y)*math::DOUBLE_INFINITY;
-			nearest.z = math::signum(dir.z)*math::DOUBLE_INFINITY;
+			nearest.x = math::signum(dir.x) * math::DOUBLE_INFINITY;
+			nearest.y = math::signum(dir.y) * math::DOUBLE_INFINITY;
+			nearest.z = math::signum(dir.z) * math::DOUBLE_INFINITY;
 			return math::DOUBLE_INFINITY;
 		}
 	} else {
 
 		// get intersection point
-		double t = -distance/denom;
+		double t = -distance / denom;
 		nearest.scaledAdd(pnt, t, dir);
 
 		// check if intersects triangle
 		if (polygon->numVertices() == 3) {
 			// check if is in triangle
 			if (point_in_triangle(nearest, *(polygon->verts[0]),
-					*(polygon->verts[1]), *(polygon->verts[2]),
-					bary)) {
-				tri.set(*polygon);
-				return fabs(t*dir.norm());
+					*(polygon->verts[1]), *(polygon->verts[2]), bary)) {
+				tri = polygon;
+				return fabs(t * dir.norm());
 			}
 		} else {
 
 			// triangulate if not already done
-			const PPolygonList &ltris = getTriangulation();
+			const std::vector<SharedPolygon>& ltris = getTriangulation();
 
-			for (PPolygon ltri : ltris) {
+			for (const SharedPolygon& ltri : ltris) {
 				bool inside = point_in_triangle(nearest, *(ltri->verts[0]),
 						*(ltri->verts[1]), *(ltri->verts[2]), bary);
 				if (inside) {
-					return fabs(t*dir.norm());
+					return fabs(t * dir.norm());
 				}
 			}
 
@@ -314,117 +313,111 @@ double BoundablePolygon::distanceToPoint(const Point3d &pnt,
 	return math::DOUBLE_INFINITY;
 }
 
-double BoundablePolygon::distanceToPoint(const Point3d &pnt,
-		const Vector3d &dir, Point3d &nearest) const {
-	Polygon tri;
+double BoundablePolygon::distanceToPoint(const Point3d& pnt,
+		const Vector3d& dir, Point3d& nearest) const {
+	SharedPolygon tri;
 	Vector3d bary;
-	return distanceToPoint(pnt, dir, nearest, tri, bary);
-}
-
-PBoundablePolygon BoundableFactory::createBoundablePolygon(
-		const PPolygon poly) {
-	return std::make_shared<BoundablePolygon>(poly);
+	return distanceToPoint(pnt, dir, nearest, bary, tri);
 }
 
 // methods for meshes
-POBBTree get_obb_tree(const PolygonMesh &mesh, double margin) {
-	return get_bv_tree_T<OBB>(mesh, margin);
-}
 
-PAABBTree get_aabb_tree(const PolygonMesh &mesh, double margin) {
-	return get_bv_tree_T<AABB>(mesh, margin);
-}
-
-PBSTree get_bs_tree(const PolygonMesh &mesh, double margin) {
+BSTree* get_bs_tree(const PolygonMesh& mesh, double margin) {
 	return get_bv_tree_T<BoundingSphere>(mesh, margin);
 }
 
-PPolygon nearest_polygon(const Point3d &pnt,
-		const PolygonMesh &mesh, Point3d &nearestPoint) {
+AABBTree* get_aabb_tree(const PolygonMesh& mesh, double margin) {
+	return get_bv_tree_T<AABB>(mesh, margin);
+}
+
+OBBTree* get_obb_tree(const PolygonMesh& mesh, double margin) {
+	return get_bv_tree_T<OBB>(mesh, margin);
+}
+
+SharedPolygon nearest_polygon(const Point3d& pnt, const PolygonMesh& mesh,
+		Point3d& nearestPoint) {
 	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	POBBTree tree = get_obb_tree(mesh);
-	PBoundable nearest = mas::bvtree::nearest_boundable(tree, pnt, nearestPoint);
-	PBoundablePolygon poly = std::static_pointer_cast<BoundablePolygon>(nearest);
+	UniqueOBBTree tree = std::unique_ptr<OBBTree>(get_obb_tree(mesh));
+	SharedBoundable nearest = mas::bvtree::nearest_boundable(*tree, pnt, nearestPoint);
+	SharedBoundablePolygon poly = std::static_pointer_cast<BoundablePolygon>(nearest);
 	return poly->polygon;
 }
 
-PPolygon nearest_polygon(const Point3d &pnt,
-		const Vector3d &dir, const PolygonMesh &mesh,
-		Point3d &nearestPoint) {
+SharedPolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
+		const PolygonMesh& mesh, Point3d& nearestPoint) {
 	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	POBBTree tree = get_obb_tree(mesh);
-	PBoundable nearest = mas::bvtree::nearest_boundable(tree, pnt, dir, nearestPoint);
-	PBoundablePolygon poly = std::static_pointer_cast<BoundablePolygon>(nearest);
+	UniqueOBBTree tree = std::unique_ptr<OBBTree>(get_obb_tree(mesh));
+	SharedBoundable nearest = mas::bvtree::nearest_boundable(*tree, pnt, dir,
+			nearestPoint);
+	SharedBoundablePolygon poly = std::static_pointer_cast<BoundablePolygon>(
+			nearest);
 	return poly->polygon;
 }
 
-PBoundablePolygon nearest_polygon(const Point3d &pnt, const PBVTree bvt, Point3d &nearestPoint) {
+SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const BVTree& bvt,
+		Point3d& nearestPoint) {
 	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	PBoundable nearest = mas::bvtree::nearest_boundable(bvt, pnt, nearestPoint);
-	PBoundablePolygon poly = std::dynamic_pointer_cast<BoundablePolygon>(nearest);
+	SharedBoundable nearest = mas::bvtree::nearest_boundable(bvt, pnt, nearestPoint);
+	SharedBoundablePolygon poly = std::dynamic_pointer_cast<BoundablePolygon>(
+			nearest);
 	return poly;
 }
 
-PBoundablePolygon nearest_polygon(const Point3d &pnt, const Vector3d &dir,
-		const PBVTree bvt, Point3d &nearestPoint) {
+SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
+		const BVTree& bvt, Point3d& nearestPoint) {
 	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	PBoundable nearest = mas::bvtree::nearest_boundable(bvt, pnt, dir, nearestPoint);
-	PBoundablePolygon poly = std::dynamic_pointer_cast<BoundablePolygon>(nearest);
+	SharedBoundable nearest = mas::bvtree::nearest_boundable(bvt, pnt, dir,
+			nearestPoint);
+	SharedBoundablePolygon poly = std::dynamic_pointer_cast<BoundablePolygon>(
+			nearest);
 	return poly;
 }
 
-int is_inside(const Point3d &pnt, const PolygonMesh &mesh, double tol,
+MeshQueryResult is_inside(const Point3d& pnt, const PolygonMesh& mesh, double tol,
 		int numRetries, double baryEpsilon) {
 	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
 	double margin = tol;
 	if (margin < 0) {
 		margin = 0;
 	}
-	POBBTree tree = get_obb_tree(mesh, margin);
+	UniqueOBBTree tree = std::unique_ptr<OBBTree>(get_obb_tree(mesh, margin));
 	//PBSTree tree = get_bs_tree(mesh);
-	return is_inside(pnt, mesh, tree, tol, numRetries, baryEpsilon);
+	return is_inside(pnt, mesh, *tree, tol, numRetries, baryEpsilon);
 }
 
-int is_inside(const Point3d &pnt, const PolygonMesh &mesh,
-		const PBVTree bvt, double tol, int numRetries, double baryEpsilon) {
+MeshQueryResult is_inside(const Point3d& pnt, const PolygonMesh& mesh, const BVTree& bvt,
+		double tol, int numRetries, double baryEpsilon) {
 
-	int inside = is_inside_or_on(pnt, mesh, bvt, tol, numRetries, baryEpsilon);
+	MeshQueryResult inside = is_inside_or_on(pnt, mesh, bvt, tol, numRetries, baryEpsilon);
 
-	if (inside == MESH_INSIDE_ON) {
-		inside = MESH_INSIDE_TRUE;
+	if (inside == MeshQueryResult::ON) {
+		inside = MeshQueryResult::INSIDE;
 	}
 	return inside;
 }
 
-int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
-		const PBVTree bvt, double tol, int numRetries,
-		double baryEpsilon) {
+MeshQueryResult is_inside_or_on(const Point3d& pnt, const PolygonMesh& mesh,
+		const BVTree& bvt, double tol, int numRetries, double baryEpsilon) {
 	InsideMeshQueryData data;
 	return is_inside_or_on(pnt, mesh, bvt, data, tol, numRetries, baryEpsilon);
 }
 
-int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
-		const PBVTree bvt, InsideMeshQueryData &data, double tol, int numRetries,
-		double baryEpsilon) {
+MeshQueryResult is_inside_or_on(const Point3d& pnt, const PolygonMesh& mesh,
+		const BVTree& bvt, InsideMeshQueryData& data, double tol,
+		int numRetries, double baryEpsilon) {
 
-	data.in = false;
-	data.on = false;
-	data.nHits = 0;
-	data.nRetries = 0;
-	data.unsure = false;
-	data.nearestFace = NULL;
-	data.nearestPoint = pnt;
-
+	const SharedBVNode& root = bvt.getRoot();
 	if (tol < 0) {
 		// default tolerance
-		double r = bvt->getRoot()->bv->getBoundingSphere().getRadius();
-		tol = 1e-12*r;
+		double r = root->bv->getBoundingSphere().getRadius();
+		tol = 1e-12 * r;
 	}
 
+	data.reset();
+
 	// check if is inside root bounding box
-	PBVNode root = bvt->getRoot();
 	if (!root->bv->intersectsSphere(pnt, tol)) {
-		return MESH_INSIDE_FALSE;
+		return MeshQueryResult::OUTSIDE;
 	}
 
 	// find the nearest polygon
@@ -434,7 +427,7 @@ int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
 	if (pnt.distance(data.nearestPoint) <= tol) {
 		data.in = true;
 		data.on = true;
-		return MESH_INSIDE_ON;
+		return MeshQueryResult::ON;
 	}
 
 	/// first direction is away from nearest face (fastest when
@@ -443,7 +436,7 @@ int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
 	dir.subtract(data.nearestPoint);
 	dir.normalize();
 
-	const PPolygonList &meshFaces = mesh.faces;
+	const std::vector<SharedPolygon>& meshFaces = mesh.faces;
 	Point3d centroid;
 
 	data.nRetries = 0;
@@ -451,39 +444,46 @@ int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
 		data.nHits = 0;
 		data.unsure = false;
 
-		PBVNodeList bvnodes;
-		bvt->intersectRay(pnt, dir, bvnodes);
+		std::vector<BVNode*> bvnodes;
+		bvt.intersectRay(pnt, dir, bvnodes);
 
-		for (PBVNode node : bvnodes) {
+		for (BVNode* node : bvnodes) {
 
-			for (PBoundable boundable : node->elems) {
+			for (SharedBoundable& boundable : node->elems) {
 
 				// dynamic cast to PBoundablePolygon
-				PBoundablePolygon poly =
-						std::dynamic_pointer_cast<BoundablePolygon>(boundable);
-				if (poly != NULL) {
+				SharedBoundablePolygon poly = std::dynamic_pointer_cast<
+						BoundablePolygon>(boundable);
+				if (poly != nullptr) {
+
 					// intersect ray with face
 					Vector3d bary;
-					Polygon tri;
-					double d = fabs(poly->distanceToPoint(pnt, dir, data.nearestPoint, tri, bary));
+					SharedPolygon tri;
+					double d = fabs(
+							poly->distanceToPoint(pnt, dir, data.nearestPoint,
+									bary, tri));
 
 					// check if close to face
 					if (d < tol) {
 						data.in = true;
 						data.on = true;
-						return MESH_INSIDE_TRUE;
+						return MeshQueryResult::ON;
 					}
 
 					// check if ray hits face
-					if (d != math::DOUBLE_INFINITY && d != -math::DOUBLE_INFINITY) {
+					if (d != math::DOUBLE_INFINITY
+							&& d != -math::DOUBLE_INFINITY) {
 						// check that it hits the face in the correct direction
 						Vector3d ndir(data.nearestPoint);
 						ndir.subtract(pnt);
 						if (ndir.dot(dir) > 0) {
 							// make sure barycentric coordinates are not on edges
-							if (bary.x >= baryEpsilon && bary.x <= 1-baryEpsilon
-									&& bary.y >= baryEpsilon && bary.y <= 1-baryEpsilon
-									&& bary.z >= baryEpsilon && bary.z <= 1-baryEpsilon) {
+							if (bary.x >= baryEpsilon
+									&& bary.x <= 1 - baryEpsilon
+									&& bary.y >= baryEpsilon
+									&& bary.y <= 1 - baryEpsilon
+									&& bary.z >= baryEpsilon
+									&& bary.z <= 1 - baryEpsilon) {
 								data.nHits++;
 							} else {
 								data.unsure = true;
@@ -504,9 +504,9 @@ int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
 			// we are sure about our intersection count
 			if (data.nHits % 2 == 1) {
 				data.in = true;
-				return MESH_INSIDE_TRUE;
+				return MeshQueryResult::INSIDE;
 			} else {
-				return MESH_INSIDE_FALSE;
+				return MeshQueryResult::OUTSIDE;
 			}
 		}
 
@@ -525,7 +525,7 @@ int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
 		if (dir.norm() <= tol) {
 			data.in = true;
 			data.on = true;
-			return MESH_INSIDE_TRUE;
+			return MeshQueryResult::INSIDE;
 		}
 		dir.normalize();
 
@@ -533,29 +533,30 @@ int is_inside_or_on(const Point3d &pnt, const PolygonMesh &mesh,
 	} while (data.nRetries < numRetries);
 
 	data.unsure = true;
-	return MESH_INSIDE_UNSURE;	// unsure
+	return MeshQueryResult::UNSURE;	// unsure
 
 }
 
-bool poly_contains_coordinate(Point3d &pnt, PBoundablePolygon bpoly, Polygon &tri, Vector3d &bary) {
+bool poly_contains_coordinate(Point3d& pnt, const BoundablePolygon& bpoly,
+		Vector3d& bary, SharedPolygon& tri) {
+
 	// check if is inside triangles
-	PPolygon &polygon = bpoly->polygon;
+	const SharedPolygon& polygon = bpoly.polygon;
 	if (polygon->numVertices() == 3) {
-	   tri.set(*polygon);
+		tri = polygon;
 		// check if is in triangle
-		if (point_in_triangle(pnt, *(polygon->verts[0]),
-				*(polygon->verts[1]), *(polygon->verts[2]),
-				bary)) {
+		if (point_in_triangle(pnt, *(polygon->verts[0]), *(polygon->verts[1]),
+				*(polygon->verts[2]), bary)) {
 			return true;
 		}
 		return false;
 	} else {
 
 		// triangulate if not already done
-		const PPolygonList &ltris = bpoly->getTriangulation();
+		const std::vector<SharedPolygon>& ltris = bpoly.getTriangulation();
 
-		for (PPolygon ltri : ltris) {
-		   tri.set(*ltri);
+		for (const SharedPolygon& ltri : ltris) {
+			tri = ltri;
 			bool inside = point_in_triangle(pnt, *(ltri->verts[0]),
 					*(ltri->verts[1]), *(ltri->verts[2]), bary);
 			if (inside) {
@@ -567,41 +568,48 @@ bool poly_contains_coordinate(Point3d &pnt, PBoundablePolygon bpoly, Polygon &tr
 }
 
 // Faster?
-bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data, double tol, int maxRetries) {
+bool is_inside(const Point3d& pnt, const BVTree& bvt, InsideMeshQueryData& data,
+		double tol, int maxRetries) {
+
+	const SharedBVNode& root = bvt.getRoot();
 
 	if (tol < 0) {
 		// default tolerance
-		double r = bvt->getRoot()->bv->getBoundingSphere().getRadius();
-		tol = 1e-12*r;
+		double r = root->bv->getBoundingSphere().getRadius();
+		tol = 1e-12 * r;
 	}
 
-	data.in = false;
-	data.on = false;
+	// initialize
+	data.reset();
 
 	// check if is inside root bounding box
-	PBVNode root = bvt->getRoot();
 	if (!root->bv->intersectsSphere(pnt, tol)) {
 		return false;
 	}
 
-	PBoundable nearestBoundable = nearest_boundable(bvt, pnt, data.nearestPoint);
-	data.nearestFace = std::static_pointer_cast<BoundablePolygon>(nearestBoundable);
+	// find the nearest polygon
+	data.nearestFace = nearest_polygon(pnt, bvt, data.nearestPoint);
+
+	// cast direction
 	Vector3d dir(data.nearestPoint);
 	dir.subtract(pnt);
 
-	// check if on
-	if (dir.norm() <= tol) {
+	// first check if within tolerance
+	if (dir.normSquared() <= tol*tol) {
 		data.in = true;
 		data.on = true;
 		return true;
 	}
-	data.on = false;
 
-	// check if on edge or vertex
-
+	// check if closest point is within the center of the triangle
+	// i.e. not on an edge or vertex
+	// Because then we just need to check the face normal
 	Vector3d bary;
-	Polygon tri;
-	bool success = poly_contains_coordinate(data.nearestPoint, data.nearestFace, tri, bary);
+	SharedPolygon tri;
+	bool success = poly_contains_coordinate(data.nearestPoint, *(data.nearestFace),
+			bary, tri);
+
+	// make sure within eps of boundary of face
 	double eps = 1e-12;
 	if (bary.x > eps && bary.y > eps && bary.z > eps) {
 		// check normal
@@ -614,40 +622,42 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 		}
 	}
 
-	// resort to continuously, starting with aimed at mid-face
+	// resort to ray-cast, starting with aimed at mid-face
 	Point3d centroid;
-	tri.computeCentroid(centroid);
+	tri->computeCentroid(centroid);
 	dir.set(centroid);
 	dir.subtract(pnt);
 
 	// uniform random distribution for direction generation
-	std::uniform_real_distribution<double> uniform(-1,1);
+	std::uniform_real_distribution<double> uniform(-1, 1);
 	std::default_random_engine randomengine;
 
-	Polygon *prevPoly = &tri;
+	Polygon* prevPoly = tri.get();
 
 	data.nRetries = 0;
 	do {
 		data.nHits = 0;
 		data.unsure = false;
-		PBoundablePolygon unsureFace = NULL;
+		BoundablePolygon* unsureFace = nullptr;
 
-		PBVNodeList bvnodes;
-		bvt->intersectRay(pnt, dir, bvnodes);
+		std::vector<BVNode*> bvnodes;
+		bvt.intersectRay(pnt, dir, bvnodes);
 		double dmin = mas::math::DOUBLE_INFINITY;
 		data.in = false;
 
 		// find closest face among nodes in direction of dir
-		for (PBVNode node : bvnodes) {
-			for (PBoundable boundable : node->elems) {
+		for (BVNode* node : bvnodes) {
+			for (SharedBoundable& boundable : node->elems) {
 
 				// dynamic cast to PBoundablePolygon
-				PBoundablePolygon poly =
-						std::dynamic_pointer_cast<BoundablePolygon>(boundable);
-				if (poly != NULL) {
+				SharedBoundablePolygon poly = std::dynamic_pointer_cast<
+						BoundablePolygon>(boundable);
+				if (poly != nullptr) {
 
 					// intersect ray with face
-					double d = fabs(poly->distanceToPoint(pnt, dir, data.nearestPoint, tri, bary));
+					double d = fabs(
+							poly->distanceToPoint(pnt, dir, data.nearestPoint,
+									bary, tri));
 
 					// check if ray hits face
 					if (d < dmin) {
@@ -659,9 +669,9 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 
 							dmin = d;
 							// make sure barycentric coordinates are not on edges
-							if (bary.x >= eps && bary.x <= 1-eps
-									&& bary.y >= eps && bary.y <= 1-eps
-									&& bary.z >= eps && bary.z <= 1-eps) {
+							if (bary.x >= eps && bary.x <= 1 - eps
+									&& bary.y >= eps && bary.y <= 1 - eps
+									&& bary.z >= eps && bary.z <= 1 - eps) {
 								data.nHits++;
 								data.unsure = false;
 								if (poly->polygon->plane.normal.dot(dir) > 0) {
@@ -671,7 +681,7 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 								}
 							} else {
 								data.unsure = true;
-								unsureFace = poly;
+								unsureFace = poly.get();
 							}
 						}
 					}
@@ -685,30 +695,31 @@ bool is_inside(const Point3d &pnt, const PBVTree bvt, InsideMeshQueryData &data,
 		}
 
 		// pick next direction as centroid of closest unsure face
-		PPolygon nextPoly = unsureFace->getTriangulation()[0];
+		const SharedPolygon& nextPoly = unsureFace->getTriangulation()[0];
 		if (nextPoly.get() == prevPoly) {
-		   // randomize direction
-		   do {
-		      dir.x = uniform(randomengine);
-		      dir.y = uniform(randomengine);
-		      dir.z = uniform(randomengine);
-		   } while (dir.norm() == 0);
-		   dir.normalize();
+			// randomize direction
+			do {
+				dir.x = uniform(randomengine);
+				dir.y = uniform(randomengine);
+				dir.z = uniform(randomengine);
+			} while (dir.norm() == 0);
+			dir.normalize();
 
-		   prevPoly = NULL;
+			prevPoly = nullptr;
 		} else {
-		   nextPoly->computeCentroid(centroid);
-		   dir.set(centroid);
-		   dir.subtract(pnt);
-		   prevPoly = nextPoly.get();
+			nextPoly->computeCentroid(centroid);
+			dir.set(centroid);
+			dir.subtract(pnt);
+			prevPoly = nextPoly.get();
 		}
 
 		data.nRetries++;
 	} while (data.nRetries < maxRetries);
 
+	// failed to converge
+	data.unsure = true;
 	return false;
 }
-
 
 }
 }

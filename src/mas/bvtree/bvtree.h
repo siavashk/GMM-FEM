@@ -490,7 +490,7 @@ public:
 
 	BVTree(SharedBVNode&& root);
 
-	SharedBVNode& getRoot();
+	const SharedBVNode& getRoot() const;
 	double getRadius() const;
 
 	virtual void build(UniqueBV&& rootbv, const std::vector<SharedBoundable>& elems, double margin = 0);

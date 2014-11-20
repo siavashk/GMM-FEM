@@ -22,110 +22,50 @@ namespace mas {
 namespace mesh {
 namespace io {
 
-// some useful string operations
-namespace str {
-
-// trim characters from start
-static std::string ltrim(const std::string &s, const std::string &chars =
-        "\n\r ");
-
-// trim characters from end
-static std::string rtrim(const std::string &s, const std::string &chars =
-        "\n\r ");
-
-// trim characters from both ends
-static std::string trim(const std::string &s,
-        const std::string &chars = "\n\r ");
-}
-
-class PolygonReader {
+class PolygonMeshReader {
 public:
-    virtual void read(const char* filename) = 0 ;
-    virtual void read(std::string filename) = 0 ;
-    virtual void read(std::istream &fin) = 0;
-    virtual PPolygonList getPolygons() const {
-    }
-    ;
-    virtual PolygonMesh getPolygonMesh() const {
-    }
-    ;
+    virtual PolygonMesh* read(const char* filename) = 0 ;
+    virtual PolygonMesh* read(std::string filename) = 0 ;
+    virtual PolygonMesh* read(std::istream& fin) = 0;
 };
 
-class PolygonWriter {
+class PolygonMeshWriter {
 public:
-    virtual ~PolygonWriter() {
-    }
-    ;
-    virtual void write(const char* filename) {
-    }
-    ;
-    virtual void write(std::string filename) {
-    }
-    ;
-    virtual void write(std::ostream &fout) {
-    }
-    ;
-    virtual void setPolygons(PPolygonList &polys) {
-    }
-    ;
-    virtual void setPolygonMesh(PolygonMesh* mesh) {
-    }
-    ;
+    virtual void write(const PolygonMesh& mesh, const char* filename) = 0;
+    virtual void write(const PolygonMesh& mesh, const std::string& filename) = 0;
+    virtual void write(const PolygonMesh& mesh, std::ostream& fout)  = 0;
 };
 
 // Only reads header, vertices, faces
-class SimpleObjReader: public PolygonReader {
+class SimpleObjReader: public PolygonMeshReader {
 private:
-    PolygonMesh* mesh;
-    bool needsCleanup;
+	SimpleObjReader(const SimpleObjReader& copyMe);
     bool zeroIndexed;
 
 protected:
-    virtual void cleanup();
-    virtual PVertex3d parseVertex(const std::string &line);
-    virtual IndexList parseFace(const std::string &line);
+    virtual Vertex3d* parseVertex(const std::string& line, int idx = -1);
+    virtual std::vector<size_t> parseFace(const std::string& line);
 
 public:
     SimpleObjReader();
-    SimpleObjReader(PolygonMesh* mesh);
-    SimpleObjReader(const SimpleObjReader& copyMe);
-    virtual ~SimpleObjReader();
-
-    void setMesh(PolygonMesh* mesh);
     void setZeroIndexed();
     void setOneIndexed();
 
-    virtual void read(const char* filename);
-    virtual void read(std::string filename);
-    virtual void read(std::istream &fin);
-    virtual PVertex3dList* getVertices() const;
-    virtual PPolygonList getPolygons() const;
-    virtual PolygonMesh getPolygonMesh() const;
-    virtual void clear();
-
+    virtual PolygonMesh* read(const char* filename);
+    virtual PolygonMesh* read(std::string filename);
+    virtual PolygonMesh* read(std::istream& fin);
 };
 
 // Only writes header, vertices, faces
-class SimpleObjWriter: public PolygonWriter {
+class SimpleObjWriter: public PolygonMeshWriter {
 private:
-    PolygonMesh* mesh;
     std::string header;
     bool zeroIndexed;
-    bool needsCleanup;
     std::string doubleFormat;
 private:
-    virtual void cleanup();
-
+    SimpleObjWriter(const SimpleObjWriter& copyMe);
 public:
     SimpleObjWriter();
-    SimpleObjWriter(PolygonMesh* mesh);
-    virtual ~SimpleObjWriter();
-
-    virtual void write(const char* filename);
-    virtual void write(std::string filename);
-    virtual void write(std::ostream &fout);
-    virtual void setPolygons(PPolygonList &polys);
-    virtual void setPolygonMesh(PolygonMesh* mesh);
 
     void setZeroIndexed();
     void setOneIndexed();
@@ -136,7 +76,9 @@ public:
     void setDoubleFormat(const char* fmt);
     void setDoubleFormat(const std::string fmt);
 
-    void clear();
+    virtual void write(const PolygonMesh& mesh, const char* filename);
+    virtual void write(const PolygonMesh& mesh, const std::string& filename);
+    virtual void write(const PolygonMesh& mesh, std::ostream& fout);
 
 };
 
