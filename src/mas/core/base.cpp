@@ -461,10 +461,10 @@ IndexedPoint3d::IndexedPoint3d()
 IndexedPoint3d::IndexedPoint3d(const IndexedPoint3d& copyMe)
 : Point3d(copyMe), idx(copyMe.idx) {}
 
-IndexedPoint3d::IndexedPoint3d(const Vector3d& pointMe, int index)
+IndexedPoint3d::IndexedPoint3d(const Vector3d& pointMe, size_t index)
 : Point3d(pointMe), idx(index) {}
 
-IndexedPoint3d::IndexedPoint3d(double x, double y, double z, int index)
+IndexedPoint3d::IndexedPoint3d(double x, double y, double z, size_t index)
 : Point3d(x,y,z), idx(index) {}
 
 IndexedPoint3d& IndexedPoint3d::operator=(const IndexedPoint3d& assignMe) {

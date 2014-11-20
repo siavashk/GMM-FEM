@@ -6,39 +6,25 @@ namespace mesh {
 using namespace mas::bvtree;
 
 template<typename BV>
-PBVTree get_bv_tree(const PolygonMesh &mesh, double margin) {
+BVTreeT<BV>*  get_bv_tree_T(const PolygonMesh &mesh,
+		double margin) {
 
-	PBoundableList elems;
-	const PPolygonList &faces = mesh.faces;
+	std::vector<SharedBoundable> elems;
+	const std::vector<SharedPolygon>& faces = mesh.faces;
 
-	for (PPolygonList::const_iterator pit = faces.begin();
-			pit < faces.end(); pit++) {
+	for (const SharedPolygon& face : faces) {
 		elems.push_back(
-				BoundableFactory::createBoundablePolygon(*pit));
+				std::make_shared<BoundablePolygon>(face));
 	}
-	PBVTree tree =
-			BVTreeFactory::createTree<BV>(elems, margin);
-	return tree;
+	return new BVTreeT<BV>(std::move(elems), margin);
 }
 
 template<typename BV>
-std::shared_ptr<BVTreeT<BV> >  get_bv_tree_T(const PolygonMesh &mesh,
-		double margin) {
-
-	PBoundableList elems;
-	const PPolygonList &faces = mesh.faces;
-
-	for (PPolygonList::const_iterator pit = faces.begin();
-			pit < faces.end(); pit++) {
-		elems.push_back(
-				BoundableFactory::createBoundablePolygon(*pit));
-	}
-	std::shared_ptr<BVTreeT<BV> >  tree =
-			BVTreeFactory::createTreeT<BV>(elems, margin);
-	return tree;
+BVTree* get_bv_tree(const PolygonMesh &mesh, double margin) {
+	return get_bv_tree_T<BV>(mesh, margin);
 }
 
-}
-}
+} // end mas
+} // end mesh
 
 #endif

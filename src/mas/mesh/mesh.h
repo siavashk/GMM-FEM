@@ -27,12 +27,6 @@ typedef std::weak_ptr<Polygon> WeakPolygon;
 // basic half-edge building block
 class HalfEdge;
 typedef std::shared_ptr<HalfEdge> SharedHalfEdge;
-typedef std::weak_ptr<HalfEdge> WeakHalfEdge;
-
-// polygon connectivity data, adding
-// connectivity structure to mesh
-class PolyData;
-typedef std::unique_ptr<PolyData> UniquePolyData;
 
 // made of faces and vertices
 class PolygonMesh;
@@ -40,13 +34,11 @@ class PolygonMesh;
 // spits out smart vertices and polygons
 class MeshFactory;
 
-
-class Vertex3d : public IndexedPoint3d {
-private:
-	// list in case non-manifold
-	WHalfEdgeList _incident;
+class Vertex3d: public IndexedPoint3d {
 public:
-	size_t scratchIdx;	// for temporary use
+	//size_t scratchIdx;	// for temporary use
+	// list in case non-manifold
+	std::vector<HalfEdge*> incident;
 private:
 	// disable copying/assigning
 	Vertex3d(const Vertex3d& copyMe);
@@ -54,21 +46,24 @@ private:
 public:
 	Vertex3d();
 	Vertex3d(const Point3d& vertexMe);
+	Vertex3d(const Point3d& vertexMe, size_t index);
+	Vertex3d(const IndexedPoint3d& vertexMe);
 	Vertex3d(double x, double y, double z);
 	Vertex3d(double x, double y, double z, size_t idx);
 
-	void removeIncidentEdge(const SharedHalfEdge& he);
-	void addIncidentEdge(const SharedHalfEdge& he);
-	PHalfEdgeList getIncidentEdges() const;
+	void addIncidentEdge(HalfEdge* he);
+	bool removeIncidentEdge(const HalfEdge* he);
+
+	std::vector<HalfEdge*>& getIncidentEdges();
 };
 
 // Polygon, makes up faces
 class Polygon {
-private:
-	UniquePolyData _data;
+
 public:
 	std::vector<SharedVertex3d> verts;
 	Plane plane;
+	SharedHalfEdge he0;
 
 private:
 	static Plane getPlane(const std::vector<SharedVertex3d>& verts);
@@ -81,12 +76,16 @@ public:
 	Polygon(const Plane& Plane, const std::vector<SharedVertex3d>& verts);
 	Polygon(std::vector<SharedVertex3d>&& verts);
 	Polygon(const std::vector<SharedVertex3d>& verts);
-	Polygon(const SharedVertex3d& v0, const SharedVertex3d& v1, const SharedVertex3d& v2);
+	Polygon(const SharedVertex3d& v0, const SharedVertex3d& v1,
+			const SharedVertex3d& v2);
+
+	~Polygon();
 
 	void set(const Polygon& poly);
 	void set(std::vector<SharedVertex3d>&& verts);
 	void set(const std::vector<SharedVertex3d>& verts);
-	void set(const SharedVertex3d& v0, const SharedVertex3d& v1, const SharedVertex3d& v2);
+	void set(const SharedVertex3d& v0, const SharedVertex3d& v1,
+			const SharedVertex3d& v2);
 	void set(Plane&& p, std::vector<SharedVertex3d>&& verts);
 	void set(const Plane& p, const std::vector<SharedVertex3d>& verts);
 	void set(const SharedPolygon& poly);
@@ -101,8 +100,10 @@ public:
 	bool isConvex(std::vector<SharedVertex3d>& reflex) const;
 
 	// connectivity data
-	UniquePolyData& getData();
-	void setData(UniquePolyData&& data);
+	bool isConnected();
+	void connect();
+	void disconnect();
+	SharedHalfEdge& getFirstHalfEdge();
 
 };
 
@@ -110,34 +111,24 @@ class HalfEdge {
 public:
 	SharedVertex3d head;
 	SharedVertex3d tail;
-	WeakPolygon face;
+	const Polygon* face;
 
 	// set when connected
 	SharedHalfEdge next;
-	SharedHalfEdge opposite;
+	HalfEdge* opposite;
 
 private:
 	HalfEdge(const HalfEdge& copyMe);
 	HalfEdge& operator=(const HalfEdge& assignMe);
 
-	void disconnect();  // clear opposite's opposite if assigned
 public:
 	HalfEdge(const SharedVertex3d& tail, const SharedVertex3d& head,
-			const SharedPolygon& face = nullptr, const SharedHalfEdge& opposite = nullptr);
+			const Polygon* face);
 	virtual ~HalfEdge();   // needed to disconnect shared pointers
-	double getLength() const ;
-};
+	double getLength() const;
 
-// contains half-edge info
-class PolyData {
-public:
-	SharedHalfEdge firstHE;
-private:
-	PolyData(const PolyData& copyMe);
-	PolyData& operator=(const PolyData& assignMe);
-public:
-	PolyData(const SharedPolygon& poly);
-	void attach(const UniquePolyData& pthis);
+	void connect();
+	void disconnect();  // clear opposite's opposite if assigned
 };
 
 class PolygonMesh {
@@ -151,94 +142,79 @@ public:
 	std::vector<SharedPolygon> faces;
 
 private:
-	SharedVertex3dMap copyVertices(const std::vector<SharedVertex3d>& verts);
+	static SharedVertex3dMap copyVertices(const std::vector<SharedVertex3d>& verts);
+
 protected:
 	void cleanup();
+	void buildFaces(const std::vector<std::vector<size_t>>& facesIdxs);
+
 public:
 	PolygonMesh();
 	PolygonMesh(const PolygonMesh& copyMe);
-	PolygonMesh(const std::vector<SharedVertex3d>& verts, const std::vector<SharedPolygon>& faces);
-	PolygonMesh(std::vector<SharedVertex3d>&& verts, std::vector<SharedPolygon>&& faces);
-	PolygonMesh(const std::vector<SharedVertex3d>& verts, const std::vector<std::vector<size_t>>& facesIdxs);
-	PolygonMesh(std::vector<SharedVertex3d>&& verts, const std::vector<std::vector<size_t>>& facesIdxs);
-	PolygonMesh(const std::vector<SharedPolygon>& faces);
-	PolygonMesh(std::vector<SharedPolygon>&& faces);
-
+	PolygonMesh(std::vector<SharedVertex3d>&& verts,
+			std::vector<SharedPolygon>&& faces);
+	PolygonMesh(std::vector<SharedVertex3d>&& verts,
+			const std::vector<std::vector<size_t>>& facesIdxs);
 	virtual ~PolygonMesh();
+
 	virtual PolygonMesh& operator=(const PolygonMesh& assignMe);
 
-	void set(const std::vector<SharedVertex3d>& verts, const std::vector<SharedPolygon>& faces);
-	void set(std::vector<SharedVertex3d>&& verts, std::vector<SharedPolygon>&& faces);
+	void set(std::vector<SharedVertex3d>&& verts,
+			std::vector<SharedPolygon>&& faces);
+	void set(std::vector<SharedVertex3d>&& verts,
+			const std::vector<std::vector<size_t>>& facesIdxs);
 
-	void set(const std::vector<SharedPolygon>& faces);
-	void set(std::vector<SharedPolygon>&& faces);
-	void set(const std::vector<SharedVertex3d>& verts, const std::vector<std::vector<size_t>>& facesIdxs);
-	void set(std::vector<SharedVertex3d>&& verts, const std::vector<std::vector<size_t>>& facesIdxs);
+	void clone(const PolygonMesh& mesh);
+	void clone(const std::vector<SharedVertex3d> verts,
+			const std::vector<SharedPolygon> faces);
+	void clone(const std::vector<SharedPolygon> faces);
 
-	void addVertex(const SharedVertex3d& vtx);
+	void updateIndices();
+
 	void addVertex(SharedVertex3d&& vtx);
 
 	SharedVertex3d& addVertex(const Point3d& pnt);
 
-	void addFace(const SharedPolygon& poly);
 	void addFace(SharedPolygon&& poly);
 
-	SharedPolygon& addFace(const std::vector<SharedVertex3d>& vtxs);
 	SharedPolygon& addFace(std::vector<SharedVertex3d>&& vtxs);
-	SharedPolygon& addFace(const SharedVertex3d& v0, const SharedVertex3d& v1, const SharedVertex3d& v2);
+	SharedPolygon& addFace(const SharedVertex3d& v0, const SharedVertex3d& v1,
+			const SharedVertex3d& v2);
 
 	size_t numVertices() const;
 	void triangulate();
+
 	double volume() const;
 	double volumeIntegral() const;
-	double volumeIntegrals(Vector3d* m1, Vector3d* m2 = nullptr, Vector3d* p=nullptr) const;
+	double volumeIntegrals(Vector3d* m1, Vector3d* m2 = nullptr, Vector3d* p =
+			nullptr) const;
 };
-
 
 // contains factory methods for creating and managing
 // various structures
 class MeshFactory {
 private:
-	static double maximumCosine(const SharedVertex3d& v0, const SharedVertex3d& v1, const SharedVertex3d& v2);
+	static double maximumCosine(const Point3d& v0,	const Point3d& v1, const Point3d& v2);
 	static int bestTriangle(const std::vector<SharedVertex3d>& verts);
 public:
-	static std::unique_ptr<Vertex3d> createVertex();
-	static std::unique_ptr<Vertex3d> createVertex(double x, double y, double z, int idx = -1);
-	static std::unique_ptr<Vertex3d> createVertex(const Vector3d& v);
-	static std::unique_ptr<Vertex3d> createVertex(const Vertex3d& vert);
 
-	/*
-			static PHalfEdge createHalfEdge(PVertex3d& tail, PVertex3d& head,
-				PHalfEdge opposite = NULL);
-	 */
-	static std::unique_ptr<Polygon> createPolygon();
-	static std::unique_ptr<Polygon> createPolygon(const Plane& plane, const std::vector<SharedVertex3d>& verts);
-	static std::unique_ptr<Polygon> createPolygon(const std::vector<SharedVertex3d>& verts);
-	static std::unique_ptr<Polygon> createPolygon(const SharedVertex3d& v0, const SharedVertex3d& v1,
-			const SharedVertex3d& v2);
-	static std::unique_ptr<Polygon> createPolygon(const Polygon& poly);
-	static std::vector<std::unique_ptr<Polygon>> triangulate(const SharedPolygon& poly);
-
-	static std::unique_ptr<HalfEdge> createHalfEdge(const SharedVertex3d& p0, const SharedVertex3d& p1,
-			const SharedPolygon& face = nullptr);
-
-	static void createPolyData(SharedPolygon& poly);
+	static std::vector<std::unique_ptr<Polygon>> triangulate(
+			const Polygon& poly);
 
 };
 
-double volume_integrals(const std::vector<SharedPolygon>& polygons, Vector3d* m1 = nullptr,
-        Vector3d* m2 = nullptr, Vector3d* p = nullptr);
+double volume_integrals(const std::vector<SharedPolygon>& polygons,
+		Vector3d* m1 = nullptr, Vector3d* m2 = nullptr, Vector3d* p = nullptr);
 
 double volume_integral(const std::vector<SharedPolygon>& polygons);
 
 double area_integral(const std::vector<SharedPolygon>& polygons);
 
-bool point_in_triangle(const Point3d& pnt,
-		const Point3d& p0, const Point3d& p1, const Point3d& p2, Vector3d& bary);
+bool point_in_triangle(const Point3d& pnt, const Point3d& p0, const Point3d& p1,
+		const Point3d& p2, Vector3d& bary);
 
-double distance_to_triangle(const Point3d& pnt,
-		const Point3d& p1, const Point3d& p2, const Point3d& p3,
-		Point3d& nearest, Vector3d& bary);
+double distance_to_triangle(const Point3d& pnt, const Point3d& p1,
+		const Point3d& p2, const Point3d& p3, Point3d& nearest, Vector3d& bary);
 
 }
 }

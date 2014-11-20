@@ -100,9 +100,7 @@ void doAnalyze(int cmd, std::vector<std::string> files, std::ostream &out,
 	char line[MAX_NUMBER_WIDTH];	// for formatted number
 
 	for (int i=0; i<files.size(); i++) {
-		reader.clear();
-		reader.read(files[i]);
-		PolygonMesh mesh = reader.getPolygonMesh();
+		std::unique_ptr<PolygonMesh> mesh(reader.read(files[i]));
 
 		if (files.size() > 1) {
 			out << files[i] << ": ";
@@ -110,7 +108,7 @@ void doAnalyze(int cmd, std::vector<std::string> files, std::ostream &out,
 
 		switch (cmd) {
 		case CMD_VOLUME: {
-			double vol = mesh.volume();
+			double vol = mesh->volume();
 			snprintf(line, MAX_NUMBER_WIDTH,
 					doubleFormat.c_str(), vol);
 			out << line << std::endl;
@@ -120,12 +118,12 @@ void doAnalyze(int cmd, std::vector<std::string> files, std::ostream &out,
 			mas::Vector3d m1;
 			mas::Vector3d m2;
 			mas::Vector3d p;
-			double vol = mesh.volumeIntegrals(&m1, &m2, &p);
+			double vol = mesh->volumeIntegrals(&m1, &m2, &p);
 
 			out << std::endl;
-			out << "    # Vertices: " << mesh.numVertices()
+			out << "    # Vertices: " << mesh->numVertices()
 									<< std::endl;
-			out << "    # Faces:    " << mesh.faces.size()
+			out << "    # Faces:    " << mesh->faces.size()
 									<< std::endl;
 			snprintf(line, MAX_NUMBER_WIDTH,
 					doubleFormat.c_str(), vol);
@@ -173,12 +171,8 @@ void doMerge(int cmd, std::vector<std::string> files, std::ostream &out,
 	PolygonMesh outMesh;
 
 	for (int i=0; i<files.size(); i++) {
-		reader.clear();
-		reader.read(files[i]);
-		PolygonMesh mesh2 = reader.getPolygonMesh();
-		PPolygonList polys = mesh2.faces;
-		polys.insert(polys.end(), outMesh.faces.begin(), outMesh.faces.end());
-		outMesh.set(polys);
+		std::unique_ptr<PolygonMesh> mesh(reader.read(files[i]));
+		outMesh.clone(*mesh);
 	}
 
 	switch(cmd) {
@@ -186,9 +180,8 @@ void doMerge(int cmd, std::vector<std::string> files, std::ostream &out,
 		outMesh.triangulate();
 	}
 	mas::mesh::io::SimpleObjWriter writer;
-	writer.setPolygonMesh(&outMesh);
 	writer.setDoubleFormat(doubleFormat);
-	writer.write(out);
+	writer.write(outMesh, out);
 
 }
 
