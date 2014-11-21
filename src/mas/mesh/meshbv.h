@@ -9,10 +9,6 @@
 namespace mas {
 namespace mesh {
 
-enum class MeshQueryResult {
-	ON, INSIDE, OUTSIDE, UNSURE
-};
-
 // wrapper for polygon structure
 class BoundablePolygon;
 typedef std::shared_ptr<BoundablePolygon> SharedBoundablePolygon;
@@ -59,19 +55,10 @@ public:
 };
 
 struct InsideMeshQueryData {
-	InsideMeshQueryData() :
-			on(false), in(false), unsure(false), nearestFace(nullptr), nearestPoint(
-					0, 0, 0), nHits(0), nRetries(0) {
-	}
-	void reset() {
-		in = false;
-		on = false;
-		unsure = false;
-		nHits = 0;
-		nRetries = 0;
-		nearestFace = nullptr;
-		nearestPoint.setZero();
-	}
+public:
+	InsideMeshQueryData();
+	void reset();
+public:
 	bool on;
 	bool in;
 	bool unsure;
@@ -111,22 +98,12 @@ SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
 SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
 		const BVTree& bvt, double tol, NearestPolygonData& data);
 
-MeshQueryResult is_inside(const Point3d& pnt, const PolygonMesh& mesh,
-		double tol = -1, int numRetries = 100, double baryEpsilon = 1e-12);
-MeshQueryResult is_inside(const Point3d& pnt, const PolygonMesh& mesh,
-		const BVTree& bvt, double tol = -1, int numRetries = 100,
-		double baryEpsilon = 1e-12);
-MeshQueryResult is_inside(const Point3d& pnt, const PolygonMesh& mesh,
-        const BVTree& bvt, InsideMeshQueryData& data, double tol = -1,
-        int numRetries = 100, double baryEpsilon = 1e-12);
-
-MeshQueryResult is_inside_or_on(const Point3d& pnt, const PolygonMesh& mesh,
-		const BVTree& bvt, double tol = -1, int numRetries = 100,
-		double baryEpsilon = 1e-12);
-MeshQueryResult is_inside_or_on(const Point3d& pnt, const PolygonMesh& mesh,
-		const BVTree& bvt, InsideMeshQueryData& data, double tol,
-		int numRetries, double baryEpsilon);
-
+bool is_inside(const Point3d& pnt, const PolygonMesh& mesh, double tol = -1,
+		int maxRetries = 10);
+bool is_inside(const Point3d& pnt, const PolygonMesh& mesh,
+		InsideMeshQueryData& data, double tol = -1, int maxRetries = 10);
+bool is_inside(const Point3d& pnt, const BVTree& bvt, double tol = -1,
+		int maxRetries = 10);
 bool is_inside(const Point3d& pnt, const BVTree& bvt, InsideMeshQueryData& data,
 		double tol = -1, int maxRetries = 10);
 
