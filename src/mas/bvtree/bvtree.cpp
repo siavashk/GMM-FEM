@@ -443,6 +443,11 @@ BoundingSphere BoundingSphere::getBoundingSphere() const {
     return *this;
 }
 
+double BoundingSphere::getBoundingSphere(Point3d& centre) const {
+	centre.set(c);
+	return r;
+}
+
 bool BoundingSphere::updatePoint(const Point3d& p) {
     double rnew = p.distance(c) + margin;
     if (rnew > r) {
@@ -763,6 +768,11 @@ bool BoundingBox::intersectsPlane(const Plane& p) const {
 
 BoundingSphere BoundingBox::getBoundingSphere() const {
     return BoundingSphere(c, halfWidths.norm(), margin);
+}
+
+double BoundingBox::getBoundingSphere(Point3d& centre) const {
+	centre.set(c);
+	return halfWidths.norm()+margin;
 }
 
 bool BoundingBox::updatePoint(const Point3d& p) {
@@ -1585,9 +1595,7 @@ void OBB::getRotation(RotationMatrix3d& R) {
 }
 
 void OBB::getLocalCoords(const Point3d& p, Point3d& out) const {
-    Point3d tmp = p;     // XXX bottleneck?!?!?!
-    tmp.subtract(c);
-    R.multiplyLeft(tmp, out);
+    R.subtractMultiplyLeft(p, c, out);
 }
 
 void OBB::getLocalCoords(const Vector3d& v, Vector3d& out) const {
@@ -1595,9 +1603,7 @@ void OBB::getLocalCoords(const Vector3d& v, Vector3d& out) const {
 }
 
 void OBB::getWorldCoords(const Point3d& p, Point3d& out) const {
-    Point3d tmp = c;     // XXX bottleneck?!?!?!
-    R.multiply(p, out);
-    out.add(tmp);
+    R.multiplyAdd(p, c, out);
 }
 
 void OBB::getWorldCoords(const Vector3d& v, Vector3d& out) const {
@@ -1871,6 +1877,10 @@ void BVNode::setParent(BVNode *p) {
 
 BoundingSphere BVNode::getBoundingSphere() const {
     return bv->getBoundingSphere();
+}
+
+double BVNode::getBoundingSphere(Point3d& centre) const {
+	return bv->getBoundingSphere(centre);
 }
 
 const BoundingVolume& BVNode::getBoundingVolume() const {

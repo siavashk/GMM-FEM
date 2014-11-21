@@ -419,10 +419,11 @@ MeshQueryResult is_inside_or_on(const Point3d& pnt, const PolygonMesh& mesh,
         const BVTree& bvt, InsideMeshQueryData& data, double tol,
         int numRetries, double baryEpsilon) {
 
+	Point3d centroid;
     const SharedBVNode& root = bvt.getRoot();
     if (tol < 0) {
         // default tolerance
-        double r = root->bv->getBoundingSphere().getRadius();
+        double r = root->bv->getBoundingSphere(centroid);
         tol = 1e-12 * r;
     }
 
@@ -450,7 +451,6 @@ MeshQueryResult is_inside_or_on(const Point3d& pnt, const PolygonMesh& mesh,
     dir.normalize();
 
     const std::vector<SharedPolygon>& meshFaces = mesh.faces;
-    Point3d centroid;
 
     data.nRetries = 0;
     do {
@@ -580,15 +580,15 @@ bool poly_contains_coordinate(Point3d& pnt, const BoundablePolygon& bpoly,
     return false;
 }
 
-// Faster?
 bool is_inside(const Point3d& pnt, const BVTree& bvt, InsideMeshQueryData& data,
         double tol, int maxRetries) {
 
     const SharedBVNode& root = bvt.getRoot();
+    Point3d centroid;
 
     if (tol < 0) {
         // default tolerance
-        double r = root->bv->getBoundingSphere().getRadius();
+        double r = root->bv->getBoundingSphere(centroid);
         tol = 1e-12 * r;
     }
 
@@ -636,7 +636,6 @@ bool is_inside(const Point3d& pnt, const BVTree& bvt, InsideMeshQueryData& data,
     }
 
     // resort to ray-cast, starting with aimed at mid-face
-    Point3d centroid;
     tri->computeCentroid(centroid);
     dir.set(centroid);
     dir.subtract(pnt);

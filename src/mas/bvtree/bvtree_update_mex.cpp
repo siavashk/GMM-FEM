@@ -72,7 +72,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     // get updated points vector
-    double *pnts;
+    double *pnts = nullptr;
     if (nrhs > PNTS_IDX && !mxIsEmpty(prhs[PNTS_IDX])
             && mxIsDouble(prhs[PNTS_IDX])) {
         pnts = mxGetPr(prhs[PNTS_IDX]);
@@ -88,6 +88,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     // recursively update points
-    updateNode(*(tree->getRoot()), pnts);
+    if (pnts != nullptr) {
+    	updateNode(*(tree->getRoot()), pnts);
+    }
 
 }
