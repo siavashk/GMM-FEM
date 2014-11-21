@@ -20,32 +20,34 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 
     if (nrhs < 1) {
-        mexErrMsgIdAndTxt( "MATLAB:bvtree_intersect_point_mex:invalidNumInputs",
+        mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_nearest_polygon:invalidNumInputs",
                         "Must have at least 1 input.");
     }
     if (nlhs > 2){
-        mexErrMsgIdAndTxt( "MATLAB:bvtree_destroy_mex:maxlhs",
+        mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_nearest_polygon:maxlhs",
                 "Too many output arguments.");
     }
 
-    // Get data
-    PBVTree tree = NULL;
+    // Get tree
+    mex::class_handle<BVTree> *tree = nullptr;
     if (nrhs > TREE_IDX) {
-    	mex::class_holder<PBVTree> *treeHolder = mex::get_class_holder<PBVTree>(MESH_TREE_SIGNATURE, prhs[TREE_IDX]);
-    	tree = treeHolder->getData();
+        tree = mex::get_class_handle<BVTree>(MESH_TREE_SIGNATURE,
+                prhs[TREE_IDX]);
 
-    	if (tree == NULL) {
-    		mexPrintf("Unable to recover tree");
-    	}
+        if (tree == nullptr) {
+            mexPrintf("Unable to recover tree");
+        }
 
-    	if (tree == NULL) {
-    		mexErrMsgIdAndTxt( "MATLAB:bvtree_intersect_point_mex:invalidInput",
-    		            "Cannot find BVTree with supplied id.");
-    	}
+        if (tree == nullptr) {
+            mexErrMsgIdAndTxt("MATLAB:smesh_bvtree_nearest_polygon:invalidInput",
+                    "Cannot find BVTree with supplied id.");
+        }
+
+        // printTree(tree);
 
     } else {
-        mexErrMsgIdAndTxt( "MATLAB:bvtree_intersect_point_mex:invalidInputType",
-            "Expecting an integer id.");
+        mexErrMsgIdAndTxt("MATLAB:smesh_bvtree_nearest_polygon:invalidInputType",
+                "Expecting an integer id.");
     }
 
     // get Points
@@ -58,11 +60,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     	int dim = mxGetM(prhs[PNTS_IDX]);
     	if (dim != DIM) {
-    		mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidInput",
+    		mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_nearest_polygon:invalidInput",
     				"Point array must be of size 3xN.");
     	}
     } else {
-    	mexErrMsgIdAndTxt( "MATLAB:bvtree_mex:invalidInputType",
+    	mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_nearest_polygon:invalidInputType",
     			"Point array must be of type double.");
     }
 
@@ -72,14 +74,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mxArray* nearestArray = mxCreateDoubleMatrix(DIM, nPoints, mxREAL);
     double *nearest = mxGetPr(nearestArray);
 
+    // temp variable for nearest point
+    mas::Point3d np;
+
 	// #pragma omp parallel for
     for (int i=0; i<nPoints; i++) {
    		mas::Point3d pnt(pnts[3*i], pnts[3*i+1], pnts[3*i+2]);
 
-   		mas::Point3d np;
-
    		// find nearest face
-   		mas::mesh::PBoundablePolygon bpoly = mas::mesh::nearest_polygon(pnt, tree, np);
+   		mas::mesh::SharedBoundablePolygon bpoly = mas::mesh::nearest_polygon(pnt, *tree, np);
 
    		nearest[3*i] = np.x;
    		nearest[3*i+1] = np.y;
@@ -94,7 +97,5 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if (nlhs > NEAREST_OUT) {
     	plhs[NEAREST_OUT] = nearestArray;
     }
-
-
 
 }

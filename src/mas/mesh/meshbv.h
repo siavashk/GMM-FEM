@@ -116,6 +116,10 @@ MeshQueryResult is_inside(const Point3d& pnt, const PolygonMesh& mesh,
 MeshQueryResult is_inside(const Point3d& pnt, const PolygonMesh& mesh,
 		const BVTree& bvt, double tol = -1, int numRetries = 100,
 		double baryEpsilon = 1e-12);
+MeshQueryResult is_inside(const Point3d& pnt, const PolygonMesh& mesh,
+        const BVTree& bvt, InsideMeshQueryData& data, double tol = -1,
+        int numRetries = 100, double baryEpsilon = 1e-12);
+
 MeshQueryResult is_inside_or_on(const Point3d& pnt, const PolygonMesh& mesh,
 		const BVTree& bvt, double tol = -1, int numRetries = 100,
 		double baryEpsilon = 1e-12);

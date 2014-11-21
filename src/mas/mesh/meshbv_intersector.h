@@ -43,7 +43,7 @@ public:
 		std::vector<Point3d>& pnts) const;
 	int intersectTriangleLine (
       const Point3d& v0, const Point3d& v1, const Point3d& v2,
-	  const Point3d& pos, const Vector3d& dir, Vector3d& duv);
+	  const Point3d& pos, const Vector3d& dir, Vector3d& duv) const;
 	int intersectTrianglePlane(const Point3d& p0, const Point3d& p1,
       const Point3d& p2, const Plane& plane, std::vector<Point3d>& pnts) const;
 	double nearestpoint (

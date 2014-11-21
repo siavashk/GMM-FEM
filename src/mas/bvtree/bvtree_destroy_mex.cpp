@@ -28,7 +28,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         // mexPrintf("Destroying tree\n");
         if (tree->isValid(POINTSET_TREE_SIGNATURE)) {
             delete tree;
-            tree = NULL;
+            tree = nullptr;
         }
         // mexPrintf("No access violation :(\n");
     }
