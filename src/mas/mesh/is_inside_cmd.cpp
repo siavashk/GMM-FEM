@@ -67,16 +67,28 @@ bool doInsideTest(const char filename[], double pnt[], double dx[], int nx[]) {
          for (int k=0; k<nx[2]; k++) {
 
             p.z = pStart.z + k*dx[2];
-            mas::mesh::MeshQueryResult inside = mas::mesh::is_inside(p, *mesh, *obbt);
+            mas::mesh::InsideMeshQueryData data;
+            mas::mesh::MeshQueryResult inside = mas::mesh::is_inside(p, *mesh, *obbt, data);
 
-//            printf("Point: (%.5lf, %.5lf, %.5lf), ", p.x, p.y, p.z);
-//            if (inside == mas::mesh::MeshQueryResult::INSIDE) {
-//               printf("Inside: true\n");
-//            } else if (inside == mas::mesh::MeshQueryResult::OUTSIDE) {
-//               printf("Inside: false\n");
-//            } else {
-//               printf("Inside: unsure\n");
-//            }
+            printf("Point: (%.5lf, %.5lf, %.5lf), ", p.x, p.y, p.z);
+            if (inside == mas::mesh::MeshQueryResult::INSIDE) {
+               printf("Inside: true\n");
+            } else if (inside == mas::mesh::MeshQueryResult::OUTSIDE) {
+               printf("Inside: false\n");
+            } else {
+               printf("Inside: unsure\n");
+            }
+
+            //            printf("  nearest face: ");
+            //            if (data.nearestFace != nullptr) {
+            //                for (mas::mesh::SharedVertex3d& vtx : data.nearestFace->polygon->verts) {
+            //                    printf("%d ", vtx->idx );
+            //                }
+            //                printf(", dist = %.5lf", data.nearestPoint.distance(p));
+            //                printf("'\n");
+            //            } else {
+            //                printf("null\n");
+            //            }
 
          }
       }
@@ -111,15 +123,25 @@ bool doInsideTestFaster(const char filename[], double pnt[], double dx[], int nx
             mas::mesh::InsideMeshQueryData data;
             bool inside2 = mas::mesh::is_inside(p, *obbt, data);
 
-//            printf("Point: (%.5lf, %.5lf, %.5lf), Inside: ", p.x, p.y, p.z);
-//
-//            if (data.unsure) {
-//               printf("unsure\n");
-//            } else if (inside2) {
-//               printf("true\n");
-//            } else {
-//               printf("false\n");
-//            }
+            printf("Point: (%.5lf, %.5lf, %.5lf), Inside: ", p.x, p.y, p.z);
+            if (data.unsure) {
+                printf("unsure\n");
+            } else if (inside2) {
+                printf("true\n");
+            } else {
+                printf("false\n");
+            }
+
+            //            printf("  nearest face: ");
+            //            if (data.nearestFace != nullptr) {
+            //                for (mas::mesh::SharedVertex3d& vtx : data.nearestFace->polygon->verts) {
+            //                    printf("%d ", vtx->idx );
+            //                }
+            //                printf(", dist = %.5lf", data.nearestPoint.distance(p));
+            //                printf("'\n");
+            //            } else {
+            //                printf("null\n");
+            //            }
 
          }
       }
@@ -137,6 +159,23 @@ int main( int argc, const char* argv[] ) {
    for (int i=0; i<3; i++) {
       sscanf(argv[i+2], "%lf", &pnt[i]);
    }
+
+   if (argc == 7 ) {
+       sscanf(argv[5], "%lf", &dx[0]);
+       dx[1] = dx[0];
+       dx[2] = dx[0];
+       sscanf(argv[6], "%d", &dn[0]);
+       dn[1] = dn[0];
+       dn[2] = dn[0];
+   } else if (argc == 11 ) {
+       for (int i=0; i<3; i++) {
+           sscanf(argv[i+5], "%lf", &dx[i]);
+       }
+       for (int i=0; i<3; i++) {
+           sscanf(argv[i+8], "%d", &dn[i]);
+       }
+   }
+
 
    mas::time::Timer timer;
 

@@ -208,8 +208,8 @@ public:
 	virtual bool split(std::vector<SharedBoundable>&& b,                    // move shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const = 0;
 
-	virtual BoundingVolume* clone();
-	virtual BoundingVolume* newInstance();
+	virtual BoundingVolume* clone() const = 0;
+	virtual BoundingVolume* newInstance() const = 0;
 
 };
 
@@ -350,8 +350,8 @@ public:
 	virtual bool split(std::vector<SharedBoundable>&& b,                    // move shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const;
 
-	virtual AABB* clone();
-	virtual AABB* newInstance();
+	virtual AABB* clone() const;
+	virtual AABB* newInstance() const;
 };
 
 class OBB : public BoundingBox {
@@ -397,8 +397,8 @@ public:
 	virtual bool split(std::vector<SharedBoundable>&& b,                    // move shared boundables
 			std::vector<std::vector<SharedBoundable>>& out) const;
 
-	virtual OBB* clone();
-	virtual OBB* newInstance();
+	virtual OBB* clone() const;
+	virtual OBB* newInstance() const;
 
 private:
 	static bool boxesIntersect ( const Vector3d& hw1, const Vector3d& hw2,
@@ -439,7 +439,7 @@ public:
 	virtual BoundingSphere getBoundingSphere() const;
 	virtual const BoundingVolume& getBoundingVolume() const;
 
-	std::vector<SharedBoundable>& getElements();
+	std::vector<SharedBoundable> getElements() const;
 	void setElements(const std::vector<SharedBoundable>& elems);
 	void setElements(std::vector<SharedBoundable>&& elems);
 
@@ -489,7 +489,7 @@ public:
 	BVTree(UniqueBV&& rootbv, std::vector<SharedBoundable>&& elems, double margin = 0);
 
 	BVTree(SharedBVNode&& root);
-
+	virtual ~BVTree() {};
 	const SharedBVNode& getRoot() const;
 	double getRadius() const;
 

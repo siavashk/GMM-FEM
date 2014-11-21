@@ -1,11 +1,11 @@
 #include "mas/bvtree/bvtree.h"
-#include "mas/core/util.h"
 #include "mas/core/math.h"
 #include <math.h>
+#include <algorithm>
 
 #define OCTANT_SIGN(a) (a >= 0 ? 1 : 0)
 #define OCTANT(a,o) (OCTANT_SIGN(a.x-o.x)+2*OCTANT_SIGN(a.y-o.y)\
-		+4*OCTANT_SIGN(a.z-o.z))
+        +4*OCTANT_SIGN(a.z-o.z))
 
 namespace mas {
 namespace bvtree {
@@ -1202,6 +1202,12 @@ bool AABB::split(std::vector<SharedBoundable>&& b,
 
         if (out[0].size() > 0 && out[1].size() > 0) {
             return true;
+        } else {
+            if (out[0].size() > 0) {
+                b = std::move(out[0]);
+            } else {
+                b = std::move(out[1]);
+            }
         }
     }
 
@@ -1210,11 +1216,11 @@ bool AABB::split(std::vector<SharedBoundable>&& b,
     return false;
 }
 
-AABB* AABB::clone() {
+AABB* AABB::clone() const {
     return new AABB(*this);
 }
 
-AABB* AABB::newInstance() {
+AABB* AABB::newInstance() const {
     return new AABB();
 }
 
@@ -1809,6 +1815,12 @@ bool OBB::split(std::vector<SharedBoundable>&& b,
         outSizes[1] = out[1].size();
         if (out[0].size() > 0 && out[1].size() > 0) {
             return true;
+        } else {
+            if (out[0].size() > 0) {
+                b = std::move(out[0]);
+            } else {
+                b = std::move(out[1]);
+            }
         }
     }
 
@@ -1817,11 +1829,11 @@ bool OBB::split(std::vector<SharedBoundable>&& b,
     return false;
 }
 
-OBB* OBB::clone() {
+OBB* OBB::clone() const {
     return new OBB(*this);
 }
 
-OBB* OBB::newInstance() {
+OBB* OBB::newInstance() const {
     return new OBB();
 }
 
@@ -1839,14 +1851,14 @@ BVNode::BVNode(UniqueBV&& bv, const std::vector<SharedBoundable>& elems,
         double margin) :
         bv(std::move(bv)), elems(elems), children(), parent() {
     this->bv->setMargin(margin);
-    this->bv->bound(elems);
+    this->bv->bound(this->elems);
 }
 
 BVNode::BVNode(UniqueBV&& bv, std::vector<SharedBoundable>&& elems,
         double margin) :
         bv(std::move(bv)), elems(std::move(elems)), children(), parent() {
     this->bv->setMargin(margin);
-    this->bv->bound(elems);
+    this->bv->bound(this->elems);
 }
 
 BVNode* BVNode::getParent() {
@@ -1865,7 +1877,7 @@ const BoundingVolume& BVNode::getBoundingVolume() const {
     return *bv;
 }
 
-std::vector<SharedBoundable>& BVNode::getElements() {
+std::vector<SharedBoundable> BVNode::getElements() const {
     return elems;
 }
 
@@ -1875,8 +1887,8 @@ void BVNode::setElements(const std::vector<SharedBoundable>& elems) {
 }
 
 void BVNode::setElements(std::vector<SharedBoundable>&& elems) {
-    this->elems = elems;
-    bv->bound(std::move(elems));
+    this->elems = std::move(elems);
+    bv->bound(this->elems);
 }
 
 size_t BVNode::numElements() const {
@@ -2453,45 +2465,237 @@ void BVTree::getLeavesRecursively(std::vector<BVNode*>& leaves,
     }
 }
 
-//  Static routines
-class BVNodeDistance {
-public:
-    const SharedBVNode& node;
-    Point3d nearest;
-    double dist;
-private:
-    BVNodeDistance(const BVNodeDistance& copyMe); // prevent copying
+double nearest_boundable_recursive_old(const Point3d& pnt, const BVNode& node,
+        SharedBoundable& nearest, Point3d& nearestPoint, double nearestDist) {
 
-public:
-    BVNodeDistance(const SharedBVNode& node, const Point3d& nearest,
-            double dist) :
-            node(node), nearest(nearest), dist(dist) {
-    }
+    Point3d p;
+    if (node.isLeaf()) {
+        for (const SharedBoundable& elem : node.elems) {
 
-    BVNodeDistance(const SharedBVNode& node, const Point3d& pnt) :
-            node(node) {
-        this->dist = node->bv->distanceToPoint(pnt, nearest);
-    }
-
-    BVNodeDistance(const SharedBVNode& node, const Point3d& pnt,
-            const Vector3d& dir) :
-            node(node) {
-        this->dist = node->bv->distanceToPoint(pnt, dir, nearest);
-    }
-
-};
-
-class BVNodeDistanceComparator {
-public:
-    // Returns true if b1 is earlier than b2
-    bool operator()(std::unique_ptr<BVNodeDistance>& b1,
-            std::unique_ptr<BVNodeDistance>& b2) {
-        if (b1->dist < b2->dist) {
-            return true;
+            double d = elem->distanceToPoint(pnt, p);
+            if (d < nearestDist) {
+                nearestDist = d;
+                nearest = elem;
+                nearestPoint.set(p);
+            }
         }
-        return false;
+    } else {
+        // recurse through children
+        for (const SharedBVNode& child : node.children) {
+            double d = child->bv->distanceToPoint(pnt, p);
+            if (d < nearestDist) {
+                nearestDist = nearest_boundable_recursive_old(pnt, *child, nearest,
+                        nearestPoint, nearestDist);
+            }
+        }
     }
-};
+
+    return nearestDist;
+}
+
+double nearest_boundable_recursive(const Point3d& pnt,
+        const BVNode& node, SharedBoundable& nearest, Point3d& nearestPoint,
+        double nearestDist) {
+
+    Point3d p;
+    if (node.isLeaf()) {
+        for (const SharedBoundable& elem : node.elems) {
+
+            double d = elem->distanceToPoint(pnt, p);
+            if (d < nearestDist) {
+                nearestDist = d;
+                nearest = elem;
+                nearestPoint.set(p);
+            }
+        }
+    } else {
+
+        // compute distances
+        size_t size = node.children.size();
+        int idx = 0;
+        std::vector<size_t> nidxs(size);
+        std::vector<double> ndists(size);
+
+        // recurse through children
+        for (const SharedBVNode& child : node.children) {
+            ndists[idx] = child->bv->distanceToPoint(pnt, p);
+            nidxs[idx] = idx;
+            if (ndists[idx] < nearestDist) {
+                idx++;
+            }
+        }
+
+        // sort indices by distance
+        std::sort(nidxs.begin(), std::next(nidxs.begin(), idx),
+                [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];}
+            );
+
+        // recurse through children in order of shortest distance
+        for (int i=0; i<idx; i++) {
+            int childIdx = nidxs[i];
+            const SharedBVNode& child = node.children[childIdx];
+            if (ndists[childIdx] < nearestDist) {
+                nearestDist = nearest_boundable_recursive(pnt, *child,
+                                nearest, nearestPoint, nearestDist);
+            }
+        }
+
+    }
+
+    return nearestDist;
+}
+
+double nearest_boundable_recursive_raw(const Point3d& pnt, const BVNode& node,
+        Boundable*& nearest, Point3d& nearestPoint, double nearestDist) {
+
+    Point3d p;
+    if (node.isLeaf()) {
+        for (const SharedBoundable& elem : node.elems) {
+
+            double d = elem->distanceToPoint(pnt, p);
+            if (d < nearestDist) {
+                nearestDist = d;
+                nearest = elem.get();
+                nearestPoint.set(p);
+            }
+        }
+    } else {
+        // compute distances
+        size_t size = node.children.size();
+        int idx = 0;
+        std::vector<size_t> nidxs(size);
+        std::vector<double> ndists(size);
+
+        // compute distances for children
+        for (const SharedBVNode& child : node.children) {
+            ndists[idx] = child->bv->distanceToPoint(pnt, p);
+            nidxs[idx] = idx;
+            if (ndists[idx] < nearestDist) {
+                idx++;
+            }
+        }
+
+        // sort indices by distance
+        std::sort(nidxs.begin(), std::next(nidxs.begin(), idx),
+                [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];}
+            );
+
+        // recurse through children in order of shortest distance
+        for (int i=0; i<idx; i++) {
+            int childIdx = nidxs[i];
+            const SharedBVNode& child = node.children[childIdx];
+            if (ndists[childIdx] < nearestDist) {
+                nearestDist = nearest_boundable_recursive_raw(pnt, *child,
+                                nearest, nearestPoint, nearestDist);
+            }
+        }
+    }
+
+    return nearestDist;
+}
+
+double nearest_boundable_recursive(const Point3d& pnt, const Vector3d& dir,
+        const BVNode& node, SharedBoundable& nearest, Point3d& nearestPoint,
+        double nearestDist) {
+
+    Point3d p;
+    if (node.isLeaf()) {
+        for (const SharedBoundable& elem : node.elems) {
+
+            double d = elem->distanceToPoint(pnt, dir, p);
+            if (d < nearestDist) {
+                nearestDist = d;
+                nearest = elem;
+                nearestPoint.set(p);
+            }
+        }
+    } else {
+
+        // compute distances
+        size_t size = node.children.size();
+        int idx = 0;
+        std::vector<size_t> nidxs(size);
+        std::vector<double> ndists(size);
+
+        // compute distances for children
+        for (const SharedBVNode& child : node.children) {
+            ndists[idx] = child->bv->distanceToPoint(pnt, dir, p);
+            nidxs[idx] = idx;
+            if (ndists[idx] < nearestDist) {
+                idx++;
+            }
+        }
+
+        // sort indices by distance
+        std::sort(nidxs.begin(), std::next(nidxs.begin(), idx),
+                [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];}
+            );
+
+        // recurse through children in order of shortest distance
+        for (int i=0; i<idx; i++) {
+            int childIdx = nidxs[i];
+            const SharedBVNode& child = node.children[childIdx];
+            if (ndists[childIdx] < nearestDist) {
+                nearestDist = nearest_boundable_recursive(pnt, dir, *child,
+                                nearest, nearestPoint, nearestDist);
+            }
+        }
+
+    }
+
+    return nearestDist;
+}
+
+double nearest_boundable_recursive_raw(const Point3d& pnt, const Vector3d& dir,
+        const BVNode& node, Boundable* nearest, Point3d& nearestPoint,
+        double nearestDist) {
+
+    Point3d p;
+    if (node.isLeaf()) {
+        for (const SharedBoundable& elem : node.elems) {
+
+            double d = elem->distanceToPoint(pnt, dir, p);
+            if (d < nearestDist) {
+                nearestDist = d;
+                nearest = elem.get();
+                nearestPoint.set(p);
+            }
+        }
+    } else {
+
+        // compute distances
+        size_t size = node.children.size();
+        int idx = 0;
+        std::vector<size_t> nidxs(size);
+        std::vector<double> ndists(size);
+
+        // compute distances for children
+        for (const SharedBVNode& child : node.children) {
+            ndists[idx] = child->bv->distanceToPoint(pnt, dir, p);
+            nidxs[idx] = idx;
+            if (ndists[idx] < nearestDist) {
+                idx++;
+            }
+        }
+
+        // sort indices by distance
+        std::sort(nidxs.begin(), std::next(nidxs.begin(), idx),
+                [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];}
+            );
+
+        // recurse through children in order of shortest distance
+        for (int i=0; i<idx; i++) {
+            int childIdx = nidxs[i];
+            const SharedBVNode& child = node.children[childIdx];
+            if (ndists[childIdx] < nearestDist) {
+                nearestDist = nearest_boundable_recursive_raw(pnt, dir, *child,
+                                nearest, nearestPoint, nearestDist);
+            }
+        }
+    }
+
+    return nearestDist;
+}
 
 SharedBoundable nearest_boundable(const BVTree& bvh, const Point3d& pnt,
         Point3d& nearestPoint) {
@@ -2501,46 +2705,8 @@ SharedBoundable nearest_boundable(const BVTree& bvh, const Point3d& pnt,
 
     double dist = math::DOUBLE_INFINITY;
 
-    mas::priority_queue<std::unique_ptr<BVNodeDistance>,
-            std::vector<std::unique_ptr<BVNodeDistance> >,
-            BVNodeDistanceComparator> queue;
-
-    queue.push(
-            std::unique_ptr<BVNodeDistance>(
-                    new BVNodeDistance(bvh.getRoot(), pnt)));
-    while (queue.size() > 0) {
-
-        std::unique_ptr<BVNodeDistance> bvd = queue.pop_top();
-
-        if (bvd->dist > dist) {
-            // remaining nodes are further than nearest distance
-            break;
-        }
-
-        if (bvd->node->isLeaf()) {
-            for (SharedBoundable& elem : bvd->node->elems) {
-
-                double d = elem->distanceToPoint(pnt, p);
-                if (d < dist) {
-                    dist = d;
-                    nearest = elem;
-                    nearestPoint.set(p);
-                }
-            }
-        } else {
-
-            // add children to queue
-            for (SharedBVNode& child : bvd->node->children) {
-                double d = child->bv->distanceToPoint(pnt, p);
-                if (d <= dist) {
-                    queue.push(
-                            std::unique_ptr<BVNodeDistance>(
-                                    new BVNodeDistance(child, p, d)));
-                }
-            }
-        }
-    }
-
+    const BVNode& root = *(bvh.getRoot());
+    dist = nearest_boundable_recursive(pnt, root, nearest, nearestPoint, dist);
     return nearest;
 
 }
@@ -2549,52 +2715,15 @@ SharedBoundable nearest_boundable(const BVTree& bvh, const Point3d& pnt,
         const Vector3d& dir, Point3d& nearestPoint) {
 
     SharedBoundable nearest = nullptr;
-    Point3d p;  // temp point
+    Point3d p;  // temporary point
 
     double dist = math::DOUBLE_INFINITY;
 
-    mas::priority_queue<std::unique_ptr<BVNodeDistance>,
-            std::vector<std::unique_ptr<BVNodeDistance> >,
-            BVNodeDistanceComparator> queue;
-
-    queue.push(
-            std::unique_ptr<BVNodeDistance>(
-                    new BVNodeDistance(bvh.getRoot(), pnt, dir)));
-
-    while (queue.size() > 0) {
-
-        std::unique_ptr<BVNodeDistance> bvd = queue.pop_top();
-
-        if (bvd->dist > dist) {
-            // remaining nodes are further
-            break;
-        }
-
-        if (bvd->node->isLeaf()) {
-            for (SharedBoundable& elem : bvd->node->elems) {
-                double d = elem->distanceToPoint(pnt, dir, p);
-                if (d < dist) {
-                    // clear current list of nearest
-                    dist = d;
-                    nearest = elem;
-                    nearestPoint.set(p);
-                }
-            }
-        } else {
-
-            // add children to queue
-            for (SharedBVNode& child : bvd->node->children) {
-                double d = child->bv->distanceToPoint(pnt, dir, p);
-                if (d <= dist) {
-                    queue.push(
-                            std::unique_ptr<BVNodeDistance>(
-                                    new BVNodeDistance(child, p, d)));
-                }
-            }
-        }
-    }
-
+    const BVNode& root = *(bvh.getRoot());
+    dist = nearest_boundable_recursive(pnt, dir, root, nearest, nearestPoint,
+            dist);
     return nearest;
+
 }
 
 Boundable* nearest_boundable_raw(const BVTree& bvh, const Point3d& pnt,
@@ -2605,46 +2734,8 @@ Boundable* nearest_boundable_raw(const BVTree& bvh, const Point3d& pnt,
 
     double dist = math::DOUBLE_INFINITY;
 
-    mas::priority_queue<std::unique_ptr<BVNodeDistance>,
-            std::vector<std::unique_ptr<BVNodeDistance> >,
-            BVNodeDistanceComparator> queue;
-
-    queue.push(
-            std::unique_ptr<BVNodeDistance>(
-                    new BVNodeDistance(bvh.getRoot(), pnt)));
-    while (queue.size() > 0) {
-
-        std::unique_ptr<BVNodeDistance> bvd = queue.pop_top();
-
-        if (bvd->dist > dist) {
-            // remaining nodes are further than nearest distance
-            break;
-        }
-
-        if (bvd->node->isLeaf()) {
-            for (SharedBoundable& elem : bvd->node->elems) {
-
-                double d = elem->distanceToPoint(pnt, p);
-                if (d < dist) {
-                    dist = d;
-                    nearest = elem.get();
-                    nearestPoint.set(p);
-                }
-            }
-        } else {
-
-            // add children to queue
-            for (SharedBVNode& child : bvd->node->children) {
-                double d = child->bv->distanceToPoint(pnt, p);
-                if (d <= dist) {
-                    queue.push(
-                            std::unique_ptr<BVNodeDistance>(
-                                    new BVNodeDistance(child, p, d)));
-                }
-            }
-        }
-    }
-
+    const BVNode& root = *(bvh.getRoot());
+    dist = nearest_boundable_recursive_raw(pnt, root, nearest, nearestPoint, dist);
     return nearest;
 
 }
@@ -2653,237 +2744,15 @@ Boundable* nearest_boundable_raw(const BVTree& bvh, const Point3d& pnt,
         const Vector3d& dir, Point3d& nearestPoint) {
 
     Boundable* nearest = nullptr;
-    Point3d p;  // temp point
+    Point3d p;  // temporary point
 
     double dist = math::DOUBLE_INFINITY;
 
-    mas::priority_queue<std::unique_ptr<BVNodeDistance>,
-            std::vector<std::unique_ptr<BVNodeDistance> >,
-            BVNodeDistanceComparator> queue;
-
-    queue.push(
-            std::unique_ptr<BVNodeDistance>(
-                    new BVNodeDistance(bvh.getRoot(), pnt, dir)));
-
-    while (queue.size() > 0) {
-
-        std::unique_ptr<BVNodeDistance> bvd = queue.pop_top();
-
-        if (bvd->dist > dist) {
-            // remaining nodes are further
-            break;
-        }
-
-        if (bvd->node->isLeaf()) {
-            for (SharedBoundable& elem : bvd->node->elems) {
-                double d = elem->distanceToPoint(pnt, dir, p);
-                if (d < dist) {
-                    // clear current list of nearest
-                    dist = d;
-                    nearest = elem.get();
-                    nearestPoint.set(p);
-                }
-            }
-        } else {
-
-            // add children to queue
-            for (SharedBVNode& child : bvd->node->children) {
-                double d = child->bv->distanceToPoint(pnt, dir, p);
-                if (d <= dist) {
-                    queue.push(
-                            std::unique_ptr<BVNodeDistance>(
-                                    new BVNodeDistance(child, p, d)));
-                }
-            }
-        }
-    }
-
+    const BVNode& root = *(bvh.getRoot());
+    dist = nearest_boundable_recursive_raw(pnt, dir, root, nearest, nearestPoint,
+            dist);
     return nearest;
 }
-
-/*
- // Factory methods
-
- PBoundingSphere BVFactory::createBoundingSphere() {
- return std::make_shared<BoundingSphere>();
- }
-
- PBoundingSphere BVFactory::createBoundingSphere(
- const BoundingSphere& bs) {
- return std::make_shared<BoundingSphere>(bs);
- }
-
- PAABB BVFactory::createAABB() {
- return std::make_shared<AABB>();
- }
-
- PAABB BVFactory::createAABB(const AABB& aabb) {
- return std::make_shared<AABB>(aabb);
- }
-
- POBB BVFactory::createOBB() {
- return std::make_shared<OBB>();
- }
-
- POBB BVFactory::createOBB(const OBB& obb) {
- return std::make_shared<OBB>(obb);
- }
-
-
- PBVNode BVTreeFactory::createNode(const PBoundingVolume bv, double margin) {
- PBVNode node = std::make_shared<BVNode>(bv, margin);
- node->attach(node);
- }
-
- PBVNode BVTreeFactory::createNode(const PBoundingVolume bv,
- const PBoundableList& elems, double margin) {
- PBVNode node = std::make_shared<BVNode>(bv, elems, margin);
- node->attach(node);
- return node;
- }
-
- PBVTree BVTreeFactory::createTree(const PBoundingVolume bv,
- double margin) {
- PBVTree tree = std::make_shared<BVTree>(bv, margin);
- return tree;
- }
-
- PBVTree BVTreeFactory::createTree(const PBoundingVolume bv,
- const PBoundableList& elems, double margin) {
-
- PBVTree tree = std::make_shared<BVTree>(bv, elems, margin);
- return tree;
- }
-
- //PBoundable nearest_boundable(const PBVTree bvh, const Point3d& pnt,
- //		double tol, NearestBoundableData& data) {
- //
- //	PBoundable nearest = NULL;
- //	Point3d p;
- //
- //	data.dist = math::DOUBLE_INFINITY;
- //	data.tol = tol;
- //	data.nearestBoundables.clear();
- //	data.nearestPoints.clear();
- //
- //	std::priority_queue<BVNodeDistance, std::vector<BVNodeDistance>,
- //	BVNodeDistanceComparator> queue;
- //
- //	queue.push( BVNodeDistance(bvh->getRoot(),pnt) );
- //	while (queue.size() > 0) {
- //
- //		BVNodeDistance bvd = queue.top();
- //		queue.pop();
- //		if (bvd.dist > data.dist+tol) {
- //			// remaining nodes are further
- //			break;
- //		}
- //
- //		PBVNode node = bvd.node;
- //		if (node->isLeaf()) {
- //
- //			PBoundableList elems = node->elems;
- //			for (PBoundable elem : node->elems) {
- //
- //				double d = elem->distanceToPoint(pnt, p);
- //				if (d < data.dist-tol) {
- //					// clear current list of nearest
- //					data.dist = d;
- //					nearest = elem;
- //					data.nearestBoundables.clear();
- //					data.nearestBoundables.push_back(nearest);
- //					data.nearestPoints.clear();
- //					data.nearestPoints.push_back(p);
- //				} else if (d < data.dist) {
- //					// add new nearest to front of list
- //					data.dist = d;
- //					data.nearestPoints.insert(data.nearestPoints.begin(), p);
- //					data.nearestBoundables.insert(data.nearestBoundables.begin(), elem);
- //				} else if (d <= data.dist+tol) {
- //					// add new nearest to back of list
- //					data.nearestBoundables.push_back(elem);
- //					data.nearestPoints.push_back(p);
- //				}
- //			}
- //		} else {
- //
- //			// add children to queue
- //			for (PBVNode child : node->children) {
- //				double d = child->bv->distanceToPoint(pnt, p);
- //				if (d <= data.dist+tol) {
- //					queue.push (BVNodeDistance(child, p, d));
- //				}
- //			}
- //		}
- //	}
- //
- //	return nearest;
- //
- //}
- //PBoundable nearest_boundable(const PBVTree bvh, const Point3d& pnt,
- //		const Vector3d& dir, double tol, NearestBoundableData& data) {
- //
- //	PBoundable nearest = NULL;
- //	Point3d p;
- //
- //	data.dist = math::DOUBLE_INFINITY;
- //	data.tol = tol;
- //	data.nearestBoundables.clear();
- //	data.nearestPoints.clear();
- //
- //	std::priority_queue<BVNodeDistance, std::vector<BVNodeDistance>,
- //	BVNodeDistanceComparator> queue;
- //
- //	queue.push( BVNodeDistance(bvh->getRoot(), pnt, dir) );
- //	while (queue.size() > 0) {
- //
- //		BVNodeDistance bvd = queue.top();
- //		queue.pop();
- //		if (bvd.dist > data.dist+tol) {
- //			// remaining nodes are further
- //			break;
- //		}
- //
- //		PBVNode node = bvd.node;
- //		if (node->isLeaf()) {
- //			for (PBoundable elem : node->elems) {
- //				double d = elem->distanceToPoint(pnt, dir, p);
- //				if (d < data.dist-tol) {
- //					// clear current list of nearest
- //					data.dist = d;
- //					nearest = elem;
- //					data.nearestBoundables.clear();
- //					data.nearestBoundables.push_back(nearest);
- //					data.nearestPoints.clear();
- //					data.nearestPoints.push_back(p);
- //				} else if (d < data.dist) {
- //					// add new nearest to front of list
- //					data.dist = d;
- //					data.nearestPoints.insert(data.nearestPoints.begin(), p);
- //					data.nearestBoundables.insert(data.nearestBoundables.begin(), elem);
- //				} else if (d <= data.dist+tol) {
- //					// add new nearest to back of list
- //					data.nearestBoundables.push_back(elem);
- //					data.nearestPoints.push_back(p);
- //				}
- //
- //			}
- //		} else {
- //
- //			// add children to queue
- //			for (PBVNode child : node->children) {
- //				double d = child->bv->distanceToPoint(pnt, dir, p);
- //				if (d <= data.dist+tol) {
- //					queue.push (BVNodeDistance(child, p, d));
- //				}
- //			}
- //		}
- //	}
- //
- //	return nearest;
- //
- //}
- */
 
 }
 }

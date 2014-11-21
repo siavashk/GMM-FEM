@@ -66,11 +66,13 @@ Polygon::Polygon(const Plane& plane, const std::vector<SharedVertex3d>& verts) :
 }
 
 Polygon::Polygon(std::vector<SharedVertex3d>&& verts) :
-		plane(std::move(getPlane(verts))), verts(std::move(verts)), he0(nullptr) {
+		plane(), verts(std::move(verts)), he0(nullptr) {
+    plane = getPlane(this->verts);
 }
 
 Polygon::Polygon(const std::vector<SharedVertex3d>& verts) :
-		plane(std::move(getPlane(verts))), verts(verts), he0(nullptr) {
+		plane(), verts(verts), he0(nullptr) {
+    plane = getPlane(this->verts);
 }
 
 Polygon::Polygon(const SharedVertex3d& v0, const SharedVertex3d& v1,
@@ -118,13 +120,13 @@ void Polygon::set(const Polygon& poly) {
 void Polygon::set(std::vector<SharedVertex3d>&& verts) {
 	he0 = nullptr;	// for triggering rebuild
 	this->verts = std::move(verts);
-	plane = getPlane(verts);
+	plane = getPlane(this->verts);
 }
 
 void Polygon::set(const std::vector<SharedVertex3d>& verts) {
 	he0 = nullptr;	// for triggering rebuild
 	this->verts = verts;
-	plane = getPlane(verts);
+	plane = getPlane(this->verts);
 }
 
 void Polygon::set(const SharedVertex3d& v0, const SharedVertex3d& v1,
@@ -698,7 +700,7 @@ std::vector<std::unique_ptr<Polygon>> MeshFactory::triangulate(
 					foundEar = true;
 					for (SharedVertex3d& vtxr : reflex) {
 						if (vtxr != *vtxPrev && vtxr != *vtx
-								&& vtxr != *vtxNext) {
+							&& vtxr != *vtxNext) {
 
 							// determine barycentric coordinates
 							vp.subtract(*vtxr, **vtx);

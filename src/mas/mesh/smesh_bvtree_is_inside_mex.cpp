@@ -17,88 +17,90 @@
 
 using namespace mas::bvtree;
 
- // Main entry function
+// Main entry function
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-    
+
     if (nrhs < 1) {
-        mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_is_inside_mex:invalidNumInputs",
-                        "Must have at least 1 input.");
+        mexErrMsgIdAndTxt("MATLAB:smesh_bvtree_is_inside:invalidNumInputs",
+                "Must have at least 1 input.");
     }
     if (nrhs > 4) {
-        mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_is_inside_mex:invalidNumInputs",
-                        "Too many input argments (max 3).");
+        mexErrMsgIdAndTxt("MATLAB:smesh_bvtree_is_inside:invalidNumInputs",
+                "Too many input argments (max 3).");
     }
-    if (nlhs > 1){
-        mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_is_inside_mex:maxlhs",
+    if (nlhs > 1) {
+        mexErrMsgIdAndTxt("MATLAB:smesh_bvtree_is_inside:maxlhs",
                 "Too many output arguments.");
     }
 
     // Get data
-    PBVTree tree = NULL;
+    // Get data
+    mex::class_handle<BVTree> *tree = nullptr;
     if (nrhs > TREE_IDX) {
-    	mex::class_holder<PBVTree> *treeHolder = mex::get_class_holder<PBVTree>(MESH_TREE_SIGNATURE, prhs[TREE_IDX]);
-    	tree = treeHolder->getData();
+        tree = mex::get_class_handle<BVTree>(MESH_TREE_SIGNATURE,
+                prhs[TREE_IDX]);
 
-    	if (tree == NULL) {
-    		mexPrintf("Unable to recover tree");
-    	}
+        if (tree == nullptr) {
+            mexPrintf("Unable to recover tree");
+        }
 
-    	if (tree == NULL) {
-    		mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_is_inside_mex:invalidInput",
-    		            "Cannot find BVTree with supplied id.");
-    	}
+        if (tree == nullptr) {
+            mexErrMsgIdAndTxt("MATLAB:smesh_bvtree_is_inside:invalidInput",
+                    "Cannot find BVTree with supplied id.");
+        }
 
     } else {
-        mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_is_inside_mex:invalidInputType",
-            "Expecting an integer id.");
+        mexErrMsgIdAndTxt("MATLAB:smesh_bvtree_is_inside:invalidInputType",
+                "Expecting an integer id.");
     }
 
     // get Points
     // Get data
     double *pnts;
     int nPoints = 0;
-    if (nrhs > PNTS_IDX && !mxIsEmpty(prhs[PNTS_IDX]) && mxIsDouble(prhs[PNTS_IDX])) {
-    	pnts = mxGetPr(prhs[PNTS_IDX]);
-    	nPoints = mxGetN(prhs[PNTS_IDX]);
+    if (nrhs > PNTS_IDX && !mxIsEmpty(prhs[PNTS_IDX])
+            && mxIsDouble(prhs[PNTS_IDX])) {
+        pnts = mxGetPr(prhs[PNTS_IDX]);
+        nPoints = mxGetN(prhs[PNTS_IDX]);
 
-    	int dim = mxGetM(prhs[PNTS_IDX]);
-    	if (dim != DIM) {
-    		mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_is_inside_mex:invalidInput",
-    				"Point array must be of size 3xN.");
-    	}
+        int dim = mxGetM(prhs[PNTS_IDX]);
+        if (dim != DIM) {
+            mexErrMsgIdAndTxt("MATLAB:smesh_bvtree_is_inside:invalidInput",
+                    "Point array must be of size 3xN.");
+        }
     } else {
-    	mexErrMsgIdAndTxt( "MATLAB:smesh_bvtree_is_inside_mex:invalidInputType",
-    			"Point array must be of type double.");
+        mexErrMsgIdAndTxt("MATLAB:smesh_bvtree_is_inside:invalidInputType",
+                "Point array must be of type double.");
     }
-    
+
     // get tolerance and retries
     double tol = -1;
     if (nrhs > TOL_IDX && !mxIsEmpty(prhs[TOL_IDX])
-        && mxIsDouble(prhs[TOL_IDX])) {
+            && mxIsDouble(prhs[TOL_IDX])) {
         double *eptr = mxGetPr(prhs[TOL_IDX]);
         tol = eptr[0];
     }
-    
+
     // get tolerance and retries
     int retries = -1;
     if (nrhs > RETRY_IDX && !mxIsEmpty(prhs[RETRY_IDX])
-        && mxIsDouble(prhs[RETRY_IDX])) {
+            && mxIsDouble(prhs[RETRY_IDX])) {
         double *eptr = mxGetPr(prhs[RETRY_IDX]);
-        retries = (int)eptr[0];
+        retries = (int) eptr[0];
     }
 
     // build output
     mxArray* inArray = mxCreateDoubleMatrix(nPoints, 1, mxREAL);
     double *in = mxGetPr(inArray);
 
-	// #pragma omp parallel for
-    for (int i=0; i<nPoints; i++) {
-   		mas::Point3d pnt(pnts[3*i], pnts[3*i+1], pnts[3*i+2]);
+    // #pragma omp parallel for
+    for (int i = 0; i < nPoints; i++) {
+        mas::Point3d pnt(pnts[3 * i], pnts[3 * i + 1], pnts[3 * i + 2]);
 
         mas::mesh::InsideMeshQueryData qdata;
-        
-   		// determine whether is inside or out
-   		bool inside = mas::mesh::is_inside(pnt, tree, qdata, tol, retries);
+
+        // determine whether is inside or out
+        bool inside = mas::mesh::is_inside(pnt, *tree, qdata, tol, retries);
         if (!qdata.unsure) {
             if (inside) {
                 in[i] = 1;
@@ -111,7 +113,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     if (nlhs > INSIDE_OUT) {
-    	plhs[INSIDE_OUT] = inArray;
+        plhs[INSIDE_OUT] = inArray;
     }
 
 }

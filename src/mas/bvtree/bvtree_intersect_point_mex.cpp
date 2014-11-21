@@ -37,7 +37,7 @@ void printNode(const BVNode& node, int depth) {
 }
 
 void printTree(BVTree& obbt) {
-    SharedBVNode& root = obbt.getRoot();
+    const SharedBVNode& root = obbt.getRoot();
     printNode(*root, 0);
 
 }
@@ -54,17 +54,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 "Too many output arguments.");
     }
 
-    // Get data
-    mex::class_handle<BVTree> *tree = NULL;
+    // Get tree
+    mex::class_handle<BVTree> *tree = nullptr;
     if (nrhs > TREE_IDX) {
         tree = mex::get_class_handle<BVTree>(POINTSET_TREE_SIGNATURE,
                 prhs[TREE_IDX]);
 
-        if (tree == NULL) {
+        if (tree == nullptr) {
             mexPrintf("Unable to recover tree");
         }
 
-        if (tree == NULL) {
+        if (tree == nullptr) {
             mexErrMsgIdAndTxt("MATLAB:bvtree_intersect_point:invalidInput",
                     "Cannot find BVTree with supplied id.");
         }
