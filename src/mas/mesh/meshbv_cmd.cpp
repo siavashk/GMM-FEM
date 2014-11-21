@@ -55,7 +55,7 @@ int main(int argc, const char* argv[]) {
 				polyvtxs.push_back( vtxs[ gidx-1 ] );
 			}
 			SharedPolygon poly = std::make_shared<Polygon>(std::move(polyvtxs));
-			printf("Poly created, %d verts\n", poly->verts.size());
+			printf("Poly created, %ld verts\n", poly->verts.size());
 			SharedBoundablePolygon bpoly = std::make_shared<BoundablePolygon>(std::move(poly));
 			bpoly->setIndex(idx++);
 
@@ -63,7 +63,7 @@ int main(int argc, const char* argv[]) {
 				printf("What's going on?!?!\n");
 				printf("Polygon: %p\nBPolygon: %p\n", poly.get(), bpoly->polygon.get());
 			}
-			printf("Bounded polygon has %d verts (%d)\n", bpoly->polygon->verts.size(), poly->verts.size());
+			printf("Bounded polygon has %ld verts (%ld)\n", bpoly->polygon->verts.size(), poly->verts.size());
 			fflush(stdout);
 			boundableGroups.push_back(bpoly);
 		}
@@ -72,7 +72,7 @@ int main(int argc, const char* argv[]) {
 	int pidx = 1;
 	for (SharedBoundable& b : boundableGroups) {
 		SharedBoundablePolygon bpoly = std::static_pointer_cast<BoundablePolygon>(b);
-		printf("Polygon %d, %d verts\n", pidx++, bpoly->polygon->verts.size());
+		printf("Polygon %d, %ld verts\n", pidx++, bpoly->polygon->verts.size());
 		fflush(stdout);
 	}
 

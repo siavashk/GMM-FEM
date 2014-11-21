@@ -1,7 +1,7 @@
 CC=g++
 LD=g++
 
-DEBUG = 0
+# DEBUG = 0
 PROFILE = 0
 
 BUILDDIR = ./build
@@ -34,9 +34,12 @@ endif
 ifndef OCTAVE_INCLUDEDIR
 OCTAVE_INCLUDEDIR:="/usr/include/octave-3.8.1/octave"
 endif
+ifndef OCTAVE_LIBDIR
+OCTAVE_LIBDIR:="usr/lib/x86_64-linux-gnu/octave/3.8.1"
+endif
 
 MEX_CPPFLAGS:=$(CPPFLAGS) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I"$(OCTAVE_INCLUDEDIR)" -Wall
-MEX_LDFLAGS:= $(LDFLAGS) -shared -L"$(MATLAB_BINDIR)" -lstdc++ -lmex -lmx -lmat
+MEX_LDFLAGS:= $(LDFLAGS) -shared -L"$(OCTAVE_LIBDIR)" -lstdc++ -loctinterp
 
 MEX_SOURCES = $(shell find $(SRCDIR)/ -type f -name '*_mex.cpp')
 MEX_OBJECTS = $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.mexo, $(MEX_SOURCES))
