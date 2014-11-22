@@ -1,7 +1,7 @@
 CC=g++
 LD=g++
 
-DEBUG = 0
+# DEBUG = 0
 PROFILE = 0
 
 BUILDDIR = ./build
@@ -9,7 +9,7 @@ SRCDIR = ./src
 INCLUDEDIR = ./src
 BINDIR = ./bin
 
-CPPFLAGS=-I$(INCLUDEDIR) -fPIC --std=c++11
+CPPFLAGS=-I$(INCLUDEDIR) --std=c++11
 ifdef DEBUG
 CPPFLAGS:=$(CPPFLAGS) -g -O0 -DMAS_DEBUG
 else
@@ -104,7 +104,7 @@ lib: $(LIB)
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
 	@$(MKDIR_CMD)
 	@echo Compiling $@...
-	$(CC) $(CPPFLAGS) -o $@ -c $<
+	@$(CC) $(CPPFLAGS) -o $@ -c $<
 
 $(BUILDDIR)/%.mexo: $(SRCDIR)/%.cpp
 	@$(MKDIR_CMD)
@@ -114,7 +114,7 @@ $(BUILDDIR)/%.mexo: $(SRCDIR)/%.cpp
 $(BINDIR)/%.$(MEX_EXT): $(BUILDDIR)/%_mex.mexo $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	$(LD) -o $@ $(MEX_LDFLAGS) $(OBJECTS) $<
+	@$(LD) -o $@ $(MEX_LDFLAGS) $(OBJECTS) $<
 	@echo Complete!
 	
 $(BINDIR)/%.m: $(SRCDIR)/%.m
@@ -126,12 +126,12 @@ $(BINDIR)/%.m: $(SRCDIR)/%.m
 $(BINDIR)/%: $(BUILDDIR)/%_cmd.o $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	$(LD) -o $@ $(LDFLAGS) $(OBJECTS) $<
+	@$(LD) -o $@ $(LDFLAGS) $(OBJECTS) $<
 	@echo Complete!
 	
 $(LIB) : $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	# ar rcs $@ $(OBJECTS)
-	# ranlib $@
-	$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(OBJECTS)
+	@ar rcs $@ $(OBJECTS)
+	@ranlib $@
+	@$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(OBJECTS)
