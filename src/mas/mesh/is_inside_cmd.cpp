@@ -65,6 +65,7 @@ bool doInsideTest(const char filename[], double pnt[], double dx[], int nx[]) {
       for (int j=0; j<nx[1]; j++) {
          p.y = pStart.y + j*dx[1];
          for (int k=0; k<nx[2]; k++) {
+			p.z = pStart.z + k*dx[2];
             mas::mesh::InsideMeshQueryData data;
             bool inside2 = mas::mesh::is_inside(p, *obbt, data);
 
@@ -122,8 +123,9 @@ int main( int argc, const char* argv[] ) {
    }
 
 
-   mas::time::Timer timer;
+	printf("Starting Point: (%.5lf, %.5lf, %.5lf)\n\n", pnt[0], pnt[1], pnt[2]);
 
+   mas::time::Timer timer;
    timer.start();
    doInsideTest(argv[1], pnt, dx, dn);
    timer.stop();
