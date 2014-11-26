@@ -846,12 +846,9 @@ void BVIntersector::intersectBoundingVolumeTriangles(
             const std::vector<SharedPolygon>& tris = bpoly->getTriangulation();
 
             for (const SharedPolygon& tri : tris) {
-
-                const SharedHalfEdge& he0 = tri->getFirstHalfEdge();
-
-                const Point3d& p0 = *(he0->head);
-                const Point3d& p1 = *(he0->next->head);
-                const Point3d& p2 = *(he0->next->next->head);
+                const Point3d& p0 = *(tri->verts[0]);
+                const Point3d& p1 = *(tri->verts[1]);
+                const Point3d& p2 = *(tri->verts[2]);
 
                 for (const SharedBoundable& elem2 : elems2) {
 
@@ -865,12 +862,9 @@ void BVIntersector::intersectBoundingVolumeTriangles(
 
                         for (const SharedPolygon& tri2 : tris2) {
 
-                            const SharedHalfEdge& he02 =
-                                    tri->getFirstHalfEdge();
-
-                            const Point3d& q0 = *(he02->head);
-                            const Point3d& q1 = *(he02->next->head);
-                            const Point3d& q2 = *(he02->next->next->head);
+                            const Point3d& q0 = *(tri2->verts[0]);
+                            const Point3d& q1 = *(tri2->verts[1]);
+                            const Point3d& q2 = *(tri2->verts[2]);
 
                             std::vector<Point3d> pnts;
                             int num =
