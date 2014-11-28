@@ -2,7 +2,7 @@ CC=g++
 LD=g++
 
 # DEBUG = 0
-PROFILE = 0
+# PROFILE = 0
 
 BUILDDIR = ./build
 SRCDIR = ./src
@@ -29,13 +29,13 @@ endif
 
 # Octave folders
 ifndef MEX_EXT
-MEX_EXT:=mexa64
+MEX_EXT:=mex
 endif
 ifndef OCTAVE_INCLUDEDIR
-OCTAVE_INCLUDEDIR:="/usr/include/octave-3.8.1/octave"
+OCTAVE_INCLUDEDIR:="/opt/octavedev/include/octave-4.1.0+/octave"
 endif
 ifndef OCTAVE_LIBDIR
-OCTAVE_LIBDIR:="usr/lib/x86_64-linux-gnu/octave/3.8.1"
+OCTAVE_LIBDIR:="/opt/octavedev/lib/octave/4.1.0+"
 endif
 
 MEX_CPPFLAGS:=$(CPPFLAGS) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I"$(OCTAVE_INCLUDEDIR)" -Wall
