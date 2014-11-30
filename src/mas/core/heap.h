@@ -57,6 +57,16 @@ template<typename RandomAccessIterator>
 void update_heap(RandomAccessIterator first, RandomAccessIterator last,
 		RandomAccessIterator pos);
 
+template<typename RandomAccessIterator>
+void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
+        RandomAccessIterator pos);
+template<typename RandomAccessIterator, typename Compare>
+void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
+        RandomAccessIterator pos, Compare compare);
+template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
+void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
+        RandomAccessIterator pos, Compare compare, MoveCallback moved);
+
 template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 void make_heap(RandomAccessIterator first, RandomAccessIterator last,
         Compare compare, MoveCallback moved);

@@ -18,6 +18,14 @@ void print_vec(const std::vector<int>& v) {
     std::cout << std::endl;
 }
 
+template<typename RA>
+void print_it(RA start, RA end) {
+    for (RA it = start; it < end; it++) {
+        std::cout << *it << " ";
+    }
+    std::cout << std::endl;
+}
+
 void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
     bool equal = true;
     for (int i = 0; i < v1.size(); i++) {
@@ -41,10 +49,10 @@ void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
 
 int main(int argc, char **argv) {
 
-    auto cmp = [](int a, int b){ return (a > b); };
-    auto mv = [](size_t a, size_t b) {};
+    auto cmp = [](int a, int b) {return (a > b);};
+    auto mv = [](int& v, const size_t& a, const size_t& b) {};
 
-    int len = 120000000;
+    int len = 100000;
     std::vector<int> v1(len);
     for (int i = 0; i < v1.size(); i++) {
         v1[i] = i;
@@ -179,10 +187,7 @@ int main(int argc, char **argv) {
     std::cout << "mas invalid: " << (invalid2 - v2.begin()) << std::endl;
 
     if (len < 50) {
-        for (int i = 0; i < v2.size(); i++) {
-            std::cout << v2[i] << " ";
-        }
-        std::cout << std::endl;
+        print_vec(v2);
     }
 
     // update heap
@@ -193,7 +198,8 @@ int main(int argc, char **argv) {
     std::cout << "std update took " << std_ms << "ms" << std::endl;
 
     timer.start();
-    mas::heap::update_heap(v2.begin(), v2.end(), v2.begin() + invalidPos, cmp, mv);
+    mas::heap::update_heap(v2.begin(), v2.end(), v2.begin() + invalidPos, cmp,
+            mv);
     timer.stop();
     mas_ms = timer.getMilliseconds();
     std::cout << "mas update took " << mas_ms << "ms" << std::endl;
@@ -203,7 +209,13 @@ int main(int argc, char **argv) {
     bool valid2 = std::is_heap(v2.begin(), v2.end(), cmp);
 
     std::cout << "std valid: " << valid1 << std::endl;
+    if (!valid1 && v1.size() < 50) {
+        print_vec(v1);
+    }
     std::cout << "mas valid: " << valid2 << std::endl;
+    if (!valid2 && v2.size() < 50) {
+        print_vec(v2);
+    }
 
     // invalidate part of heap again
     invalidPos = len / 3;
@@ -217,10 +229,7 @@ int main(int argc, char **argv) {
     std::cout << "mas invalid: " << (invalid2 - v2.begin()) << std::endl;
 
     if (len < 50) {
-        for (int i = 0; i < v2.size(); i++) {
-            std::cout << v2[i] << " ";
-        }
-        std::cout << std::endl;
+        print_vec(v2);
     }
 
     // update heap
@@ -231,17 +240,64 @@ int main(int argc, char **argv) {
     std::cout << "std update took " << std_ms << "ms" << std::endl;
 
     timer.start();
-    mas::heap::update_heap(v2.begin(), v2.end(), v2.begin() + invalidPos, cmp, mv);
+    mas::heap::update_heap(v2.begin(), v2.end(), v2.begin() + invalidPos, cmp,
+            mv);
     timer.stop();
     mas_ms = timer.getMilliseconds();
     std::cout << "mas update took " << mas_ms << "ms" << std::endl;
 
     // validate
     valid1 = std::is_heap(v1.begin(), v1.end(), cmp);
-    valid2 = std::is_heap(v2.begin(), v2.end(), cmp);
-
     std::cout << "std valid: " << valid1 << std::endl;
+    if (!valid1 && v1.size() < 50) {
+        print_vec(v1);
+    }
+
+    valid2 = std::is_heap(v2.begin(), v2.end(), cmp);
     std::cout << "mas valid: " << valid2 << std::endl;
+    if (!valid2 && v2.size() < 50) {
+        print_vec(v2);
+    }
+
+    // randomly pop out entries
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+
+    valid1 = true;
+    for (auto end = v2.end(); end > v2.begin(); end--) {
+        std::uniform_int_distribution<size_t> dis(0,
+                std::distance(v2.begin(), end) - 1);
+        auto pos = std::next(v2.begin(), dis(gen));
+
+        if (v2.size() < 50) {
+            std::cout << "before: ";
+            print_it(v2.begin(), end);
+            std::cout << "pop:    " << (pos - v2.begin()) << "(" << *pos << ")" << std::endl;
+        }
+
+        mas::heap::pop_heap(v2.begin(), end, pos, cmp, mv);
+
+        if (v2.size() < 50) {
+            std::cout << "after:  ";
+            print_it(v2.begin(), end);
+        }
+
+        // ensure valid heap
+        valid1 = std::is_heap(v2.begin(), end-1, cmp);
+        if (!valid1) {
+            std::cout << "    INVALID" << std::endl;
+            break;
+        }
+    }
+
+    if (valid1) {
+        std::cout << "mas internal pop passed" << std::endl;
+    } else {
+        std::cout << "mas internal pop failed" << std::endl;
+        if (v2.size() < 50) {
+            print_vec(v2);
+        }
+    }
 
 }
 

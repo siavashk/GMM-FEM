@@ -174,6 +174,54 @@ inline void __pop_heap(RandomAccessIterator first, RandomAccessIterator last,
             __MAS_MOVE(value));
 }
 
+template<typename RandomAccessIterator, typename Compare>
+void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last, RandomAccessIterator pos,
+        RandomAccessIterator result, Compare compare) {
+    typedef typename std::iterator_traits<RandomAccessIterator>::value_type ValueType;
+    typedef typename std::iterator_traits<RandomAccessIterator>::difference_type DistanceType;
+
+    ValueType value = __MAS_MOVE(*result);  // move out element from last position (will be re-inserted)
+    *result = __MAS_MOVE(*pos);             // move value from 'pos' to the end
+    DistanceType hole = pos-first;          // location of the hole
+
+    DistanceType parent = (hole-1)/2;
+    DistanceType child = (hole-1)/2;
+
+    // see if we need to move value up
+    if (hole > 0 && compare(*(first+parent), value)) {
+        // value needs to move up
+        __up_heap(first, hole, __MAS_MOVE(value), compare);
+    } else {
+        // move down or stay in place
+        __down_heap(first, last-first, hole, value, compare);
+    }
+
+}
+
+template<typename RandomAccessIterator>
+void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last, RandomAccessIterator pos,
+        RandomAccessIterator result) {
+    typedef typename std::iterator_traits<RandomAccessIterator>::value_type ValueType;
+    typedef typename std::iterator_traits<RandomAccessIterator>::difference_type DistanceType;
+
+    ValueType value = __MAS_MOVE(*result);  // move out element from last position (will be re-inserted)
+    *result = __MAS_MOVE(*pos);             // move value from 'pos' to the end
+    DistanceType hole = pos-first;          // location of the hole
+
+    DistanceType parent = (hole-1)/2;
+    DistanceType child = (hole-1)/2;
+
+    // see if we need to move value up
+    if (hole > 0 && (*(first+parent) < value)) {
+        // value needs to move up
+        __up_heap(first, hole, __MAS_MOVE(value));
+    } else {
+        // move down or stay in place
+        __down_heap(first, last-first, hole, value);
+    }
+
+}
+
 /**
  * @brief  Constructs a max binary heap over the given range using a comparison
  * functor.
@@ -421,7 +469,7 @@ void update_heap(RandomAccessIterator first, RandomAccessIterator last,
     // check if parent is smaller or child is bigger, bubble where necessary
     if ((posd > 0) && compare(*(first + (posd - 1) / 2), *(first + posd)) ) {
         __up_heap(first, posd, __MAS_MOVE(*(first + posd)), compare);
-    } else if (compare(*(first + posd), *(first + (posd - 1) / 2))) {
+    } else {
         __down_heap(first, last - first, posd, __MAS_MOVE(*(first + posd)), compare);
     }
 
@@ -444,10 +492,47 @@ void update_heap(RandomAccessIterator first, RandomAccessIterator last,
     // check if parent is smaller or child is bigger, bubble where necessary
     if ((posd > 0) && (*(first + (posd - 1) / 2)) < *(first + posd)) {
         __up_heap(first, posd, __MAS_MOVE(*(first + posd)));
-    } else if (*(first + posd) < *(first + (posd - 1) / 2)) {
+    } else {
         __down_heap(first, last - first, posd, __MAS_MOVE(*(first + posd)));
     }
 
+}
+
+/**
+ * @brief Removes the element at iterator location pos from the heap, moving
+ * it to the location (last-1)
+ * @param first start of heap
+ * @param last end of heap
+ * @param pos position to move
+ * @param compare comparison functor, compare(a,b)=true if a < b
+ */
+template<typename RandomAccessIterator, typename Compare>
+void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
+        RandomAccessIterator pos, Compare compare) {
+
+    // if not at the end, pop it out
+    if (last - pos > 1) {
+        last--;
+        mas::heap::__pop_heap_pos(first, last, pos, last, compare);
+    }
+}
+
+/**
+ * @brief Removes the element at iterator location pos from the heap, moving
+ * it to the location (last-1)
+ * @param first start of heap
+ * @param last end of heap
+ * @param pos position to move
+ */
+template<typename RandomAccessIterator>
+void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
+        RandomAccessIterator pos) {
+
+    // if not at the end, pop it out
+    if (last - pos > 1) {
+        last--;
+        mas::heap::__pop_heap_pos(first, last, pos, last);
+    }
 }
 
 //===========================================================================
@@ -460,27 +545,26 @@ void update_heap(RandomAccessIterator first, RandomAccessIterator last,
  * @param length End of heap
  * @param pos position in heap to potentially move up
  * @param compare comparison functor, compare(a,b)=true if a < b
- * @param moved callback functor, moved(a, b) is called when first+a is moved to first+b
+ * @param moved callback functor, moved(val&, a, b) is called after val is moved from first+a to first+b
  */
 template<typename RandomAccessIterator, typename Distance, typename ValueType,
         typename Compare, typename MoveCallback>
 void __up_heap(RandomAccessIterator first, Distance pos, ValueType p, Distance ppos,
         Compare compare, MoveCallback moved) {
 
-
     Distance parent = (pos - 1) / 2;
     Distance child = pos;
     while (child > 0 && compare(*(first + parent), p)) {
 
         *(first + child) = __MAS_MOVE(*(first + parent));
-        moved(parent, child);
+        moved(*(first+child), parent, child);
         child = parent;
         parent = (child - 1) / 2;
     }
 
     // move value into new slot
     *(first + child) = __MAS_MOVE(p);
-    moved(ppos, child);
+    moved(*(first+child), ppos, child);
 
 }
 
@@ -492,7 +576,7 @@ void __up_heap(RandomAccessIterator first, Distance pos, ValueType p, Distance p
  * @param p value currently popped out of the hole
  * @param ppos original position of value p
  * @param compare comparison functor, compare(a,b)=true if a < b
- * @param moved callback functor, moved(a, b) is called when first+a is moved to first+b
+ * @param moved callback functor, moved(val&, a, b) is called after val is moved from first+a to first+b
  */
 template<typename RandomAccessIterator, typename Distance, typename ValueType,
         typename Compare, typename MoveCallback>
@@ -518,7 +602,7 @@ void __down_heap(RandomAccessIterator first, Distance length, Distance hole,
 
         // replace hole with child
         *(first + parent) = __MAS_MOVE(*(first + child));
-        moved(child, parent);
+        moved(*(first+parent), child, parent);
 
         // move down next branch
         parent = child;
@@ -527,50 +611,7 @@ void __down_heap(RandomAccessIterator first, Distance length, Distance hole,
 
     // move value into new slot
     *(first + parent) = __MAS_MOVE(p);
-    moved(ppos, parent);
-
-}
-
-/**
- * Bubble-down operation (internal use only)
- * @param first Start of heap
- * @param length End of heap
- * @param hole empty position in heap to potentially move down
- * @param p value currently popped out of the hole
- * @param ppos original position of value p
- * @param moved callback functor, moved(a, b) is called when first+a is moved to first+b
- */
-template<typename RandomAccessIterator, typename Distance, typename ValueType, typename MoveCallback>
-void __down_heap(RandomAccessIterator first, Distance length, Distance hole,
-        ValueType p, Distance ppos, MoveCallback moved) {
-
-    Distance parent = hole;
-    Distance child = 2 * parent + 1;     // first child
-    while (child < length) {
-
-        // check if second child is larger
-        if ((child < length - 1) && (*(first + child) < *(first + child + 1))) {
-            child++;  // second child
-        }
-
-        // compare parent with child
-        if (*(first + child) < p) {
-            // parent is greater, we are done
-            break;
-        }
-
-        // replace hole with child
-        *(first + parent) = __MAS_MOVE(*(first + child));
-        moved(child, parent);
-
-        // move down next branch
-        parent = child;
-        child = 2 * parent + 1;
-    }
-
-    // move value into new slot
-    *(first + parent) = __MAS_MOVE(p);
-    moved(ppos, parent);
+    moved(*(first+parent), ppos, parent);
 
 }
 
@@ -587,13 +628,37 @@ inline void __pop_heap(RandomAccessIterator first, RandomAccessIterator last,
 
 }
 
+template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
+void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last, RandomAccessIterator pos,
+        RandomAccessIterator result, Compare compare, MoveCallback moved) {
+    typedef typename std::iterator_traits<RandomAccessIterator>::value_type ValueType;
+    typedef typename std::iterator_traits<RandomAccessIterator>::difference_type DistanceType;
+
+    ValueType value = __MAS_MOVE(*result);  // move out element from last position (will be re-inserted)
+    *result = __MAS_MOVE(*pos);             // move value from 'pos' to the end
+    DistanceType hole = pos-first;          // location of the hole
+
+    DistanceType parent = (hole-1)/2;
+    DistanceType child = (hole-1)/2;
+
+    // see if we need to move value up
+    if (hole > 0 && compare(*(first+parent), value)) {
+        // value needs to move up
+        __up_heap(first, hole, __MAS_MOVE(value), result-first, compare, moved);
+    } else {
+        // move down or stay in place
+        __down_heap(first, last-first, hole, value, result-first, compare, moved);
+    }
+
+}
+
 /**
  * @brief  Constructs a max binary heap over the given range using a comparison
  * functor.
  * @param  first  start of heap
  * @param  last   end of heap
  * @param  compare  comparison functor, compare(a,b)=true if a < b
-  * @param moved callback functor, moved(a, b) is called when first+a is moved to first+b
+  * @param moved callback functor, moved(val&, a, b) is called after val is moved from first+a to first+b
  */
 template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 void make_heap(RandomAccessIterator first, RandomAccessIterator last,
@@ -612,7 +677,7 @@ void make_heap(RandomAccessIterator first, RandomAccessIterator last,
  * @param first start of heap
  * @param last end of heap
  * @param compare comparison functor, compare(a,b)=true if a < b
- * @param moved callback functor, moved(a, b) is called when first+a is moved to first+b
+ * @param moved callback functor, moved(val&, a, b) is called after val is moved from first+a to first+b
  */
 template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 void push_heap(RandomAccessIterator first, RandomAccessIterator last,
@@ -634,7 +699,7 @@ void push_heap(RandomAccessIterator first, RandomAccessIterator last,
  * @param first start of heap
  * @param last end of heap
  * @param compare comparison functor, compare(a,b)=true if a < b
- * @param moved callback functor, moved(a, b) is called when first+a is moved to first+b
+ * @param moved callback functor, moved(val&, a, b) is called after val is moved from first+a to first+b
  */
 template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
@@ -647,12 +712,32 @@ void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
 }
 
 /**
+ * @brief Removes the element at iterator location pos from the heap, moving
+ * it to the location (last-1)
+ * @param first start of heap
+ * @param last end of heap
+ * @param pos position to move
+ * @param compare comparison functor, compare(a,b)=true if a < b
+ * @param moved callback functor, moved(val&, a, b) is called after val is moved from first+a to first+b
+ */
+template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
+void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
+        RandomAccessIterator pos, Compare compare, MoveCallback moved) {
+
+    // if not at the end, pop it out
+    if (last - pos > 1) {
+        last--;
+        mas::heap::__pop_heap_pos(first, last, pos, last, compare, moved);
+    }
+}
+
+/**
  * @brief Sorts the range [first, last) in ascending order, given
  * that it currently represents a binary heap.
  * @param first start of heap
  * @param last end of heap
  * @param compare comparison functor, compare(a,b)=true if a < b
- * @param moved callback functor, moved(a, b) is called when first+a is moved to first+b
+ * @param moved callback functor, moved(val&, a, b) is called after val is moved from first+a to first+b
  */
 template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 void sort_heap(RandomAccessIterator first, RandomAccessIterator last,
@@ -670,7 +755,7 @@ void sort_heap(RandomAccessIterator first, RandomAccessIterator last,
  * @param last end of heap
  * @param pos element whose position requires updating
  * @param compare comparison functor, compare(a,b)=true if a < b
- * @param moved callback functor, moved(a, b) is called when first+a is moved to first+b
+ * @param moved callback functor, moved(val&, a, b) is called after val is moved from first+a to first+b
  */
 template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 void update_heap(RandomAccessIterator first, RandomAccessIterator last,
@@ -682,7 +767,8 @@ void update_heap(RandomAccessIterator first, RandomAccessIterator last,
     // check if parent is smaller or child is bigger, bubble where necessary
     if ((posd > 0) && compare(*(first + (posd - 1) / 2), *(first + posd)) ) {
         __up_heap(first, posd, __MAS_MOVE(*(first + posd)), posd, compare, moved);
-    } else if (compare(*(first + posd), *(first + (posd - 1) / 2))) {
+    } else {
+        // might have to move down if less then either child
         __down_heap(first, last - first, posd, __MAS_MOVE(*(first + posd)), posd, compare, moved);
     }
 
