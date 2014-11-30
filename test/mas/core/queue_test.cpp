@@ -41,7 +41,7 @@ void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
 
 int main(int argc, char **argv) {
 
-    int len = 12000000;
+    int len = 1200000;
     std::vector<int> v1(len);
     for (int i = 0; i < v1.size(); i++) {
         v1[i] = i;
@@ -50,32 +50,65 @@ int main(int argc, char **argv) {
 
     std::vector<int> v2 = v1;
 
-    auto cmp = [](int a, int b) { return a > b; };
+    auto cmp = [](int a, int b) {return a > b;};
 
-    mas::queue::priority_queue<int, std::vector<int>, decltype(cmp)> mas_queue(cmp, std::move(v1));
-    std::priority_queue<int, std::vector<int>, decltype(cmp)> std_queue(cmp, std::move(v2));
+    mas::queue::priority_queue<int, std::vector<int>, decltype(cmp)> mas_queue(
+            cmp, std::move(v1));
+    std::priority_queue<int, std::vector<int>, decltype(cmp)> std_queue(cmp,
+            std::move(v2));
 
     // pop all out
     mas::time::Timer timer;
     double mas_time, std_time;
 
     timer.start();
-    for (int i=0; i<len; i++) {
+    for (int i = 0; i < len; i++) {
         v1.push_back(mas_queue.pop_top());
     }
     timer.stop();
     mas_time = timer.getMilliseconds();
-    std::cout << "Pop sort time: " << mas_time << "ms" << std::endl;
+    std::cout << "mas pop sort time: " << mas_time << "ms" << std::endl;
 
     timer.start();
-    for (int i=0; i<len; i++) {
+    for (int i = 0; i < len; i++) {
         v2.push_back(std_queue.top());
         std_queue.pop();
     }
     timer.stop();
     std_time = timer.getMilliseconds();
-    std::cout << "Pop sort time: " << std_time << "ms" << std::endl;
+    std::cout << "std pop sort time: " << std_time << "ms" << std::endl;
 
+    // pop random positions out of queue
+    // randomly pop out entries
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+
+    bool valid = true;
+    for (auto end = v1.end(); end > v1.begin(); end--) {
+        std::uniform_int_distribution<size_t> dis(0,
+                std::distance(v1.begin(), end) - 1);
+        auto pos = dis(gen);
+
+        int val = mas_queue.peek(pos);
+        int next = mas_queue.pop(pos);
+
+        if (val != next) {
+            std::cout << "uh oh, incorrect value popped out" << std::endl;
+        }
+
+        // ensure valid heap
+        valid = mas_queue.is_valid();
+        if (!valid) {
+            std::cout << "    INVALID" << std::endl;
+            break;
+        }
+    }
+
+    if (valid) {
+        std::cout << "mas internal pop passed" << std::endl;
+    } else {
+        std::cout << "mas internal pop failed" << std::endl;
+    }
 
 }
 
