@@ -43,7 +43,7 @@ inline int signum(int a){ return (a > 0) ? 1 : ((a < 0) ? -1 : 0); }
  * @param maxIters
  * @return true if converged
  */
-bool svd3(const Matrix3d &A, Matrix3d &U, Vector3d &s, Matrix3d &V,
+bool svd3(const Matrix3d& A, Matrix3d& U, Vector3d& s, Matrix3d& V,
 		size_t maxIters = MAS_MATH_SVD_ITERATIONS);
 
 }

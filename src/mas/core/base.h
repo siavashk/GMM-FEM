@@ -30,6 +30,26 @@
 #define IDX3D_12	5
 #define IDX3D_22	8
 #define IDX3D_N		9
+
+#define IDX4D(i,j)	4*i+j
+#define IDX4D_00	0
+#define IDX4D_10	4
+#define IDX4D_20	8
+#define IDX4D_30	12
+#define IDX4D_01	1
+#define IDX4D_11	5
+#define IDX4D_21	9
+#define IDX4D_31	13
+#define IDX4D_02	2
+#define IDX4D_12	6
+#define IDX4D_22	10
+#define IDX4D_32	14
+#define IDX4D_03	3
+#define IDX4D_13	7
+#define IDX4D_23	11
+#define IDX4D_33	15
+#define IDX4D_N		16
+
 #else
 #define MATRIX_ROW_MAJOR
 #define IDX3D(i,j)	3*j+i
@@ -43,6 +63,26 @@
 #define IDX3D_12	7
 #define IDX3D_22	8
 #define IDX3D_N		9
+
+#define IDX4D(i,j)	4*j+i
+#define IDX4D_00	0
+#define IDX4D_10	1
+#define IDX4D_20	2
+#define IDX4D_30	3
+#define IDX4D_01	4
+#define IDX4D_11	5
+#define IDX4D_21	6
+#define IDX4D_31	7
+#define IDX4D_02	8
+#define IDX4D_12	9
+#define IDX4D_22	10
+#define IDX4D_32	11
+#define IDX4D_03	12
+#define IDX4D_13	13
+#define IDX4D_23	14
+#define IDX4D_33	15
+#define IDX4D_N		16
+
 #endif
 
 namespace mas {
@@ -135,6 +175,49 @@ public:
 	std::string toString(std::string fmt) const;
 };
 
+class Vector4d {
+public:
+	double w, x, y, z;
+	static const Vector4d ZERO;
+	static const Vector4d W_AXIS;
+	static const Vector4d X_AXIS;
+	static const Vector4d Y_AXIS;
+	static const Vector4d Z_AXIS;
+
+public:
+	Vector4d();
+	Vector4d(const Vector4d& copyMe);
+	Vector4d(double w, double x, double y, double z);
+	virtual Vector4d& operator=(const Vector4d& assignMe);
+
+	void set(const Vector4d& pnt);
+	void set(double w, double x, double y, double z);
+	void setZero();
+	double get(int idx) const;
+	void set(int idx, double val);
+
+	void add(const Vector4d& v);
+	void add(double w, double x, double y, double z);
+	void add(const Vector4d& v1, const Vector4d& v2);
+	void subtract(const Vector4d& v);
+	void subtract(const Vector4d& v1, const Vector4d& v2);
+	void scaledAdd(double s, const Vector4d& v2);
+	void scaledAdd(const Vector4d& v1, double s, const Vector4d& v2);
+	void scale(double s);
+	void scale(double s, const Vector4d& v);
+	void negate();
+
+	double dot(const Vector4d& v) const;
+	double dot(double w, double x, double y, double z) const;
+	double norm() const;
+	double normSquared() const;
+	bool normalize();
+
+	void interpolate(const Vector4d& v1, double t, const Vector4d& v2);
+
+	std::string toString(std::string fmt) const;
+};
+
 class Point3d: public Vector3d {
 public:
 	Point3d();
@@ -166,7 +249,7 @@ public:
 // Generic 3D matrix
 class Matrix3d {
 public:
-	double m[9];	// row-major format
+	double m[IDX3D_N];	// row-major format
 public:
 	static const Matrix3d IDENTITY;
 public:
@@ -284,6 +367,63 @@ public:
 	void multiply(const RigidTransform3d& left, const RigidTransform3d& right);
 
 	void setIdentity();
+};
+
+// Generic 4D matrix
+class Matrix4d {
+public:
+	double m[IDX4D_N];	// row-major format
+public:
+	static const Matrix4d IDENTITY;
+public:
+	Matrix4d();
+	Matrix4d(const Matrix4d& copyMe);
+	Matrix4d(const double m[]);	// row-major
+	Matrix4d(double m00, double m01, double m02, double m03,
+			double m10, double m11, double m12, double m13,
+			double m20, double m21, double m22, double m23,
+			double m30, double m31, double m32, double m33);
+	virtual Matrix4d& operator=(const Matrix4d& assignMe);
+
+	double get(int i, int j) const;
+	void set(int i, int j, double val);
+	void set(const Matrix4d& mat);
+	void set(const double m[]);
+	void set(double m00, double m01, double m02, double m03,
+			double m10, double m11, double m12, double m13,
+			double m20, double m21, double m22, double m23,
+			double m30, double m31, double m32, double m33);
+
+	void setColumn(int col, const Vector4d& v);
+	void getColumn(int col, Vector4d& v) const;
+	void setRow(int row, const Vector4d& v);
+	void getRow(int row, Vector4d& v) const;
+
+	void add(const Matrix4d& mat);
+	void subtract(const Matrix4d& mat);
+	void scaledAdd(double s, const Matrix4d& mat);
+
+	void scale(double s);
+	void scaleColumn(int col, double s);
+	void scaleRow(int row, double s);
+
+	void multiply(const Matrix4d& right);
+	void multiply(const Matrix4d& left, const Matrix4d& right);
+	void multiply(const Vector4d& pnt, Vector4d& out) const;
+	void multiplyLeft(const Vector4d& pnt, Vector4d& out) const;
+
+	void outerProduct(const Vector4d& v1, const Vector4d& v2);
+	void addOuterProduct(const Vector4d& v1, const Vector4d& v2);
+
+
+	double determinant() const;
+	double condition() const;
+
+	virtual void transpose();
+	virtual double invert();
+
+	void setIdentity();
+	virtual void setZero();
 };
 
 class Line {

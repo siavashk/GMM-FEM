@@ -38,7 +38,7 @@ classdef smesh_bvtree < handle
 			if (nargin < 3 || isempty(tol))
 				tol = -1;
 			end
-			if (nargin < 4 || isempty(maxRetries)
+			if (nargin < 4 || isempty(maxRetries))
 				maxRetries = 100;
 			end
             [inside] = smesh_bvtree_is_inside(this.cpp_handle_, pnts, tol, maxRetries);

@@ -408,6 +408,203 @@ std::string Vector2d::toString(std::string fmt) const {
 	return out;
 }
 
+// Vector4D
+const Vector4d Vector4d::ZERO = Vector4d(0, 0, 0, 0);
+const Vector4d Vector4d::W_AXIS = Vector4d(1, 0, 0, 0);
+const Vector4d Vector4d::X_AXIS = Vector4d(0, 1, 0, 0);
+const Vector4d Vector4d::Y_AXIS = Vector4d(0, 0, 1, 0);
+const Vector4d Vector4d::Z_AXIS = Vector4d(0, 0, 0, 1);
+
+Vector4d::Vector4d() :
+		w(0), x(0), y(0), z(0) {
+}
+
+Vector4d::Vector4d(const Vector4d& copyMe) :
+		w(copyMe.w), x(copyMe.x), y(copyMe.y), z(copyMe.z) {
+}
+
+Vector4d::Vector4d(double w, double x, double y, double z) :
+		w(w), x(x), y(y), z(z) {
+}
+
+Vector4d& Vector4d::operator=(const Vector4d& assignMe) {
+	w = assignMe.w;
+	x = assignMe.x;
+	y = assignMe.y;
+	z = assignMe.z;
+	return *this;
+}
+
+void Vector4d::set(const Vector4d& pnt) {
+	w = pnt.w;
+	x = pnt.x;
+	y = pnt.y;
+	z = pnt.z;
+}
+
+void Vector4d::set(double w, double x, double y, double z) {
+	this->w = w;
+	this->x = x;
+	this->y = y;
+	this->z = z;
+}
+
+void Vector4d::set(int idx, double val) {
+	switch (idx) {
+	case 0:
+		w = val;
+		return;
+	case 1:
+		x = val;
+		return;
+	case 2:
+		y = val;
+		return;
+	case 3:
+		z = val;
+		return;
+	}
+}
+
+void Vector4d::setZero() {
+	w = 0;
+	x = 0;
+	y = 0;
+	z = 0;
+}
+
+double Vector4d::get(int idx) const {
+	switch (idx) {
+	case 0:
+		return w;
+	case 1:
+		return x;
+	case 2:
+		return y;
+	case 3:
+		return z;
+	}
+	return 0;
+}
+
+void Vector4d::add(const Vector4d& v) {
+	w += v.w;
+	x += v.x;
+	y += v.y;
+	z += v.z;
+}
+
+void Vector4d::add(double w, double x, double y, double z) {
+	this->w += w;
+	this->x += x;
+	this->y += y;
+	this->z += z;
+}
+
+void Vector4d::add(const Vector4d& v1, const Vector4d& v2) {
+	w = v1.w + v2.w;
+	x = v1.x + v2.x;
+	y = v1.y + v2.y;
+	z = v1.z + v2.z;
+}
+
+void Vector4d::subtract(const Vector4d& v) {
+	w -= v.w;
+	x -= v.x;
+	y -= v.y;
+	z -= v.z;
+}
+
+/**
+ * @brief v1-v2
+ *
+ * Sets the contents of this vector to v1-v2
+ *
+ * @param v1
+ * @param v2
+ */
+void Vector4d::subtract(const Vector4d& v1, const Vector4d& v2) {
+	w = v1.w - v2.w;
+	x = v1.x - v2.x;
+	y = v1.y - v2.y;
+	z = v1.z - v2.z;
+}
+
+// v1 + s*v2
+void Vector4d::scaledAdd(const Vector4d& v1, double s, const Vector4d& v2) {
+
+	w = v1.w + s * v2.w;
+	x = v1.x + s * v2.x;
+	y = v1.y + s * v2.y;
+	z = v1.z + s * v2.z;
+
+}
+
+void Vector4d::scaledAdd(double s, const Vector4d& v) {
+	scaledAdd(*this, s, v);
+}
+
+void Vector4d::scale(double s) {
+	w *= s;
+	x *= s;
+	y *= s;
+	z *= s;
+}
+
+void Vector4d::scale(double s, const Vector4d& v) {
+	w = s * v.w;
+	x = s * v.x;
+	y = s * v.y;
+	z = s * v.z;
+}
+
+void Vector4d::negate() {
+	w = -w;
+	x = -x;
+	y = -y;
+	z = -z;
+}
+
+double Vector4d::dot(double w, double x, double y, double z) const {
+	return this->w * w + this->x * x + this->y * y + this->z * z;
+}
+
+double Vector4d::dot(const Vector4d& v) const {
+	return w * v.w + x * v.x + y * v.y + z * v.z;
+}
+
+double Vector4d::norm() const {
+	return sqrt(w * w + x * x + y * y + z * z);
+}
+
+double Vector4d::normSquared() const {
+	return w * w + x * x + y * y + z * z;
+}
+
+// return false if norm is zero
+bool Vector4d::normalize() {
+	double myNorm = norm();
+	if (myNorm != 0) {
+		scale(1.0 / myNorm);
+		return true;
+	}
+	return false;
+}
+
+void Vector4d::interpolate(const Vector4d& p1, double t, const Vector4d& p2) {
+	w = (1 - t) * p1.w + t * p2.w;
+	x = (1 - t) * p1.x + t * p2.x;
+	y = (1 - t) * p1.y + t * p2.y;
+	z = (1 - t) * p1.z + t * p2.z;
+}
+
+std::string Vector4d::toString(std::string fmt) const {
+	char buffer[80];
+	snprintf(buffer, 80, fmt.c_str(), w, x, y, z);
+	std::string out(buffer);
+	return out;
+}
+
 // Point implementation
 Point3d::Point3d() :
 		Vector3d(0, 0, 0) {
@@ -991,6 +1188,538 @@ void RigidTransform3d::multiply(const RigidTransform3d& left,
 	t.add(lt);
 	R.multiply(left.R, right.R);
 
+}
+
+// Matrix implementation
+
+const Matrix4d Matrix4d::IDENTITY = Matrix4d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
+Matrix4d::Matrix4d() :
+		m() {
+}
+
+Matrix4d::Matrix4d(const Matrix4d& copyMe) {
+	set(copyMe.m);
+}
+
+Matrix4d::Matrix4d(const double m[]) {
+	set(m);
+}
+
+Matrix4d::Matrix4d(double m00, double m01, double m02, double m03,
+			double m10, double m11, double m12, double m13,
+			double m20, double m21, double m22, double m23,
+			double m30, double m31, double m32, double m33) {
+	set(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33);
+}
+
+Matrix4d& Matrix4d::operator=(const Matrix4d& assignMe) {
+	set(assignMe.m);
+	return *this;
+}
+
+double Matrix4d::get(int i, int j) const {
+	return m[IDX4D(i, j)];
+}
+
+void Matrix4d::set(int i, int j, double val) {
+	m[IDX4D(i, j)] = val;
+}
+
+void Matrix4d::set(const Matrix4d& mat) {
+	set(mat.m);
+}
+
+void Matrix4d::set(const double mat[]) {
+	std::copy(mat, mat + IDX4D_N, m);
+}
+
+void Matrix4d::set(double m00, double m01, double m02, double m03,
+			double m10, double m11, double m12, double m13,
+			double m20, double m21, double m22, double m23,
+			double m30, double m31, double m32, double m33) {
+	m[IDX4D_00] = m00;
+	m[IDX4D_01] = m01;
+	m[IDX4D_02] = m02;
+	m[IDX4D_03] = m03;
+	m[IDX4D_10] = m10;
+	m[IDX4D_11] = m11;
+	m[IDX4D_12] = m12;
+	m[IDX4D_13] = m13;
+	m[IDX4D_20] = m20;
+	m[IDX4D_21] = m21;
+	m[IDX4D_22] = m22;
+	m[IDX4D_23] = m23;
+	m[IDX4D_30] = m30;
+	m[IDX4D_31] = m31;
+	m[IDX4D_32] = m32;
+	m[IDX4D_33] = m33;
+}
+
+void Matrix4d::setColumn(int col, const Vector4d& v) {
+	m[IDX4D(0, col)] = v.w;
+	m[IDX4D(1, col)] = v.x;
+	m[IDX4D(2, col)] = v.y;
+	m[IDX4D(3, col)] = v.z;
+}
+
+void Matrix4d::getColumn(int col, Vector4d& v) const {
+	v.w = m[IDX4D(0, col)];
+	v.x = m[IDX4D(1, col)];
+	v.y = m[IDX4D(2, col)];
+	v.z = m[IDX4D(3, col)];
+}
+
+void Matrix4d::setRow(int row, const Vector4d& v) {
+	m[IDX4D(row, 0)] = v.w;
+	m[IDX4D(row, 1)] = v.x;
+	m[IDX4D(row, 2)] = v.y;
+	m[IDX4D(row, 3)] = v.z;
+}
+
+void Matrix4d::getRow(int row, Vector4d& v) const {
+	v.w = m[IDX4D(row, 0)];
+	v.x = m[IDX4D(row, 1)];
+	v.y = m[IDX4D(row, 2)];
+	v.z = m[IDX4D(row, 3)];
+}
+
+void Matrix4d::add(const Matrix4d& mat) {
+	for (int i = 0; i < IDX4D_N; i++) {
+		m[i] += mat.m[i];
+	}
+}
+
+void Matrix4d::subtract(const Matrix4d& mat) {
+	for (int i = 0; i < IDX4D_N; i++) {
+		m[i] -= mat.m[i];
+	}
+}
+
+void Matrix4d::scaledAdd(double s, const Matrix4d& mat) {
+	for (int i = 0; i < IDX4D_N; i++) {
+		m[i] += s * mat.m[i];
+	}
+}
+
+void Matrix4d::scale(double s) {
+	for (int i = 0; i < IDX4D_N; i++) {
+		m[i] = s * m[i];
+	}
+}
+
+void Matrix4d::scaleColumn(int col, double s) {
+	m[IDX4D(0, col)] = s * m[IDX4D(0, col)];
+	m[IDX4D(1, col)] = s * m[IDX4D(1, col)];
+	m[IDX4D(2, col)] = s * m[IDX4D(2, col)];
+	m[IDX4D(3, col)] = s * m[IDX4D(3, col)];
+}
+
+void Matrix4d::scaleRow(int row, double s) {
+	m[IDX4D(row, 0)] = s * m[IDX4D(row, 0)];
+	m[IDX4D(row, 1)] = s * m[IDX4D(row, 1)];
+	m[IDX4D(row, 2)] = s * m[IDX4D(row, 2)];
+	m[IDX4D(row, 3)] = s * m[IDX4D(row, 3)];
+}
+
+void Matrix4d::multiply(const Matrix4d& right) {
+	multiply(*this, right);
+}
+
+void Matrix4d::multiply(const Matrix4d& left, const Matrix4d& right) {
+	// store for safety, so can multiply by one's self
+	double m00 = left.m[IDX4D_00] * right.m[IDX4D_00]
+			+ left.m[IDX4D_01] * right.m[IDX4D_10]
+			+ left.m[IDX4D_02] * right.m[IDX4D_20]
+			+ left.m[IDX4D_03] * right.m[IDX4D_30];
+	double m10 = left.m[IDX4D_10] * right.m[IDX4D_00]
+			+ left.m[IDX4D_11] * right.m[IDX4D_10]
+			+ left.m[IDX4D_12] * right.m[IDX4D_20]
+			+ left.m[IDX4D_13] * right.m[IDX4D_30];
+	double m20 = left.m[IDX4D_20] * right.m[IDX4D_00]
+			+ left.m[IDX4D_21] * right.m[IDX4D_10]
+			+ left.m[IDX4D_22] * right.m[IDX4D_20]
+			+ left.m[IDX4D_23] * right.m[IDX4D_30];
+	double m30 = left.m[IDX4D_30] * right.m[IDX4D_00]
+			+ left.m[IDX4D_31] * right.m[IDX4D_10]
+			+ left.m[IDX4D_32] * right.m[IDX4D_20]
+			+ left.m[IDX4D_33] * right.m[IDX4D_30];
+
+	double m01 = left.m[IDX4D_00] * right.m[IDX4D_01]
+			+ left.m[IDX4D_01] * right.m[IDX4D_11]
+			+ left.m[IDX4D_02] * right.m[IDX4D_21]
+			+ left.m[IDX4D_03] * right.m[IDX4D_31];
+	double m11 = left.m[IDX4D_10] * right.m[IDX4D_01]
+			+ left.m[IDX4D_11] * right.m[IDX4D_11]
+			+ left.m[IDX4D_12] * right.m[IDX4D_21]
+			+ left.m[IDX4D_13] * right.m[IDX4D_31];
+	double m21 = left.m[IDX4D_20] * right.m[IDX4D_01]
+			+ left.m[IDX4D_21] * right.m[IDX4D_11]
+			+ left.m[IDX4D_22] * right.m[IDX4D_21]
+			+ left.m[IDX4D_32] * right.m[IDX4D_31];
+	double m31 = left.m[IDX4D_30] * right.m[IDX4D_01]
+			+ left.m[IDX4D_31] * right.m[IDX4D_11]
+			+ left.m[IDX4D_32] * right.m[IDX4D_21]
+			+ left.m[IDX4D_32] * right.m[IDX4D_31];
+
+	double m02 = left.m[IDX4D_00] * right.m[IDX4D_02]
+			+ left.m[IDX4D_01] * right.m[IDX4D_12]
+			+ left.m[IDX4D_02] * right.m[IDX4D_22]
+			+ left.m[IDX4D_03] * right.m[IDX4D_32];
+	double m12 = left.m[IDX4D_10] * right.m[IDX4D_02]
+			+ left.m[IDX4D_11] * right.m[IDX4D_12]
+			+ left.m[IDX4D_12] * right.m[IDX4D_22]
+			+ left.m[IDX4D_13] * right.m[IDX4D_32];
+	double m22 = left.m[IDX4D_20] * right.m[IDX4D_02]
+			+ left.m[IDX4D_21] * right.m[IDX4D_12]
+			+ left.m[IDX4D_22] * right.m[IDX4D_22]
+			+ left.m[IDX4D_23] * right.m[IDX4D_32];
+	double m32 = left.m[IDX4D_30] * right.m[IDX4D_02]
+			+ left.m[IDX4D_31] * right.m[IDX4D_12]
+			+ left.m[IDX4D_32] * right.m[IDX4D_22]
+			+ left.m[IDX4D_33] * right.m[IDX4D_32];
+
+	double m03 = left.m[IDX4D_00] * right.m[IDX4D_03]
+			+ left.m[IDX4D_01] * right.m[IDX4D_13]
+			+ left.m[IDX4D_02] * right.m[IDX4D_23]
+			+ left.m[IDX4D_03] * right.m[IDX4D_33];
+	double m13 = left.m[IDX4D_10] * right.m[IDX4D_03]
+			+ left.m[IDX4D_11] * right.m[IDX4D_13]
+			+ left.m[IDX4D_12] * right.m[IDX4D_23]
+			+ left.m[IDX4D_13] * right.m[IDX4D_33];
+	double m23 = left.m[IDX4D_20] * right.m[IDX4D_03]
+			+ left.m[IDX4D_21] * right.m[IDX4D_13]
+			+ left.m[IDX4D_22] * right.m[IDX4D_23]
+			+ left.m[IDX4D_23] * right.m[IDX4D_33];
+	double m33 = left.m[IDX4D_30] * right.m[IDX4D_03]
+			+ left.m[IDX4D_31] * right.m[IDX4D_13]
+			+ left.m[IDX4D_32] * right.m[IDX4D_23]
+			+ left.m[IDX4D_33] * right.m[IDX4D_33];
+
+	m[IDX4D_00] = m00;
+	m[IDX4D_10] = m10;
+	m[IDX4D_20] = m20;
+	m[IDX4D_30] = m30;
+
+	m[IDX4D_01] = m01;
+	m[IDX4D_11] = m11;
+	m[IDX4D_21] = m21;
+	m[IDX4D_31] = m31;
+
+	m[IDX4D_02] = m02;
+	m[IDX4D_12] = m12;
+	m[IDX4D_22] = m22;
+	m[IDX4D_32] = m32;
+
+	m[IDX4D_03] = m03;
+	m[IDX4D_13] = m13;
+	m[IDX4D_23] = m23;
+	m[IDX4D_33] = m33;
+}
+
+void Matrix4d::multiply(const Vector4d& pnt, Vector4d& out) const {
+
+	double w = pnt.w;
+	double x = pnt.x;
+	double y = pnt.y;
+	double z = pnt.z;
+
+	out.w = m[IDX4D_00] * w + m[IDX4D_01] * x + m[IDX4D_02] * y + m[IDX4D_03] * z;
+	out.x = m[IDX4D_10] * w + m[IDX4D_11] * x + m[IDX4D_12] * y + m[IDX4D_13] * z;
+	out.y = m[IDX4D_20] * w + m[IDX4D_21] * x + m[IDX4D_22] * y + m[IDX4D_23] * z;
+	out.z = m[IDX4D_30] * w + m[IDX4D_31] * x + m[IDX4D_32] * y + m[IDX4D_33] * z;
+}
+
+void Matrix4d::multiplyLeft(const Vector4d& pnt, Vector4d& out) const {
+
+	double w = pnt.w;
+	double x = pnt.x;
+	double y = pnt.y;
+	double z = pnt.z;
+
+	out.w = m[IDX4D_00] * w + m[IDX4D_10] * x + m[IDX4D_20] * y + m[IDX4D_30] * z;
+	out.x = m[IDX4D_01] * w + m[IDX4D_11] * x + m[IDX4D_21] * y + m[IDX4D_31] * z;
+	out.y = m[IDX4D_02] * w + m[IDX4D_12] * x + m[IDX4D_22] * y + m[IDX4D_32] * z;
+	out.z = m[IDX4D_03] * w + m[IDX4D_13] * x + m[IDX4D_23] * y + m[IDX4D_33] * z;
+}
+
+void Matrix4d::outerProduct(const Vector4d& v1, const Vector4d& v2) {
+	m[IDX4D_00] = v1.w * v2.w;
+	m[IDX4D_01] = v1.w * v2.x;
+	m[IDX4D_02] = v1.w * v2.y;
+	m[IDX4D_03] = v1.w * v2.z;
+
+	m[IDX4D_10] = v1.x * v2.w;
+	m[IDX4D_11] = v1.x * v2.x;
+	m[IDX4D_12] = v1.x * v2.y;
+	m[IDX4D_13] = v1.x * v2.z;
+
+	m[IDX4D_20] = v1.y * v2.w;
+	m[IDX4D_21] = v1.y * v2.x;
+	m[IDX4D_22] = v1.y * v2.y;
+	m[IDX4D_23] = v1.y * v2.z;
+
+	m[IDX4D_30] = v1.z * v2.w;
+	m[IDX4D_31] = v1.z * v2.x;
+	m[IDX4D_32] = v1.z * v2.y;
+	m[IDX4D_33] = v1.z * v2.z;
+}
+
+void Matrix4d::addOuterProduct(const Vector4d& v1, const Vector4d& v2) {
+	m[IDX4D_00] += v1.w * v2.w;
+	m[IDX4D_01] += v1.w * v2.x;
+	m[IDX4D_02] += v1.w * v2.y;
+	m[IDX4D_03] += v1.w * v2.z;
+
+	m[IDX4D_10] += v1.x * v2.w;
+	m[IDX4D_11] += v1.x * v2.x;
+	m[IDX4D_12] += v1.x * v2.y;
+	m[IDX4D_13] += v1.x * v2.z;
+
+	m[IDX4D_20] += v1.y * v2.w;
+	m[IDX4D_21] += v1.y * v2.x;
+	m[IDX4D_22] += v1.y * v2.y;
+	m[IDX4D_23] += v1.y * v2.z;
+
+	m[IDX4D_30] += v1.z * v2.w;
+	m[IDX4D_31] += v1.z * v2.x;
+	m[IDX4D_32] += v1.z * v2.y;
+	m[IDX4D_33] += v1.z * v2.z;
+}
+
+double Matrix4d::determinant() const {
+	
+	double a = m[5]  * m[10] * m[15] - 
+             m[5]  * m[11] * m[14] - 
+             m[9]  * m[6]  * m[15] + 
+             m[9]  * m[7]  * m[14] +
+             m[13] * m[6]  * m[11] - 
+             m[13] * m[7]  * m[10];
+
+    double b = -m[4]  * m[10] * m[15] + 
+              m[4]  * m[11] * m[14] + 
+              m[8]  * m[6]  * m[15] - 
+              m[8]  * m[7]  * m[14] - 
+              m[12] * m[6]  * m[11] + 
+              m[12] * m[7]  * m[10];
+
+    double c = m[4]  * m[9] * m[15] - 
+             m[4]  * m[11] * m[13] - 
+             m[8]  * m[5] * m[15] + 
+             m[8]  * m[7] * m[13] + 
+             m[12] * m[5] * m[11] - 
+             m[12] * m[7] * m[9];
+
+    double d = -m[4]  * m[9] * m[14] + 
+               m[4]  * m[10] * m[13] +
+               m[8]  * m[5] * m[14] - 
+               m[8]  * m[6] * m[13] - 
+               m[12] * m[5] * m[10] + 
+               m[12] * m[6] * m[9];
+	double det = m[0] * a + m[1] * b + m[2] * c + m[3] * d;
+	return det;
+}
+
+void Matrix4d::transpose() {
+	double m01 = m[IDX4D_01];
+	double m02 = m[IDX4D_02];
+	double m03 = m[IDX4D_03];
+	double m12 = m[IDX4D_12];
+	double m13 = m[IDX4D_13];
+	double m23 = m[IDX4D_23];
+
+	m[IDX4D_01] = m[IDX4D_10];
+	m[IDX4D_02] = m[IDX4D_20];
+	m[IDX4D_03] = m[IDX4D_30];
+	m[IDX4D_12] = m[IDX4D_21];
+	m[IDX4D_13] = m[IDX4D_31];
+	m[IDX4D_23] = m[IDX4D_32];
+
+	m[IDX4D_10] = m01;
+	m[IDX4D_20] = m02;
+	m[IDX4D_30] = m03;
+	m[IDX4D_21] = m12;
+	m[IDX4D_31] = m13;
+	m[IDX4D_32] = m23;
+
+}
+
+double Matrix4d::invert() {
+
+	double inv[IDX4D_N];
+	
+	// determinant method
+    inv[0] = m[5]  * m[10] * m[15] - 
+             m[5]  * m[11] * m[14] - 
+             m[9]  * m[6]  * m[15] + 
+             m[9]  * m[7]  * m[14] +
+             m[13] * m[6]  * m[11] - 
+             m[13] * m[7]  * m[10];
+
+    inv[4] = -m[4]  * m[10] * m[15] + 
+              m[4]  * m[11] * m[14] + 
+              m[8]  * m[6]  * m[15] - 
+              m[8]  * m[7]  * m[14] - 
+              m[12] * m[6]  * m[11] + 
+              m[12] * m[7]  * m[10];
+
+    inv[8] = m[4]  * m[9] * m[15] - 
+             m[4]  * m[11] * m[13] - 
+             m[8]  * m[5] * m[15] + 
+             m[8]  * m[7] * m[13] + 
+             m[12] * m[5] * m[11] - 
+             m[12] * m[7] * m[9];
+
+    inv[12] = -m[4]  * m[9] * m[14] + 
+               m[4]  * m[10] * m[13] +
+               m[8]  * m[5] * m[14] - 
+               m[8]  * m[6] * m[13] - 
+               m[12] * m[5] * m[10] + 
+               m[12] * m[6] * m[9];
+
+    inv[1] = -m[1]  * m[10] * m[15] + 
+              m[1]  * m[11] * m[14] + 
+              m[9]  * m[2] * m[15] - 
+              m[9]  * m[3] * m[14] - 
+              m[13] * m[2] * m[11] + 
+              m[13] * m[3] * m[10];
+
+    inv[5] = m[0]  * m[10] * m[15] - 
+             m[0]  * m[11] * m[14] - 
+             m[8]  * m[2] * m[15] + 
+             m[8]  * m[3] * m[14] + 
+             m[12] * m[2] * m[11] - 
+             m[12] * m[3] * m[10];
+
+    inv[9] = -m[0]  * m[9] * m[15] + 
+              m[0]  * m[11] * m[13] + 
+              m[8]  * m[1] * m[15] - 
+              m[8]  * m[3] * m[13] - 
+              m[12] * m[1] * m[11] + 
+              m[12] * m[3] * m[9];
+
+    inv[13] = m[0]  * m[9] * m[14] - 
+              m[0]  * m[10] * m[13] - 
+              m[8]  * m[1] * m[14] + 
+              m[8]  * m[2] * m[13] + 
+              m[12] * m[1] * m[10] - 
+              m[12] * m[2] * m[9];
+
+    inv[2] = m[1]  * m[6] * m[15] - 
+             m[1]  * m[7] * m[14] - 
+             m[5]  * m[2] * m[15] + 
+             m[5]  * m[3] * m[14] + 
+             m[13] * m[2] * m[7] - 
+             m[13] * m[3] * m[6];
+
+    inv[6] = -m[0]  * m[6] * m[15] + 
+              m[0]  * m[7] * m[14] + 
+              m[4]  * m[2] * m[15] - 
+              m[4]  * m[3] * m[14] - 
+              m[12] * m[2] * m[7] + 
+              m[12] * m[3] * m[6];
+
+    inv[10] = m[0]  * m[5] * m[15] - 
+              m[0]  * m[7] * m[13] - 
+              m[4]  * m[1] * m[15] + 
+              m[4]  * m[3] * m[13] + 
+              m[12] * m[1] * m[7] - 
+              m[12] * m[3] * m[5];
+
+    inv[14] = -m[0]  * m[5] * m[14] + 
+               m[0]  * m[6] * m[13] + 
+               m[4]  * m[1] * m[14] - 
+               m[4]  * m[2] * m[13] - 
+               m[12] * m[1] * m[6] + 
+               m[12] * m[2] * m[5];
+
+    inv[3] = -m[1] * m[6] * m[11] + 
+              m[1] * m[7] * m[10] + 
+              m[5] * m[2] * m[11] - 
+              m[5] * m[3] * m[10] - 
+              m[9] * m[2] * m[7] + 
+              m[9] * m[3] * m[6];
+
+    inv[7] = m[0] * m[6] * m[11] - 
+             m[0] * m[7] * m[10] - 
+             m[4] * m[2] * m[11] + 
+             m[4] * m[3] * m[10] + 
+             m[8] * m[2] * m[7] - 
+             m[8] * m[3] * m[6];
+
+    inv[11] = -m[0] * m[5] * m[11] + 
+               m[0] * m[7] * m[9] + 
+               m[4] * m[1] * m[11] - 
+               m[4] * m[3] * m[9] - 
+               m[8] * m[1] * m[7] + 
+               m[8] * m[3] * m[5];
+
+    inv[15] = m[0] * m[5] * m[10] - 
+              m[0] * m[6] * m[9] - 
+              m[4] * m[1] * m[10] + 
+              m[4] * m[2] * m[9] + 
+              m[8] * m[1] * m[6] - 
+              m[8] * m[2] * m[5];
+
+    double det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+
+    if (det == 0) {
+        return 0;
+    }
+
+    det = 1.0 / det;
+
+    for (int i = 0; i < IDX4D_N; i++) {
+        m[i] = inv[i] * det;
+    }
+
+	return det;
+}
+
+void Matrix4d::setIdentity() {
+
+	m[IDX4D_00] = 1;
+	m[IDX4D_10] = 0;
+	m[IDX4D_20] = 0;
+	m[IDX4D_30] = 0;
+
+	m[IDX4D_01] = 0;
+	m[IDX4D_11] = 1;
+	m[IDX4D_21] = 0;
+	m[IDX4D_31] = 0;
+
+	m[IDX4D_02] = 0;
+	m[IDX4D_12] = 0;
+	m[IDX4D_22] = 1;
+	m[IDX4D_32] = 0;
+
+	m[IDX4D_03] = 0;
+	m[IDX4D_13] = 0;
+	m[IDX4D_23] = 0;
+	m[IDX4D_33] = 1;
+}
+
+void Matrix4d::setZero() {
+
+	m[IDX4D_00] = 0;
+	m[IDX4D_10] = 0;
+	m[IDX4D_20] = 0;
+	m[IDX4D_30] = 0;
+
+	m[IDX4D_01] = 0;
+	m[IDX4D_11] = 0;
+	m[IDX4D_21] = 0;
+	m[IDX4D_31] = 0;
+
+	m[IDX4D_02] = 0;
+	m[IDX4D_12] = 0;
+	m[IDX4D_22] = 0;
+	m[IDX4D_32] = 0;
+
+	m[IDX4D_03] = 0;
+	m[IDX4D_13] = 0;
+	m[IDX4D_23] = 0;
+	m[IDX4D_33] = 0;
 }
 
 // Line implementation
