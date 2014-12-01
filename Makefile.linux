@@ -8,6 +8,7 @@ BUILDDIR = ./build
 SRCDIR = ./src
 INCLUDEDIR = ./src
 TESTDIR = ./test
+MEXDIR = ./mex
 BINDIR = ./bin
 
 CPPFLAGS=-I$(INCLUDEDIR) -fPIC --std=c++11
@@ -39,12 +40,12 @@ ifndef OCTAVE_LIBDIR
 OCTAVE_LIBDIR:="/opt/octavedev/lib/octave/4.1.0+"
 endif
 
-MEX_CPPFLAGS:=$(CPPFLAGS) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I"$(OCTAVE_INCLUDEDIR)" -Wall
+MEX_CPPFLAGS:=$(CPPFLAGS) -I$(MEXDIR) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I"$(OCTAVE_INCLUDEDIR)" -Wall
 MEX_LDFLAGS:= $(LDFLAGS) -shared -L"$(OCTAVE_LIBDIR)" -lstdc++ -loctinterp
 
-MEX_SOURCES = $(shell find $(SRCDIR)/ -type f -name '*_mex.cpp')
-MEX_OBJECTS = $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.mexo, $(MEX_SOURCES))
-MEX = $(patsubst $(SRCDIR)/%_mex.cpp, $(BINDIR)/%.$(MEX_EXT), $(MEX_SOURCES))
+MEX_SOURCES = $(shell find $(MEXDIR)/ -type f -name '*_mex.cpp')
+MEX_OBJECTS = $(patsubst $(MEXDIR)/%.cpp, $(BUILDDIR)/%.mexo, $(MEX_SOURCES))
+MEX = $(patsubst $(MEXDIR)/%_mex.cpp, $(BINDIR)/%.$(MEX_EXT), $(MEX_SOURCES))
 
 CMD_SOURCES = $(shell find $(SRCDIR)/ -type f -name '*_cmd.cpp')
 CMD_OBJECTS =  $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(CMD_SOURCES))
@@ -109,7 +110,7 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
 	@echo Compiling $@...
 	@$(CC) $(CPPFLAGS) -o $@ -c $<
 
-$(BUILDDIR)/%.mexo: $(SRCDIR)/%.cpp
+$(BUILDDIR)/%.mexo: $(MEXDIR)/%.cpp
 	@$(MKDIR_CMD)
 	@echo Compiling $@...
 	@$(CC) $(MEX_CPPFLAGS) -o $@ -c $<
@@ -122,8 +123,7 @@ $(BUILDDIR)/%.to: $(TESTDIR)/%.cpp
 $(BINDIR)/%.$(MEX_EXT): $(BUILDDIR)/%_mex.mexo $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	$(LD) -o $@ $(MEX_LDFLAGS) $(OBJECTS) $<
-	@echo Complete!
+	@$(LD) -o $@ $(MEX_LDFLAGS) $(OBJECTS) $<
 	
 $(BINDIR)/%.m: $(SRCDIR)/%.m
 	@$(MKDIR_CMD)
@@ -140,12 +140,11 @@ $(BINDIR)/%: $(BUILDDIR)/%.to $(OBJECTS)
 $(BINDIR)/%: $(BUILDDIR)/%_cmd.o $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	$(LD) -o $@ $(LDFLAGS) $(OBJECTS) $<
-	@echo Complete!
+	@$(LD) -o $@ $(LDFLAGS) $(OBJECTS) $<
 	
 $(LIB) : $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	# ar rcs $@ $(OBJECTS)
-	# ranlib $@
-	$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(OBJECTS)
+	@ar rcs $@ $(OBJECTS)
+	@ranlib $@
+	@$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(OBJECTS)
