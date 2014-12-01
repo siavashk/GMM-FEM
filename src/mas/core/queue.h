@@ -114,6 +114,9 @@ public:
 
     bool is_valid() const;
 
+    template<typename IterateCallback>
+    void iterate(const IterateCallback& cb) const;
+
 };
 
 /**
@@ -269,6 +272,9 @@ public:
     void update(size_type key);
 
     bool is_valid() const;
+
+    template<typename IterateCallback>
+    void iterate(const IterateCallback& cb) const;
 
 };
 

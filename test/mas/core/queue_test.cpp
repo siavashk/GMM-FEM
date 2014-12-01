@@ -129,11 +129,12 @@ void do_random_pop_test() {
 
 void do_keyed_test() {
 
-    int len = 10000000;
+    int len = 100000;
 
     struct widget {
         size_t key;
         double priority;
+
         widget(double priority) : key(0), priority(priority){
         };
         bool operator<(const widget& cmp) const {
@@ -170,13 +171,15 @@ void do_keyed_test() {
         std::cout << "keyed pop failed" << std::endl;
     }
 
-    std::vector<bool> keys;
+    std::vector<size_t> keys;
+
+    mas::time::Timer timer;
 
     // rebuild queue
     for (int i=0; i<len; i++) {
         size_t key = queue.push(w[i]);
         queue.get(key).key = key; // assign key
-        keys.push_back(true);
+        keys.push_back(i);
     }
 
     // pop out in random order
@@ -184,6 +187,7 @@ void do_keyed_test() {
     static std::mt19937 gen(rd());
 
 
+    timer.start();
     valid = true;
     for (int i=0; i<len; i++) {
 
@@ -214,13 +218,70 @@ void do_keyed_test() {
             break;
         }
     }
+    timer.stop();
+    double key_ms = timer.getMilliseconds();
 
     if (valid) {
         std::cout << "keyed random pop passed" << std::endl;
     } else {
         std::cout << "keyed random pop failed" << std::endl;
     }
+    std::cout << "keyed time: " << key_ms << "ms" << std::endl;
 
+
+    auto mcb = [](widget& val, const size_t& from, const size_t& to){ val.key = to; };
+    mas::queue::priority_queue<widget, std::vector<widget>, decltype(cmp), decltype(mcb)> pq(cmp, std::vector<widget>(), mcb);
+
+    // rebuild queue
+    for (int i=0; i<len; i++) {
+        w[i].key = i;
+        pq.push(w[i]);
+        keys.push_back(i);
+    }
+
+    timer.start();
+    valid = true;
+    for (int i=0; i<len; i++) {
+
+        std::uniform_int_distribution<size_t> dis(0, len-i-1);
+        size_t key = dis(gen);
+
+        size_t pkey = pq.peek(key).key;
+        if (pkey != key) {
+            std::cout << "key map not correct" << std::endl;
+            valid = false;
+        }
+
+        widget w = pq.pop(key);
+        if (w.key != key) {
+            std::cout << "popped wrong out" << std::endl;
+            valid = false;
+        }
+
+        if (len < 50) {
+            auto icb = [](const std::vector<widget>::const_iterator& it)->void{
+                std::cout << it->priority << " ";
+            };
+            pq.iterate(icb);
+            std::cout << std::endl;
+        }
+
+        // ensure valid heap
+        // valid = queue.is_valid();
+        if (!valid) {
+            std::cout << "    INVALID" << std::endl;
+            break;
+        }
+    }
+    timer.stop();
+    double mov_ms = timer.getMilliseconds();
+
+    if (valid) {
+        std::cout << "moved random pop passed" << std::endl;
+    } else {
+        std::cout << "moved random pop failed" << std::endl;
+    }
+    std::cout << "moved time: " << mov_ms << "ms" << std::endl;
 
 }
 
