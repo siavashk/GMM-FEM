@@ -264,6 +264,15 @@ bool priority_queue<ValueType, Sequence, Compare, MoveCallback>::is_valid() cons
     return mas::heap::is_heap(c.begin(), c.end(), comp);
 }
 
+template<typename ValueType, typename Sequence, typename Compare,
+        typename MoveCallback>
+template<typename IterateCallback>
+void priority_queue<ValueType, Sequence, Compare, MoveCallback>::iterate(const IterateCallback& cb) const {
+    for (auto it = c.begin(); it < c.end(); it++) {
+        cb(it);
+    }
+}
+
 } // mas
 } // queue
 
@@ -661,7 +670,7 @@ void keyed_priority_queue<ValueType, Sequence, Compare, KeySequence, KeyStack>::
         keymap.pop_back();
 
         // check if we can clear any keys from the stack
-        while (keystack.top() == c.size() - 1) {
+        while (!keystack.empty() && (keystack.top() == c.size() - 1)) {
             c.pop_back();
             keymap.pop_back();
             keystack.pop();
@@ -723,7 +732,7 @@ typename keyed_priority_queue<ValueType, Sequence, Compare, KeySequence,
         keymap.pop_back();
 
         // check if we can clear any keys from the stack
-        while (keystack.top() == c.size() - 1) {
+        while (!keystack.empty() && (keystack.top() == c.size() - 1)) {
             c.pop_back();
             keystack.pop();
             keymap.pop_back();
@@ -759,12 +768,12 @@ typename keyed_priority_queue<ValueType, Sequence, Compare, KeySequence,
 
     // move out top element
     // if it's the last key, decrease container size
-    if (key == c.size() - 1) {
+    if (key > 0 && key == c.size() - 1) {
         c.pop_back();
         keymap.pop_back();
 
         // check if we can clear any keys from the stack
-        while (keystack.top() == c.size() - 1) {
+        while (!keystack.empty() && (keystack.top() == c.size() - 1)) {
             c.pop_back();
             keystack.pop();
             keymap.pop_back();
@@ -865,6 +874,14 @@ template<typename ValueType, typename Sequence, typename Compare,
         typename KeySequence, typename KeyStack>
 bool keyed_priority_queue<ValueType, Sequence, Compare, KeySequence, KeyStack>::is_valid() const {
     return mas::heap::is_heap(keyc.begin(), keyc.end(), keycomp);
+}
+
+template<typename ValueType, typename Sequence, typename Compare, typename KeySequence, typename KeyStack>
+template<typename IterateCallback>
+void keyed_priority_queue<ValueType, Sequence, Compare, KeySequence, KeyStack>::iterate(const IterateCallback& cb) const {
+    for (const auto it = c.begin(); it < c.end(); c++) {
+        cb(it);
+    }
 }
 
 } // mas

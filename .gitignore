@@ -5,7 +5,7 @@
 *.obj
 *.out
 *.tmp
-
+*.mex
 
 /.project
 /.cproject
@@ -17,3 +17,4 @@
 /doc/html/
 /doc/latex/
 
+/src_next/
