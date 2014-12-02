@@ -1,2 +1,15 @@
+# Folders
 bin
 build
+data
+srcnext
+
+# Eclipse
+.cproject
+.externalToolBuilders
+.project
+.settings
+
+# Git
+.git
+.gitignore
