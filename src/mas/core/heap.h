@@ -63,33 +63,33 @@ void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
 template<typename RandomAccessIterator, typename Compare>
 void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
         RandomAccessIterator pos, Compare compare);
-template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
+template<typename RandomAccessIterator, typename Compare, typename Move>
 void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
-        RandomAccessIterator pos, Compare compare, MoveCallback moved);
+        RandomAccessIterator pos, Compare compare, Move mov);
 
-template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
+template<typename RandomAccessIterator, typename Compare, typename Move>
 void make_heap(RandomAccessIterator first, RandomAccessIterator last,
-        Compare compare, MoveCallback moved);
-template<typename RandomAccessIterator, typename MoveCallback>
-void make_heap(RandomAccessIterator first, RandomAccessIterator last, MoveCallback moved);
+        Compare compare, Move mov);
+template<typename RandomAccessIterator, typename Move>
+void make_heap(RandomAccessIterator first, RandomAccessIterator last, Move mov);
 
-template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
+template<typename RandomAccessIterator, typename Compare, typename Move>
 void push_heap(RandomAccessIterator first, RandomAccessIterator last,
-        Compare compare, MoveCallback moved);
-template<typename RandomAccessIterator, typename MoveCallback>
+        Compare compare, Move mov);
+template<typename RandomAccessIterator, typename Move>
 void push_heap(RandomAccessIterator first, RandomAccessIterator last);
 
-template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
+template<typename RandomAccessIterator, typename Compare, typename Move>
 void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
-        Compare compare, MoveCallback moved);
-template<typename RandomAccessIterator, typename MoveCallback>
-void pop_heap(RandomAccessIterator first, RandomAccessIterator last, MoveCallback moved);
+        Compare compare, Move mov);
+template<typename RandomAccessIterator, typename Move>
+void pop_heap(RandomAccessIterator first, RandomAccessIterator last, Move mov);
 
-template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
+template<typename RandomAccessIterator, typename Compare, typename Move>
 void sort_heap(RandomAccessIterator first, RandomAccessIterator last,
-        Compare compare, MoveCallback moved);
-template<typename RandomAccessIterator, typename MoveCallback>
-void sort_heap(RandomAccessIterator first, RandomAccessIterator last, MoveCallback moved);
+        Compare compare, Move mov);
+template<typename RandomAccessIterator, typename Move>
+void sort_heap(RandomAccessIterator first, RandomAccessIterator last, Move mov);
 
 }
 }
