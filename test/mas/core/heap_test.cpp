@@ -50,9 +50,9 @@ void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
 int main(int argc, char **argv) {
 
     auto cmp = [](int a, int b) {return (a > b);};
-    auto mv = [](int& v, const size_t& a, const size_t& b) {};
+    auto mv = [](int& v, const size_t& a, const size_t& b) {  };
 
-    int len = 100000;
+    int len = 100000000;
     std::vector<int> v1(len);
     for (int i = 0; i < v1.size(); i++) {
         v1[i] = i;
