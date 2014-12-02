@@ -41,7 +41,7 @@ void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
 
 void do_pop_test() {
 
-    int len = 1200000;
+    int len = 12000000;
     std::vector<int> v1(len);
     for (int i = 0; i < v1.size(); i++) {
         v1[i] = i;
@@ -127,161 +127,96 @@ void do_random_pop_test() {
     }
 }
 
-void do_keyed_test() {
+void do_random_update_test() {
 
-    int len = 100000;
+    int len = 100000000;
 
     struct widget {
-        size_t key;
         double priority;
-
-        widget(double priority) : key(0), priority(priority){
-        };
-        bool operator<(const widget& cmp) const {
-            return priority < cmp.priority;
-        }
+        size_t loc;       // location in queue
     };
 
-    std::vector<widget> w;
+    std::vector<widget> wc;
     for (int i=0; i<len; i++) {
-        w.push_back(widget(i));
+        wc.push_back(widget {(double)i, 0} );
     }
-    std::random_shuffle(w.begin(), w.end());
+    std::random_shuffle(wc.begin(), wc.end());
 
-    auto cmp = [](const widget& x, const widget& y){ return (y < x); };
-    mas::queue::keyed_priority_queue<widget,std::vector<widget>, decltype(cmp)> queue(cmp);
+    // compare priorities
+    auto cmp = [](widget* w1, widget* w2) { return w1->priority < w2->priority; };
+    // track position in queue
+    auto mov = [](widget* w, const size_t& from, const size_t& to){
+       w->loc = to;
+    };
 
+    mas::queue::priority_queue<widget*, std::vector<widget*>, decltype(cmp), decltype(mov)> queue(cmp, std::vector<widget*>(),
+          mov);
+
+    // push a bunch of pointers onto the stack
     for (int i=0; i<len; i++) {
-        size_t key = queue.push(w[i]);
-        queue.get(key).key = key; // assign key
+       queue.push(wc.data()+i);
     }
 
-    // check that priorities are in increasing order
+    // check that loc was set in correct order
     bool valid = true;
     for (int i=0; i<len; i++) {
-        widget w = queue.pop_top();
-        if (w.priority != i) {
-            valid = false;
-        }
+       widget* w = queue.peek(i);
+       if (w->loc != i) {
+          std::cout << " loc not set correctly, " << i << " vs " << w->loc << std::endl;
+          valid = false;
+       }
     }
 
     if (valid) {
-        std::cout << "keyed pop passed" << std::endl;
+        std::cout << "mas loc passed" << std::endl;
     } else {
-        std::cout << "keyed pop failed" << std::endl;
+        std::cout << "mas loc failed" << std::endl;
     }
-
-    std::vector<size_t> keys;
 
     mas::time::Timer timer;
 
-    // rebuild queue
-    for (int i=0; i<len; i++) {
-        size_t key = queue.push(w[i]);
-        queue.get(key).key = key; // assign key
-        keys.push_back(i);
-    }
-
-    // pop out in random order
+    // uniform random number generator
     static std::random_device rd;
     static std::mt19937 gen(rd());
 
-
+    // update in random order
     timer.start();
     valid = true;
     for (int i=0; i<len; i++) {
 
-        std::uniform_int_distribution<size_t> dis(0, keys.size()-1);
-        size_t idx = dis(gen);
+        std::uniform_int_distribution<size_t> dis(0, len-1);
+        size_t w1idx = dis(gen);
+        size_t w2idx = dis(gen);
+        size_t loc = wc[w1idx].loc;  // location in queue
 
-        // grab key and remove
-        size_t key = keys[idx];
-        keys[idx] = keys.back();
-        keys.pop_back();
-
-        size_t pkey = queue.peek(key).key;
-        if (pkey != key) {
-            std::cout << "key map not correct" << std::endl;
+        widget* peek = queue.peek(loc);
+        if (wc.data()+w1idx != peek) {
+            std::cout << "mas loc not correct" << std::endl;
             valid = false;
         }
 
-        widget w = queue.pop(key);
-        if (w.key != key) {
-            std::cout << "popped wrong out" << std::endl;
-            valid = false;
-        }
+        // update
+        double oprio = wc[w1idx].priority;
+        wc[w1idx].priority = wc[w2idx].priority;  // one at a time
+        queue.update(loc);
 
-        // ensure valid heap
-        // valid = queue.is_valid();
-        if (!valid) {
-            std::cout << "    INVALID" << std::endl;
-            break;
-        }
+        loc = wc[w2idx].loc;
+        wc[w2idx].priority = oprio;
+        queue.update(loc);
+
     }
     timer.stop();
-    double key_ms = timer.getMilliseconds();
+    double mas_ms = timer.getMilliseconds();
 
+    if (!queue.is_valid()) {
+       valid = false;
+    }
     if (valid) {
-        std::cout << "keyed random pop passed" << std::endl;
+        std::cout << "mas random update passed" << std::endl;
     } else {
-        std::cout << "keyed random pop failed" << std::endl;
+        std::cout << "mas random update failed" << std::endl;
     }
-    std::cout << "keyed time: " << key_ms << "ms" << std::endl;
-
-
-    auto mcb = [](widget& val, const size_t& from, const size_t& to){ val.key = to; };
-    mas::queue::priority_queue<widget, std::vector<widget>, decltype(cmp), decltype(mcb)> pq(cmp, std::vector<widget>(), mcb);
-
-    // rebuild queue
-    for (int i=0; i<len; i++) {
-        w[i].key = i;
-        pq.push(w[i]);
-        keys.push_back(i);
-    }
-
-    timer.start();
-    valid = true;
-    for (int i=0; i<len; i++) {
-
-        std::uniform_int_distribution<size_t> dis(0, len-i-1);
-        size_t key = dis(gen);
-
-        size_t pkey = pq.peek(key).key;
-        if (pkey != key) {
-            std::cout << "key map not correct" << std::endl;
-            valid = false;
-        }
-
-        widget w = pq.pop(key);
-        if (w.key != key) {
-            std::cout << "popped wrong out" << std::endl;
-            valid = false;
-        }
-
-        if (len < 50) {
-            auto icb = [](const std::vector<widget>::const_iterator& it)->void{
-                std::cout << it->priority << " ";
-            };
-            pq.iterate(icb);
-            std::cout << std::endl;
-        }
-
-        // ensure valid heap
-        // valid = queue.is_valid();
-        if (!valid) {
-            std::cout << "    INVALID" << std::endl;
-            break;
-        }
-    }
-    timer.stop();
-    double mov_ms = timer.getMilliseconds();
-
-    if (valid) {
-        std::cout << "moved random pop passed" << std::endl;
-    } else {
-        std::cout << "moved random pop failed" << std::endl;
-    }
-    std::cout << "moved time: " << mov_ms << "ms" << std::endl;
+    std::cout << "mas time: " << mas_ms << "ms" << std::endl;
 
 }
 
@@ -289,7 +224,7 @@ int main(int argc, char **argv) {
 
     do_pop_test();
     do_random_pop_test();
-    do_keyed_test();
+    do_random_update_test();
 
 }
 
