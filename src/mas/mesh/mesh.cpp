@@ -813,10 +813,10 @@ double volume_integrals(const std::vector<SharedPolygon>& polygons,
 			v0 = v1;
 			v1 = vit;
 
-			double a0 = (*v0)->get(a);
-			double a1 = (*v1)->get(a);
-			double b0 = (*v0)->get(b);
-			double b1 = (*v1)->get(b);
+			double a0 = (**v0)[a];
+			double a1 = (**v1)[a];
+			double b0 = (**v0)[b];
+			double b1 = (**v1)[b];
 
 			double diffa = a1 - a0;
 			double diffb = b1 - b0;
@@ -877,9 +877,9 @@ double volume_integrals(const std::vector<SharedPolygon>& polygons,
 		const Vertex3d& vtxBase = *(poly->verts[0]);
 		double d = -nrm->dot(vtxBase.x, vtxBase.y, vtxBase.z);
 
-		double na = nrm->get(a);
-		double nb = nrm->get(b);
-		double nc = nrm->get(c);
+		double na = (*nrm)[a];
+		double nb = (*nrm)[b];
+		double nc = (*nrm)[c];
 		double ncinv = 1.0 / nc;	// for fast division
 
 		if (a == 0) {
@@ -900,9 +900,10 @@ double volume_integrals(const std::vector<SharedPolygon>& polygons,
 			double Icc = (na_2 * Iaa + 2 * na * nb * Iab + nb_2 * Ibb
 					+ d * (2 * (na * Ia + nb * Ib) + d * I)) * (ncinv * ncinv);
 
-			m1->set(a, m1->get(a) + ncinv * na * Iaa);
-			m1->set(b, m1->get(b) + ncinv * nb * Ibb);
-			m1->set(c, m1->get(c) + Icc);
+
+			(*m1)[a] += ncinv * na * Iaa;
+			(*m1)[b] += ncinv * nb * Ibb;
+			(*m1)[c] += Icc;
 		}
 
 		if (m2 != nullptr) {
@@ -914,9 +915,9 @@ double volume_integrals(const std::vector<SharedPolygon>& polygons,
 					+ 3 * (na_2 * Iaa + 2 * na * nb * Iab + nb_2 * Ibb) * d
 					+ d * d * (3 * (na * Ia + nb * Ib) + d * I)) * ncinv_3;
 
-			m2->set(a, m2->get(a) + ncinv * na * Iaaa);
-			m2->set(b, m2->get(b) + ncinv * nb * Ibbb);
-			m2->set(c, m2->get(c) + Iccc);
+			(*m2)[a] +=  ncinv * na * Iaaa;
+			(*m2)[b] += ncinv * nb * Ibbb;
+			(*m2)[c] += Iccc;
 		}
 
 		if (p != nullptr) {
@@ -924,9 +925,9 @@ double volume_integrals(const std::vector<SharedPolygon>& polygons,
 			double Icca = (na_2 * Iaaa + 2 * na * nb * Iaab + nb_2 * Iabb
 					+ d * (2 * (na * Iaa + nb * Iab) + d * Ia)) * ncinv_2;
 
-			p->set(a, p->get(a) + ncinv * nb * Ibbc);
-			p->set(b, p->get(b) + Icca);
-			p->set(c, p->get(c) + ncinv * na * Iaab);
+			(*p)[a] += ncinv * nb * Ibbc;
+			(*p)[b] += Icca;
+			(*p)[c] += ncinv * na * Iaab;
 		}
 	}
 
@@ -980,10 +981,10 @@ double volume_integral(const std::vector<SharedPolygon>& polygons) {
 			v0 = v1;
 			v1 = vit;
 
-			double a0 = (*v0)->get(a);
-			double a1 = (*v1)->get(a);
-			double b0 = (*v0)->get(b);
-			double b1 = (*v1)->get(b);
+			double a0 = (**v0)[a];
+			double a1 = (**v1)[a];
+			double b0 = (**v0)[b];
+			double b1 = (**v1)[b];
 
 			double C0 = a0 + a1;
 			double Ca = a1 * C0 + a0 * a0;
@@ -1001,9 +1002,9 @@ double volume_integral(const std::vector<SharedPolygon>& polygons) {
 		const Vertex3d& vtxBase = *(poly->verts[0]);
 		double d = -nrm->dot(vtxBase.x, vtxBase.y, vtxBase.z);
 
-		double na = nrm->get(a);
-		double nb = nrm->get(b);
-		double nc = nrm->get(c);
+		double na = (*nrm)[a];
+		double nb = (*nrm)[b];
+		double nc = (*nrm)[c];
 		double ncinv = 1.0 / nc;	// for fast division
 
 		if (a == 0) {
