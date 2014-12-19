@@ -60,8 +60,8 @@ TEST_SOURCES := $(shell find $(TESTDIR)/ -type f -name '*.cpp')
 TEST_OBJECTS := $(patsubst $(TESTDIR)/%.cpp, $(BUILDDIR)/%.to, $(TEST_SOURCES))
 TEST_CMD := $(patsubst $(TESTDIR)/%.cpp, $(BINDIR)/%, $(TEST_SOURCES))
 
-M_FILES := $(shell find $(SRCDIR)/ -type f -name '*.m')
-M_FILES_OUT := $(patsubst $(SRCDIR)/%.m, $(BINDIR)/%.m, $(M_FILES))
+M_FILES := $(shell find $(MEXDIR)/ -type f -name '*.m')
+M_FILES_OUT := $(patsubst $(MEXDIR)/%.m, $(BINDIR)/%.m, $(M_FILES))
 
 HEADERS := $(shell find $(INCLUDEDIR)/ -type f -name '*.h')
 # $(notdir $(MEX_SOURCES:.cpp=.$(MEX_EXT))))
@@ -74,8 +74,7 @@ cleanup:
 	rm -rf $(OBJECTS) $(MEX_OBJECTS) $(CMD_OBJECTS) $(TEST_OBJECTS)
 
 clean: cleanup
-	# $(M_FILES_OUT)
-	rm -rf $(CMD) $(MEX) $(LIB) $(TEST_CMD)
+	rm -rf $(CMD) $(MEX) $(LIB) $(TEST_CMD) $(M_FILES_OUT)
 
 # do not delete intermediates
 .SECONDARY:
@@ -125,7 +124,7 @@ $(BINDIR)/%.$(MEX_EXT): $(BUILDDIR)/%_mex.mexo $(OBJECTS)
 	@echo Assembling $@ ...
 	@$(LD) -o $@ $(MEX_LDFLAGS) $(OBJECTS) $<
 	
-$(BINDIR)/%.m: $(SRCDIR)/%.m
+$(BINDIR)/%.m: $(MEXDIR)/%.m
 	@$(MKDIR_CMD)
 	@echo Copying $@ ...
 	@cp $< $@
