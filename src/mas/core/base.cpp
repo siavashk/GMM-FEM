@@ -1136,11 +1136,24 @@ void Matrix2d::add(const Matrix2d& mat) {
    }
 }
 
+void Matrix2d::add(const Matrix2d& mat1, const Matrix2d& mat2) {
+   for (int i = 0; i < IDX2D_N; i++) {
+      m[i] = mat1.m[i]+mat2.m[i];
+   }
+}
+
 void Matrix2d::subtract(const Matrix2d& mat) {
    for (int i = 0; i < IDX2D_N; i++) {
       m[i] -= mat.m[i];
    }
 }
+
+void Matrix2d::subtract(const Matrix2d& mat1, const Matrix2d& mat2) {
+   for (int i = 0; i < IDX2D_N; i++) {
+      m[i] = mat1.m[i]-mat2.m[i];
+   }
+}
+
 
 void Matrix2d::scaledAdd(double s, const Matrix2d& mat) {
    for (int i = 0; i < IDX2D_N; i++) {
@@ -1407,9 +1420,21 @@ void Matrix3d::add(const Matrix3d& mat) {
    }
 }
 
+void Matrix3d::add(const Matrix3d& mat1, const Matrix3d& mat2) {
+   for (int i = 0; i < IDX3D_N; i++) {
+      m[i] = mat1.m[i]+mat2.m[i];
+   }
+}
+
 void Matrix3d::subtract(const Matrix3d& mat) {
    for (int i = 0; i < IDX3D_N; i++) {
       m[i] -= mat.m[i];
+   }
+}
+
+void Matrix3d::subtract(const Matrix3d& mat1, const Matrix3d& mat2) {
+   for (int i = 0; i < IDX3D_N; i++) {
+      m[i] = mat1.m[i]-mat2.m[i];
    }
 }
 
@@ -1846,9 +1871,21 @@ void MatrixNd::add(const MatrixNd& mat) {
    }
 }
 
+void MatrixNd::add(const MatrixNd& mat1, const MatrixNd& mat2) {
+   for (int i = 0; i < nr*nc; i++) {
+      m[i] = mat1.m[i]+mat2.m[i];
+   }
+}
+
 void MatrixNd::subtract(const MatrixNd& mat) {
    for (int i = 0; i < nr * nc; i++) {
       m[i] -= mat.m[i];
+   }
+}
+
+void MatrixNd::subtract(const MatrixNd& mat1, const MatrixNd& mat2) {
+   for (int i = 0; i < nr*nc; i++) {
+      m[i] = mat1.m[i]-mat2.m[i];
    }
 }
 
@@ -2085,9 +2122,21 @@ void Matrix4d::add(const Matrix4d& mat) {
    }
 }
 
+void Matrix4d::add(const Matrix4d& mat1, const Matrix4d& mat2) {
+   for (int i = 0; i < IDX4D_N; i++) {
+      m[i] = mat1.m[i]+mat2.m[i];
+   }
+}
+
 void Matrix4d::subtract(const Matrix4d& mat) {
    for (int i = 0; i < IDX4D_N; i++) {
       m[i] -= mat.m[i];
+   }
+}
+
+void Matrix4d::subtract(const Matrix4d& mat1, const Matrix4d& mat2) {
+   for (int i = 0; i < IDX4D_N; i++) {
+      m[i] = mat1.m[i]-mat2.m[i];
    }
 }
 

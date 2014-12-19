@@ -7,7 +7,6 @@
 #include <memory>
 
 namespace mas {
-
 namespace mesh {
 
 // Basic point building block
@@ -22,7 +21,6 @@ typedef std::shared_ptr<Vertex3d> SharedVertex3d;
 // use smart pointers
 class Polygon;
 typedef std::shared_ptr<Polygon> SharedPolygon;
-typedef std::weak_ptr<Polygon> WeakPolygon;
 
 // basic half-edge building block
 class HalfEdge;
@@ -36,7 +34,6 @@ class MeshFactory;
 
 class Vertex3d: public IndexedPoint3d {
 public:
-	//size_t scratchIdx;	// for temporary use
 	// list in case non-manifold
 	std::vector<HalfEdge*> incident;
 private:
@@ -64,6 +61,7 @@ public:
 	std::vector<SharedVertex3d> verts;
 	Plane plane;
 	SharedHalfEdge he0;
+	size_t idx;
 
 private:
 	static Plane getPlane(const std::vector<SharedVertex3d>& verts);
@@ -105,10 +103,14 @@ public:
 	void disconnect();
 	SharedHalfEdge& getFirstHalfEdge();
 
+	// index
+	size_t getIndex() const;
+	void setIndex(size_t index);
 };
 
 class HalfEdge {
 public:
+    size_t idx;
 	SharedVertex3d head;
 	SharedVertex3d tail;
 	const Polygon* face;
@@ -127,8 +129,12 @@ public:
 	virtual ~HalfEdge();   // needed to disconnect shared pointers
 	double getLength() const;
 
+	bool isConnected() const;
 	void connect();
 	void disconnect();  // clear opposite's opposite if assigned
+
+	size_t getIndex() const;
+	void setIndex(size_t index);
 };
 
 class PolygonMesh {
@@ -172,17 +178,26 @@ public:
 	void updateIndices();
 
 	void addVertex(SharedVertex3d&& vtx);
-
 	SharedVertex3d& addVertex(const Point3d& pnt);
+	SharedVertex3d removeVertex(size_t idx, bool swapLast = true);
 
 	void addFace(SharedPolygon&& poly);
-
 	SharedPolygon& addFace(std::vector<SharedVertex3d>&& vtxs);
 	SharedPolygon& addFace(const SharedVertex3d& v0, const SharedVertex3d& v1,
 			const SharedVertex3d& v2);
+	SharedPolygon removeFace(size_t idx, bool swapLast = true);
+
+	SharedVertex3d& getVertex(size_t idx);
+    SharedPolygon& getFace(size_t idx);
 
 	size_t numVertices() const;
+	size_t numFaces() const;
 	void triangulate();
+
+
+    // connectivity data
+    void connect();
+    void disconnect();
 
 	double volume() const;
 	double volumeIntegral() const;
