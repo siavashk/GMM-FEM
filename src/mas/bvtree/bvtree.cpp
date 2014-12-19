@@ -72,7 +72,7 @@ void BoundablePointSet::getCovariance(const Point3d& centre,
     cov.setZero();
     Point3d diff;
     for (const Point3d& pnt : pnts) {
-        diff.set(pnt);
+        diff = pnt;
         diff.subtract(centre);
         cov.addOuterProduct(diff, diff);
     }
@@ -89,7 +89,7 @@ double BoundablePointSet::distanceToPoint(const Point3d& pnt,
         double d = pnt.distance(mpnt);
         if (d < dmin) {
             dmin = d;
-            nearest.set(mpnt);
+            nearest = mpnt;
         }
     }
 
@@ -115,7 +115,7 @@ double BoundablePointSet::distanceToPoint(const Point3d& pnt,
     //
     //		if (d < dmin) {
     //			dmin = d;
-    //			nearest.set(mpnt);
+    //			nearest = mpnt;
     //		}
     //	}
 
@@ -182,7 +182,7 @@ void IndexedBoundablePointSet::getCovariance(const Point3d& centre,
     cov.setZero();
     Point3d diff;
     for (const std::shared_ptr<IndexedPoint3d>& pnt : pnts) {
-        diff.set(*pnt);
+        diff = *pnt;
         diff.subtract(centre);
         cov.addOuterProduct(diff, diff);
     }
@@ -199,7 +199,7 @@ double IndexedBoundablePointSet::distanceToPoint(const Point3d& pnt,
         double d = mpnt->distance(pnt);
         if (d < dmin) {
             dmin = d;
-            nearest.set(*mpnt);
+            nearest = *mpnt;
         }
     }
 
@@ -225,7 +225,7 @@ double IndexedBoundablePointSet::distanceToPoint(const Point3d& pnt,
     //
     //		if (d < dmin) {
     //			dmin = d;
-    //			nearest.set(mpnt);
+    //			nearest = mpnt;
     //		}
     //	}
 
@@ -282,7 +282,7 @@ unsigned long BoundingSphere::uniqueClassId() const {
 
 void BoundingSphere::set(const Point3d& c, double r) {
     this->r = r;
-    this->c.set(c);
+    this->c = c;
 }
 
 void BoundingSphere::setRadius(double r) {
@@ -294,11 +294,11 @@ double BoundingSphere::getRadius() const {
 }
 
 void BoundingSphere::setCentre(const Point3d& c) {
-    this->c.set(c);
+    this->c = c;
 }
 
 void BoundingSphere::getCentre(Point3d& c) const {
-    c.set(this->c);
+    c = this->c;
 }
 
 void BoundingSphere::setMargin(double m) {
@@ -381,7 +381,7 @@ double BoundingSphere::distanceToPoint(const Point3d& pnt,
     double d = c.distance(pnt) - r;
     // inside
     if (d <= 0) {
-        nearest.set(pnt);
+        nearest = pnt;
         return 0;
     }
 
@@ -398,7 +398,7 @@ double BoundingSphere::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
 
     // inside
     if (pc.norm() <= r) {
-        nearest.set(pnt);
+        nearest = pnt;
         return 0;
     }
 
@@ -434,7 +434,7 @@ double BoundingSphere::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
     } else {
         d = fabs(d2);
     }
-    nearest.set(pnt);
+    nearest = pnt;
     nearest.scaledAdd(d, dir);
     return d;
 }
@@ -444,7 +444,7 @@ BoundingSphere BoundingSphere::getBoundingSphere() const {
 }
 
 double BoundingSphere::getBoundingSphere(Point3d& centre) const {
-	centre.set(c);
+	centre = c;
 	return r;
 }
 
@@ -470,7 +470,7 @@ void BoundingSphere::bound(const std::vector<SharedBoundable>& blist) {
 
     // get total centroid, then compute radius
     Point3d centroid;
-    c.set(0, 0, 0);
+    c.setZero();
 
     // set center as average point
     for (const SharedBoundable& sb : blist) {
@@ -553,24 +553,24 @@ BoundingBox::BoundingBox(const Point3d& c, const Vector3d& hw, double margin) :
 }
 
 void BoundingBox::set(const Point3d& c, const Vector3d& hw) {
-    this->c.set(c);
-    halfWidths.set(hw);
+    this->c = c;
+    halfWidths = hw;
 }
 
 void BoundingBox::setHalfWidths(const Vector3d& hw) {
-    halfWidths.set(hw);
+    halfWidths = hw;
 }
 
 void BoundingBox::getHalfWidths(Vector3d& hw) const {
-    hw.set(halfWidths);
+    hw = halfWidths;
 }
 
 void BoundingBox::setCentre(const Point3d& c) {
-    this->c.set(c);
+    this->c = c;
 }
 
 void BoundingBox::getCentre(Point3d& c) const {
-    c.set(this->c);
+    c = this->c;
 }
 
 void BoundingBox::setMargin(double m) {
@@ -624,9 +624,9 @@ bool BoundingBox::intersectsLine(const Point3d& p, const Vector3d& v) const {
 
     // intersect with front/back planes
     for (int i = 0; i < 3; i++) {
-        double hwb = halfWidths.get(i);
-        double pb = pl.get(i);
-        double vb = vl.get(i);
+        double hwb = halfWidths[i];
+        double pb = pl[i];
+        double vb = vl[i];
 
         double minb = -hwb;
         double maxb = hwb;
@@ -684,9 +684,9 @@ bool BoundingBox::intersectsRay(const Point3d& p, const Vector3d& v) const {
 
     // intersect with front/back planes
     for (int i = 0; i < 3; i++) {
-        double hwb = halfWidths.get(i);
-        double pb = pl.get(i);
-        double vb = vl.get(i);
+        double hwb = halfWidths[i];
+        double pb = pl[i];
+        double vb = vl[i];
 
         double minb = -hwb;
         double maxb = hwb;
@@ -771,7 +771,7 @@ BoundingSphere BoundingBox::getBoundingSphere() const {
 }
 
 double BoundingBox::getBoundingSphere(Point3d& centre) const {
-	centre.set(c);
+	centre = c;
 	return halfWidths.norm()+margin;
 }
 
@@ -816,12 +816,12 @@ bool BoundingBox::updateSphere(const Point3d& c, double r) {
     }
 
     if (modified) {
-        cl.set(min);
+        cl = min;
         cl.add(max);
         cl.scale(0.5);
         getWorldCoords(cl, this->c);
 
-        halfWidths.set(max);
+        halfWidths = max;
         halfWidths.subtract(min);
         halfWidths.scale(0.5);
         return true;
@@ -836,7 +836,7 @@ double BoundingBox::distanceToPoint(const Point3d& pnt,
     getLocalCoords(pnt, lpnt);
 
     // find nearest face/edge or corner
-    nearest.set(lpnt);
+    nearest = lpnt;
 
     if (nearest.x > halfWidths.x) {
         nearest.x = halfWidths.x;
@@ -876,7 +876,7 @@ double BoundingBox::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
     if (lpnt.x >= -halfWidths.x && lpnt.x <= halfWidths.x
             && lpnt.y >= -halfWidths.y && lpnt.y <= halfWidths.y
             && lpnt.z >= -halfWidths.z && lpnt.z <= halfWidths.z) {
-        nearest.set(pnt);
+        nearest = pnt;
         return 0;
     }
 
@@ -898,7 +898,7 @@ double BoundingBox::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
         if (p.x >= -halfWidths.x && p.x <= halfWidths.x && p.y >= -halfWidths.y
                 && p.y <= halfWidths.y && p.z >= -halfWidths.z
                 && p.z <= halfWidths.z && (s < dmin)) {
-            nearest.set(p);
+            nearest = p;
             dmin = s;
         }
 
@@ -910,7 +910,7 @@ double BoundingBox::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
         if (p.x >= -halfWidths.x && p.x <= halfWidths.x && p.y >= -halfWidths.y
                 && p.y <= halfWidths.y && p.z >= -halfWidths.z
                 && p.z <= halfWidths.z && (s < dmin)) {
-            nearest.set(p);
+            nearest = p;
             dmin = s;
         }
     }
@@ -930,7 +930,7 @@ double BoundingBox::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
         if (p.x >= -halfWidths.x && p.x <= halfWidths.x && p.y >= -halfWidths.y
                 && p.y <= halfWidths.y && p.z >= -halfWidths.z
                 && p.z <= halfWidths.z && (s < dmin)) {
-            nearest.set(p);
+            nearest = p;
             dmin = s;
         }
 
@@ -942,7 +942,7 @@ double BoundingBox::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
         if (p.x >= -halfWidths.x && p.x <= halfWidths.x && p.y >= -halfWidths.y
                 && p.y <= halfWidths.y && p.z >= -halfWidths.z
                 && p.z <= halfWidths.z && (s < dmin)) {
-            nearest.set(p);
+            nearest = p;
             dmin = s;
         }
     }
@@ -962,7 +962,7 @@ double BoundingBox::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
         if (p.x >= -halfWidths.x && p.x <= halfWidths.x && p.y >= -halfWidths.y
                 && p.y <= halfWidths.y && p.z >= -halfWidths.z
                 && p.z <= halfWidths.z && (s < dmin)) {
-            nearest.set(p);
+            nearest = p;
             dmin = s;
         }
 
@@ -974,7 +974,7 @@ double BoundingBox::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
         if (p.x >= -halfWidths.x && p.x <= halfWidths.x && p.y >= -halfWidths.y
                 && p.y <= halfWidths.y && p.z >= -halfWidths.z
                 && p.z <= halfWidths.z && (s < dmin)) {
-            nearest.set(p);
+            nearest = p;
             dmin = s;
         }
     }
@@ -1006,16 +1006,16 @@ void AABB::getLocalCoords(const Point3d& p, Point3d& out) const {
 }
 
 void AABB::getLocalCoords(const Vector3d& v, Vector3d& out) const {
-    out.set(v);
+    out = v;
 }
 
 void AABB::getWorldCoords(const Point3d& p, Point3d& out) const {
-    out.set(c);	// first in case out == c, otherwise overwrites c
+    out = c;	// first in case out == c, otherwise overwrites c
     out.add(p);
 }
 
 void AABB::getWorldCoords(const Vector3d& v, Vector3d& out) const {
-    out.set(v);
+    out = v;
 }
 
 bool AABB::intersects(const BoundingVolume& bv) const {
@@ -1073,7 +1073,7 @@ void AABB::bound(const std::vector<SharedBoundable>& b) {
 
     // get total centroid, then compute radius
     Point3d centroid;
-    c.set(0, 0, 0);
+    c.setZero();
 
     // set center as average point
     for (const SharedBoundable& sb : b) {
@@ -1082,7 +1082,7 @@ void AABB::bound(const std::vector<SharedBoundable>& b) {
     }
     c.scale(1.0 / b.size());
 
-    halfWidths.set(0, 0, 0);
+    halfWidths.setZero();
     // update bounds
     for (const SharedBoundable& sb : b) {
         sb->updateBV(*this);
@@ -1575,23 +1575,23 @@ unsigned long OBB::uniqueClassId() const {
 }
 
 void OBB::set(const Point3d& c, const RotationMatrix3d& R, const Vector3d& hw) {
-    this->c.set(c);
-    this->halfWidths.set(hw);
-    this->R.set(R);
+    this->c = c;
+    this->halfWidths = hw;
+    this->R = R;
 }
 
 void OBB::set(const RigidTransform3d& trans, const Vector3d& hw) {
-    c.set(trans.t);
-    halfWidths.set(hw);
-    R.set(trans.R);
+    c = trans.t;
+    halfWidths = hw;
+    R = trans.R;
 }
 
 void OBB::setRotation(const RotationMatrix3d& R) {
-    this->R.set(R);
+    this->R = R;
 }
 
 void OBB::getRotation(RotationMatrix3d& R) {
-    R.set(this->R);
+    R = this->R;
 }
 
 void OBB::getLocalCoords(const Point3d& p, Point3d& out) const {
@@ -1707,7 +1707,7 @@ bool OBB::intersects(const OBB& bv) const {
 
 void OBB::bound(const std::vector<SharedBoundable>& b) {
 
-    c.set(0, 0, 0);
+    c.setZero();
 
     // set center as average point
     Point3d centroid;
@@ -1739,9 +1739,9 @@ void OBB::bound(const std::vector<SharedBoundable>& b) {
         U.scaleColumn(2, -1);
     }
 
-    this->R.set(U);
+    this->R = U;
 
-    halfWidths.set(0, 0, 0);
+    halfWidths.setZero();
     // update bounds
     for (const SharedBoundable& sb : b) {
         sb->updateBV(*this);
@@ -2486,7 +2486,7 @@ double nearest_boundable_recursive_old(const Point3d& pnt, const BVNode& node,
             if (d < nearestDist) {
                 nearestDist = d;
                 nearest = elem;
-                nearestPoint.set(p);
+                nearestPoint = p;
             }
         }
     } else {
@@ -2515,7 +2515,7 @@ double nearest_boundable_recursive(const Point3d& pnt,
             if (d < nearestDist) {
                 nearestDist = d;
                 nearest = elem;
-                nearestPoint.set(p);
+                nearestPoint = p;
             }
         }
     } else {
@@ -2566,7 +2566,7 @@ double nearest_boundable_recursive_raw(const Point3d& pnt, const BVNode& node,
             if (d < nearestDist) {
                 nearestDist = d;
                 nearest = elem.get();
-                nearestPoint.set(p);
+                nearestPoint = p;
             }
         }
     } else {
@@ -2616,7 +2616,7 @@ double nearest_boundable_recursive(const Point3d& pnt, const Vector3d& dir,
             if (d < nearestDist) {
                 nearestDist = d;
                 nearest = elem;
-                nearestPoint.set(p);
+                nearestPoint = p;
             }
         }
     } else {
@@ -2668,7 +2668,7 @@ double nearest_boundable_recursive_raw(const Point3d& pnt, const Vector3d& dir,
             if (d < nearestDist) {
                 nearestDist = d;
                 nearest = elem.get();
-                nearestPoint.set(p);
+                nearestPoint = p;
             }
         }
     } else {
