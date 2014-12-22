@@ -1,4 +1,5 @@
 #include "mas/mesh/simplification.h"
+#include <iostream>
 
 namespace mas {
 namespace mesh {
@@ -93,9 +94,9 @@ void EdgeCollapseQuadric::solve(const Point3d& v1, const Point3d& v2,
 double EdgeCollapseQuadric::cost(const Point3d &v) {
 
     // v^tQv + 2b.v+c
-    double d = v.x * v.x * A(0, 0) + v.y * v.y * A(1, 1) + v.z * v.z * A(2, 2)
-            + 2 * v.x * v.y * A(1, 2) + 2 * v.x * v.z * A(1, 3)
-            + 2 * v.y * v.z * A(2, 3) + 2 * v.dot(b) + c;
+    double d = v.x * v.x * A[IDX3D_00] + v.y * v.y * A[IDX3D_11] + v.z * v.z * A[IDX3D_22]
+            + 2 * v.x * v.y * A[IDX3D_01] + 2 * v.x * v.z * A[IDX3D_02]
+            + 2 * v.y * v.z * A[IDX3D_12] + 2 * v.dot(b) + c;
     return d;
 }
 
@@ -133,9 +134,15 @@ void EdgeCollapseQuadricCost::init(PolygonMesh& mesh) {
 
             Qi.add(Kp[fidx]);
         }
+
+        //        std::cout << "Qv[" << i << "]: " << Qi.A(0,0) << " " << Qi.A(0,1) << " " << Qi.A(0,2) << " " << Qi.b[0] <<  std::endl;
+        //        std::cout << "       " << Qi.A(1,0) << " " << Qi.A(1,1) << " " << Qi.A(1,2) << " " << Qi.b[1] <<  std::endl;
+        //        std::cout << "       " << Qi.A(2,0) << " " << Qi.A(2,1) << " " << Qi.A(2,2) << " " << Qi.b[2] <<  std::endl;
+        //        std::cout << "       " << Qi.b[0] << " " << Qi.b[1] << " " << Qi.b[2] << " " << Qi.c <<  std::endl;
+
         Qv.push_back(std::move(Qi));
     }
-    Kp.clear(); // free some memory
+
 }
 
 double EdgeCollapseQuadricCost::operator ()(PolygonMesh& mesh, HalfEdge &he,
@@ -148,8 +155,33 @@ double EdgeCollapseQuadricCost::operator ()(PolygonMesh& mesh, HalfEdge &he,
     EdgeCollapseQuadric ecq(Qv[he.head->getIndex()]);
     ecq.add(Qv[he.tail->getIndex()]);
     ecq.solve(*(he.head), *(he.tail), v);
+    double c = ecq.cost(v);
 
-    return ecq.cost(v);
+    //    std::cout << "Edge " << he.idx << ": " << he.head->idx << " --> " << he.tail->idx << std::endl;
+    //    std::cout << "    Q: " << ecq.A(0,0) << " " << ecq.A(0,1) << " " << ecq.A(0,2) << " " << ecq.b[0] <<  std::endl;
+    //    std::cout << "       " << ecq.A(1,0) << " " << ecq.A(1,1) << " " << ecq.A(1,2) << " " << ecq.b[1] <<  std::endl;
+    //    std::cout << "       " << ecq.A(2,0) << " " << ecq.A(2,1) << " " << ecq.A(2,2) << " " << ecq.b[2] <<  std::endl;
+    //    std::cout << "       " << ecq.b[0] << " " << ecq.b[1] << " " << ecq.b[2] << " " << ecq.c <<  std::endl;
+    //    std::cout << "    v: " << v.x << " " << v.y << " " << v.z << std::endl;
+    //    std::cout << "    c: " << c << std::endl << std::endl;
+
+    return c;
+}
+
+void EdgeCollapseQuadricCost::operator ()(HalfEdge &he) {
+
+    // lazy initialization
+    if (Qv.empty()) {
+        return;
+    }
+
+    // move Qv over
+    size_t hidx = he.head->getIndex();
+    size_t tidx = he.tail->getIndex();
+    size_t lastidx = Qv.size()-1;
+    Qv[hidx].add(Qv[tidx]);
+    Qv[tidx] = std::move(Qv[lastidx]);
+    Qv.pop_back();  // remove
 }
 
 }

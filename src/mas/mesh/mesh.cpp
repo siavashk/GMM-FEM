@@ -114,6 +114,14 @@ Plane Polygon::getPlane(const std::vector<SharedVertex3d>& verts) {
     return plane;
 }
 
+const Plane& Polygon::getPlane() const {
+    return plane;
+}
+
+void Polygon::updatePlane() {
+    plane = getPlane(verts);
+}
+
 void Polygon::set(const Polygon& poly) {
     he0 = nullptr; // for triggering rebuild
     this->verts = poly.verts;
@@ -283,7 +291,7 @@ void Polygon::setIndex(size_t index) {
 }
 
 HalfEdge::HalfEdge(const SharedVertex3d& tail, const SharedVertex3d& head,
-        const Polygon* face) :
+        Polygon* face) :
         head(head), tail(tail), face(face), opposite(nullptr), next(nullptr), idx(
                 MAX_SIZE_T) {
 }
@@ -306,6 +314,7 @@ void HalfEdge::connect() {
     for (HalfEdge* he : tail->incident) {
         if (he->tail == head) {
             opposite = he;
+            he->opposite = this;
         }
     }
 
@@ -341,11 +350,12 @@ PolygonMesh::PolygonMesh() :
         verts(), faces() {
 }
 
-PolygonMesh::PolygonMesh(const PolygonMesh& copyMe) {
+PolygonMesh::PolygonMesh(const PolygonMesh& copyMe) :
+    verts(), faces() {
     // create a local copy of all vertices
     SharedVertex3dMap copyMap = copyVertices(copyMe.verts);
 
-    for (const SharedPolygon& face : faces) {
+    for (const SharedPolygon& face : copyMe.faces) {
 
         // duplicate face
         std::vector<SharedVertex3d> vtxs;
@@ -561,15 +571,17 @@ SharedVertex3d PolygonMesh::removeVertex(size_t idx, bool swapLast) {
     size_t last = verts.size() - 1;
     out->setIndex(last);
 
-    if (swapLast) {
-        verts[idx] = std::move(verts[last]);
-        verts[idx]->setIndex(idx);
+    if (idx != last) {
+        if (swapLast) {
+            verts[idx] = std::move(verts[last]);
+            verts[idx]->setIndex(idx);
 
-    } else {
-        // shift
-        for (int i = idx; i < last; i++) {
-            verts[i] = std::move(verts[i + 1]);
-            verts[i]->setIndex(i);
+        } else {
+            // shift
+            for (int i = idx; i < last; i++) {
+                verts[i] = std::move(verts[i + 1]);
+                verts[i]->setIndex(i);
+            }
         }
     }
     verts.pop_back();
@@ -601,15 +613,18 @@ SharedPolygon PolygonMesh::removeFace(size_t idx, bool swapLast) {
     size_t last = faces.size() - 1;
     out->setIndex(last);
 
-    if (swapLast) {
-        faces[idx] = std::move(faces[last]);
-        faces[idx]->setIndex(idx);
+    if (idx != last) {
+        if (swapLast) {
 
-    } else {
-        // shift
-        for (int i = idx; i < last; i++) {
-            faces[i] = std::move(faces[i + 1]);
-            faces[i]->setIndex(i);
+            faces[idx] = std::move(faces[last]);
+            faces[idx]->setIndex(idx);
+
+        } else {
+            // shift
+            for (int i = idx; i < last; i++) {
+                faces[i] = std::move(faces[i + 1]);
+                faces[i]->setIndex(i);
+            }
         }
     }
     faces.pop_back();
