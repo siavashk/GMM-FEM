@@ -73,7 +73,7 @@ void edge_collapse(PolygonMesh& mesh, size_t targetFaces, CostFunc cost,
         }
         HalfEdge* he = face->he0.get();
         do {
-            he->setIndex(MAX_SIZE_T);
+            he->setIndex(MAX_SIZE_T, false);
             he = he->next.get();
         } while (he != face->he0.get());
     }
@@ -84,10 +84,10 @@ void edge_collapse(PolygonMesh& mesh, size_t targetFaces, CostFunc cost,
         HalfEdge* he = face->he0.get();
         do {
             if (he->getIndex() == MAX_SIZE_T) {
-                he->setIndex(idx);
+                he->setIndex(idx, true);
                 // opposite to same index
                 if (he->opposite != nullptr) {
-                    he->opposite->setIndex(idx);
+                    he->opposite->setIndex(idx, false);
                 }
                 idx++;
             }
@@ -143,9 +143,9 @@ void edge_collapse(PolygonMesh& mesh, size_t targetFaces, CostFunc cost,
         if (idx != lastidx) {
             // swap in last edge and renumber
             edgeinfo[idx] = std::move(edgeinfo[lastidx]);
-            edgeinfo[idx].edge->setIndex(idx);
+            edgeinfo[idx].edge->setIndex(idx, true);
             if (edgeinfo[idx].edge->opposite != nullptr) {
-                edgeinfo[idx].edge->opposite->setIndex(idx);
+                edgeinfo[idx].edge->opposite->setIndex(idx, false);
             }
             queue.get(edgeinfo[idx].pos) = idx; //update edge number in queue
         }
@@ -279,9 +279,11 @@ void edge_collapse(PolygonMesh& mesh, size_t targetFaces, CostFunc cost,
 
                         // re-index merged edge, prev's edge gets merged into next
                         size_t oldidx = prev->getIndex();
-                        prev->opposite->setIndex(next->getIndex());
+                        prev->opposite->setIndex(next->getIndex(), true);
+                        prev->opposite->opposite->setIndex(next->getIndex(), false); // ensure only one primary
                         // edge at the new index might be referring to the half-edge belonging to the removed face
                         edgeinfo[next->getIndex()].edge = prev->opposite;
+
 
                         // remove edge prev
                         remove_edge(prev.get());
@@ -344,7 +346,8 @@ void edge_collapse(PolygonMesh& mesh, size_t targetFaces, CostFunc cost,
 
                         // re-index merged edge, prev's edge gets merged into next
                         size_t oldidx = prev->getIndex();
-                        prev->opposite->setIndex(next->getIndex());
+                        prev->opposite->setIndex(next->getIndex(), true);
+                        prev->opposite->opposite->setIndex(next->getIndex(), false); // ensure only one primary
                         // edge at the new index might be referring to the half-edge belonging to the removed face
                         edgeinfo[next->getIndex()].edge = prev->opposite;
 
@@ -400,7 +403,10 @@ void edge_collapse(PolygonMesh& mesh, size_t targetFaces, CostFunc cost,
 
             // notify of collapsed edge
             edge->tail->setIndex(oldvidx);  // restore original vertex index in case others were keeping track
-            edge->setIndex(eidx);
+            edge->setIndex(eidx, true);
+            if (oedge != nullptr) {
+                oedge->setIndex(eidx, false);
+            }
             collapsed(*edge); // XXX really should be enough to reconstruct (progressive)
 
             // update normals

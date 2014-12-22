@@ -9,6 +9,37 @@
 #include "mas/mesh/simplification.h"
 #include "mas/core/exception.h"
 
+void printstuff(mas::mesh::PolygonMesh& mesh, int offset) {
+
+    // vertices
+    for (mas::mesh::SharedVertex3d& vtx : mesh.verts) {
+        std::cout << "v(" << (vtx->idx+offset) << ",:) = [" << vtx->toString("%g, ", "%g") << "];"<< std::endl;
+    }
+
+    // faces
+    for (mas::mesh::SharedPolygon& face : mesh.faces) {
+        std::cout << "f(" << (face->idx+offset) << ",:) = [";
+        for (int i=0; i<face->numVertices()-1; i++) {
+            std::cout << (face->verts[i]->idx+offset) << ", ";
+        }
+        std::cout << (face->verts.back()->idx + offset) << "];" << std::endl;
+    }
+
+    // edges
+    for (mas::mesh::SharedPolygon& face : mesh.faces) {
+
+        mas::mesh::HalfEdge* he0 = face->he0.get();
+        mas::mesh::HalfEdge* he = he0;
+        do {
+            if (he->isPrimary()) {
+                std::cout << "e(" << (he->idx+offset) << ",:) = [" << (he->tail->idx + offset) << ", " <<  (he->head->idx + offset) << "];"<< std::endl;
+            }
+            he = he->next.get();
+        } while (he != he0);
+    }
+
+}
+
 bool doEdgeCollapseTest(const char filename[], const char out[], int reduce) {
 
    mas::mesh::io::SimpleObjReader reader;
@@ -27,13 +58,23 @@ bool doEdgeCollapseTest(const char filename[], const char out[], int reduce) {
    }
    mesh->connect(); // build connectivity
 
+   if (mesh->numFaces() < 20) {
+       printstuff(*mesh, 0);
+   }
+
+   std::cout << "# faces: "<< mesh->numFaces() << std::endl;
+   std::cout << "# vertices: "<< mesh->numVertices() << std::endl;
+
    // check connectivity
    for (SharedPolygon& face : mesh->faces) {
        HalfEdge* he0 = face->he0.get();
        HalfEdge* he = he0;
        do {
            if (he->opposite == nullptr) {
-               std::cout << "BROKEN!!!" << std::endl;
+               std::cout << "OPPOSITE BROKEN!!!" << std::endl;
+           }
+           if (he->face != face.get()) {
+               std::cout << "FACE BROKEN!!!" << std::endl;
            }
            he = he->next.get();
        } while (he != he0);
