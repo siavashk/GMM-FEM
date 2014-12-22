@@ -114,6 +114,7 @@ public:
 class HalfEdge {
 public:
     size_t idx;
+    bool primary;  // one primary per pair
 	SharedVertex3d head;
 	SharedVertex3d tail;
 	Polygon* face;
@@ -137,7 +138,8 @@ public:
 	void disconnect();  // clear opposite's opposite if assigned
 
 	size_t getIndex() const;
-	void setIndex(size_t index);
+	bool isPrimary() const;
+	void setIndex(size_t index, bool primary);
 };
 
 class PolygonMesh {

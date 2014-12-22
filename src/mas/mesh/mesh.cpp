@@ -293,7 +293,7 @@ void Polygon::setIndex(size_t index) {
 HalfEdge::HalfEdge(const SharedVertex3d& tail, const SharedVertex3d& head,
         Polygon* face) :
         head(head), tail(tail), face(face), opposite(nullptr), next(nullptr), idx(
-                MAX_SIZE_T) {
+                MAX_SIZE_T), primary(false) {
 }
 
 HalfEdge::~HalfEdge() {
@@ -341,8 +341,13 @@ size_t HalfEdge::getIndex() const {
     return idx;
 }
 
-void HalfEdge::setIndex(size_t index) {
+bool HalfEdge::isPrimary() const {
+    return primary;
+}
+
+void HalfEdge::setIndex(size_t index, bool primary) {
     idx = index;
+    this->primary = primary;
 }
 
 // PolygonMesh implementation
@@ -524,7 +529,7 @@ void PolygonMesh::updateIndices() {
             hasEdges = true;
             HalfEdge* he = face->he0.get();
             do {
-                he->setIndex(MAX_SIZE_T);
+                he->setIndex(MAX_SIZE_T, false);
                 he = he->next.get();
             } while (he != face->he0.get());
         }
@@ -539,10 +544,10 @@ void PolygonMesh::updateIndices() {
                 HalfEdge* he = face->he0.get();
                 do {
                     if (he->getIndex() == MAX_SIZE_T) {
-                        he->setIndex(idx);
+                        he->setIndex(idx, true);
                         // opposite to same index
                         if (he->opposite != nullptr) {
-                            he->opposite->setIndex(idx);
+                            he->opposite->setIndex(idx, false);
                         }
                         idx++;
                     }
@@ -670,8 +675,22 @@ void PolygonMesh::triangulate() {
 }
 
 void PolygonMesh::connect() {
+
+    size_t idx = 0;
     for (SharedPolygon& poly : faces) {
         poly->connect();
+        // update indices
+        HalfEdge* he0 = poly->he0.get();
+        HalfEdge* he = he0;
+        do {
+            if (he->opposite != nullptr) {
+                he->setIndex(he->opposite->getIndex(), false);
+            } else {
+                he->setIndex(idx, true);
+                idx++;
+            }
+            he = he->next.get();
+        } while (he != he0);
     }
 }
 
