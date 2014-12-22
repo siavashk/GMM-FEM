@@ -88,6 +88,9 @@ public:
 	void set(const Plane& p, const std::vector<SharedVertex3d>& verts);
 	void set(const SharedPolygon& poly);
 
+    void updatePlane();
+	const Plane& getPlane() const;
+
 	size_t numVertices() const;
 	void computeCentroid(Point3d& centroid) const;
 
@@ -113,7 +116,7 @@ public:
     size_t idx;
 	SharedVertex3d head;
 	SharedVertex3d tail;
-	const Polygon* face;
+	Polygon* face;
 
 	// set when connected
 	SharedHalfEdge next;
@@ -125,7 +128,7 @@ private:
 
 public:
 	HalfEdge(const SharedVertex3d& tail, const SharedVertex3d& head,
-			const Polygon* face);
+			Polygon* face);
 	virtual ~HalfEdge();   // needed to disconnect shared pointers
 	double getLength() const;
 

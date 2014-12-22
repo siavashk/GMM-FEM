@@ -10,7 +10,7 @@ namespace mesh {
  * Kp or Qv = [A b; b^T c]
  */
 class EdgeCollapseQuadric {
-private:
+public:
     Matrix3d A;
     Vector3d b;
     double c;
@@ -33,14 +33,17 @@ private:
 public:
     EdgeCollapseQuadricCost();
     void init(PolygonMesh& mesh);
-    double operator ()(PolygonMesh& mesh, HalfEdge& he, Point3d &v);
+    double operator ()(PolygonMesh& mesh, HalfEdge& he, Point3d& v);
+    void operator ()(HalfEdge& removed);
 };
 
-template<typename CostFunc = EdgeCollapseQuadricCost>
-void edge_collapse(PolygonMesh& mesh, double fraction, const CostFunc cost = CostFunc());
+template<typename CostFunc = EdgeCollapseQuadricCost, typename CollapseCallback = EdgeCollapseQuadricCost>
+void edge_collapse(PolygonMesh& mesh, double fraction, CostFunc cost = CostFunc(),
+        CollapseCallback collapsed = CollapseCallback());
 
-template<typename CostFunc>
-void edge_collapse(PolygonMesh& mesh, int targetFaces, const CostFunc cost = CostFunc());
+template<typename CostFunc = EdgeCollapseQuadricCost, typename CollapseCallback = EdgeCollapseQuadricCost>
+void edge_collapse(PolygonMesh& mesh, size_t targetFaces, CostFunc cost = CostFunc(),
+        CollapseCallback collapsed = CollapseCallback());
 
 } // mesh
 } // mas

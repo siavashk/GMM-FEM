@@ -248,8 +248,9 @@ typename priority_queue<ValueType, Sequence, Compare, MoveCallback>::reference p
 }
 
 /**
- *  @brief Returns a read-only (constant) reference to the data at position loc
- *  in the container
+ *  @brief Returns a modifiable (non-constant) reference to the data at position loc
+ *  in the container.  If modified in such a way that the priority has changed, then
+ *  you must call the update(loc) function.
  */
 template<typename ValueType, typename Sequence, typename Compare,
         typename MoveCallback>

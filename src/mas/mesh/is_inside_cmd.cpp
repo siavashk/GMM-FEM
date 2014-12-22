@@ -7,7 +7,6 @@
 
 // timings
 #include "mas/core/time.h"
-#include "mas/mesh/simplification.h"
 #include "mas/core/exception.h"
 
 bool doNearestTest(const char filename[], double pnt[]) {
@@ -55,8 +54,6 @@ bool doInsideTest(const char filename[], double pnt[], double dx[], int nx[]) {
 
    std::unique_ptr<PolygonMesh> mesh = std::unique_ptr<PolygonMesh>(reader.read(filename));
    mesh->connect(); // build connectivity
-
-   mas::mesh::edge_collapse(*mesh, 0.5, [](){});
 
    Point3d pStart;
    pStart.x = pnt[0];
