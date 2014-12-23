@@ -176,6 +176,22 @@ typename priority_queue<ValueType, Sequence, Compare, MoveCallback>::value_type 
 }
 
 /**
+ * /**
+ * @brief Removes the first element, filling the provided element, top.  This is potentially
+ * safer in the case where no move assignment operator is defined, and if the copy-constructor
+ * might fail.
+ * @param top populated top element
+ */
+template<typename ValueType, typename Sequence, typename Compare,
+        typename MoveCallback>
+void priority_queue<
+        ValueType, Sequence, Compare, MoveCallback>::pop(reference top) {
+    // move out top element
+    top = __MAS_MOVE(c.front());
+    mas::heap::pop_heap(c.begin(), c.end(), comp, mov);
+}
+
+/**
  * @brief Removes and returns the element located at position
  *        loc inside the queue's container
  * @return the remov element from the queue (mov if c++11)
