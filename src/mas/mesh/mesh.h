@@ -50,8 +50,9 @@ public:
 
 	void addIncidentEdge(HalfEdge* he);
 	bool removeIncidentEdge(const HalfEdge* he);
+	bool swapIncidentEdge(const HalfEdge* removeThis, HalfEdge* addThis);
 
-	std::vector<HalfEdge*>& getIncidentEdges();
+	std::vector<HalfEdge*> getIncidentEdges();
 };
 
 // Polygon, makes up faces
@@ -104,7 +105,7 @@ public:
 	bool isConnected();
 	void connect();
 	void disconnect();
-	SharedHalfEdge& getFirstHalfEdge();
+	SharedHalfEdge getFirstHalfEdge();
 
 	// index
 	size_t getIndex() const;
@@ -136,6 +137,7 @@ public:
 	bool isConnected() const;
 	void connect();
 	void disconnect();  // clear opposite's opposite if assigned
+	SharedHalfEdge findSharedPointer();
 
 	size_t getIndex() const;
 	bool isPrimary() const;

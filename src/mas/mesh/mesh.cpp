@@ -50,7 +50,20 @@ bool Vertex3d::removeIncidentEdge(const HalfEdge* he) {
     return false;
 }
 
-std::vector<HalfEdge*>& Vertex3d::getIncidentEdges() {
+bool Vertex3d::swapIncidentEdge(const HalfEdge* removeThis, HalfEdge* addThis) {
+
+    for (std::vector<HalfEdge*>::iterator hit = incident.begin();
+            hit < incident.end(); hit++) {
+        if (*hit == removeThis) {
+            (*hit) = addThis;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+std::vector<HalfEdge*> Vertex3d::getIncidentEdges() {
     return incident;
 }
 
@@ -244,6 +257,7 @@ void Polygon::connect() {
     int v1 = 0;
 
     he0 = std::make_shared<HalfEdge>(verts[v0], verts[v1], this);
+    he0->connect();
     HalfEdge* he = he0.get();
 
     // attach half-edges to themselves
@@ -251,10 +265,9 @@ void Polygon::connect() {
         v0 = v1;
         v1 = i;
         he->next = std::make_shared<HalfEdge>(verts[v0], verts[v1], this);
-        he->connect();  // add connections to vertices
+        he->next->connect();
         he = he->next.get();
     }
-    he->connect();
     he->next = he0;
 
 }
@@ -265,20 +278,21 @@ void Polygon::disconnect() {
         return;
     }
 
-    // loop around all half edges, disconnecting
+    // disconnect all half-edges
     HalfEdge* he = he0.get();
-    HalfEdge* next = he0->next.get();
     do {
         he->disconnect();
-        he->next = nullptr;  // clear next
-        he = next;
-        next = he->next.get();
+        he = he->next.get();
     } while (he != he0.get());
-    he0 = nullptr;  // destroy
+
+    // break cycle
+    // half-edges should then take care of themselves
+    he0->next = nullptr;
+    he0 = nullptr;
 
 }
 
-SharedHalfEdge& Polygon::getFirstHalfEdge() {
+SharedHalfEdge Polygon::getFirstHalfEdge() {
     return he0;
 }
 
@@ -331,6 +345,20 @@ void HalfEdge::disconnect() {
     head->removeIncidentEdge(this);
 
     // prev he needs to be disconnected outside
+}
+
+SharedHalfEdge HalfEdge::findSharedPointer() {
+    if (face != nullptr) {
+        SharedHalfEdge he0 = face->getFirstHalfEdge();
+        SharedHalfEdge he = he0;
+        do {
+            if (he.get() == this) {
+                return he;
+            }
+            he = he->next;
+        } while (he != he0);
+    }
+    return nullptr;
 }
 
 double HalfEdge::getLength() const {
@@ -591,6 +619,25 @@ SharedVertex3d PolygonMesh::removeVertex(size_t idx, bool swapLast) {
     }
     verts.pop_back();
 
+    //    SharedVertex3d out = std::move(verts[idx]);
+    //    size_t last = verts.size() - 1;
+    //    out->setIndex(last);
+    //
+    //    if (idx != last) {
+    //        if (swapLast) {
+    //            verts[idx] = std::move(verts[last]);
+    //            verts[idx]->setIndex(idx);
+    //
+    //        } else {
+    //            // shift
+    //            for (int i = idx; i < last; i++) {
+    //                verts[i] = std::move(verts[i + 1]);
+    //                verts[i]->setIndex(i);
+    //            }
+    //        }
+    //    }
+    //    verts.pop_back();
+
     return out;
 }
 
@@ -633,6 +680,26 @@ SharedPolygon PolygonMesh::removeFace(size_t idx, bool swapLast) {
         }
     }
     faces.pop_back();
+
+    //    SharedPolygon out = std::move(faces[idx]);
+    //    size_t last = faces.size() - 1;
+    //    out->setIndex(last);
+    //
+    //    if (idx != last) {
+    //        if (swapLast) {
+    //
+    //            faces[idx] = std::move(faces[last]);
+    //            faces[idx]->setIndex(idx);
+    //
+    //        } else {
+    //            // shift
+    //            for (int i = idx; i < last; i++) {
+    //                faces[i] = std::move(faces[i + 1]);
+    //                faces[i]->setIndex(i);
+    //            }
+    //        }
+    //    }
+    //    faces.pop_back();
 
     return out;
 }
@@ -678,7 +745,9 @@ void PolygonMesh::connect() {
 
     size_t idx = 0;
     for (SharedPolygon& poly : faces) {
+
         poly->connect();
+
         // update indices
         HalfEdge* he0 = poly->he0.get();
         HalfEdge* he = he0;

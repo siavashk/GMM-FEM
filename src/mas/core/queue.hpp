@@ -185,7 +185,7 @@ typename priority_queue<ValueType, Sequence, Compare, MoveCallback>::value_type 
 template<typename ValueType, typename Sequence, typename Compare,
         typename MoveCallback>
 void priority_queue<
-        ValueType, Sequence, Compare, MoveCallback>::pop(reference top) {
+        ValueType, Sequence, Compare, MoveCallback>::pop_top(reference top) {
     // move out top element
     top = __MAS_MOVE(c.front());
     mas::heap::pop_heap(c.begin(), c.end(), comp, mov);

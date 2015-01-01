@@ -711,11 +711,12 @@ void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
         Compare compare, MoveCallback moved) {
 
    typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
-    if (last - first > 1) {
-        last--;
-        mas::heap::__pop_heap(first, last, last, compare, moved);
+   RandomAccessIterator end = last;
+    if (end - first > 1) {
+        end--;
+        mas::heap::__pop_heap(first, end, end, compare, moved);
     }
-    moved(*last, SizeType(0), last-first);
+    moved(*(last-1), SizeType(0), last-first-1);
 }
 
 /**
@@ -732,11 +733,12 @@ void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
         RandomAccessIterator pos, Compare compare, MoveCallback moved) {
 
     // if not at the end, pop it out
-    if (last - pos > 1) {
-        last--;
-        mas::heap::__pop_heap_pos(first, last, pos, last, compare, moved);
+    RandomAccessIterator end = last;
+    if (end - pos > 1) {
+        end--;
+        mas::heap::__pop_heap_pos(first, end, pos, end, compare, moved);
     }
-    moved(*last, pos-first, last-first);
+    moved(*(last-1), pos-first, last-first-1);
 }
 
 /**
@@ -755,7 +757,7 @@ void sort_heap(RandomAccessIterator first, RandomAccessIterator last,
     while (last - first > 1) {
         last--;
         mas::heap::__pop_heap(first, last, last, compare, moved);
-        moved(*last, SizeType(0), last-first-1);
+        moved(*last, SizeType(0), last-first);
     }
 }
 
