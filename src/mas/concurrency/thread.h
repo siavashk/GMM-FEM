@@ -11,28 +11,23 @@
 #include <thread>
 
 namespace mas {
-namespace thread {
+namespace concurrency {
 
 /**
  * A class to automatically clean up after a group of threads,
  * joining any last threads before destruction
  */
-template<typename RandomThreadIterator>
+template<typename Container>
 class thread_group {
 private:
-    RandomThreadIterator tbegin;
-    RandomThreadIterator tend;
+    Container& c;
 public:
-    template<typename Container>
     explicit thread_group(Container& threads_);
-    explicit thread_group(RandomThreadIterator tbegin,
-            RandomThreadIterator tend);
-
     ~thread_group();
 
 };
 
-} // thread
+} // concurrency
 } // mas
 
 #include "mas/concurrency/thread.hpp"
