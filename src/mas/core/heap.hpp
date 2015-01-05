@@ -979,8 +979,7 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
                             std::ref(compare)));
         }
 
-        mas::thread::thread_group<std::vector<std::thread>::iterator> threadGroup(
-                threads); // for closing off threads
+        mas::concurrency::thread_group<std::vector<std::thread>> threadGroup(threads); // for closing off threads
 
         // process current block
         __down_block(first, len, blockFront, blockLength, compare);
@@ -1046,7 +1045,7 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
                             std::ref(threadBacks), first, len));
         }
 
-        mas::thread::thread_group<std::vector<std::thread>::iterator> threadGroup(
+        mas::concurrency::thread_group<std::vector<std::thread>::iterator> threadGroup(
                 threads); // for closing off threads
 
         // process current block
@@ -1178,7 +1177,7 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
                             std::ref(compare)), std::ref(moved));
         }
 
-        mas::thread::thread_group<std::vector<std::thread>::iterator> threadGroup(
+        mas::concurrency::thread_group<std::vector<std::thread>::iterator> threadGroup(
                 threads); // for closing off threads
 
         // process current block

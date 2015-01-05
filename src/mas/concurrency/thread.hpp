@@ -1,26 +1,19 @@
 namespace mas {
-namespace thread {
+namespace concurrency {
 
-template<typename RandomThreadIterator>
 template<typename Container>
-thread_group<RandomThreadIterator>::thread_group(Container& threads_) :
-        tbegin(std::begin(threads_)), tend(std::end(threads_)) {
+thread_group<Container>::thread_group(Container& threads) :
+        c(threads) {
 }
 
-template<typename RandomThreadIterator>
-thread_group<RandomThreadIterator>::thread_group(RandomThreadIterator tbegin,
-        RandomThreadIterator tend) :
-        tbegin(tbegin), tend(tend) {
-}
-
-template<typename RandomThreadIterator>
-thread_group<RandomThreadIterator>::~thread_group() {
-    for (RandomThreadIterator t = tbegin; t < tend; t++) {
+template<typename Container>
+thread_group<Container>::~thread_group() {
+    for (auto t = begin(c); t < end(c); t++) {
         if (t->joinable()) {
             t->join();
         }
     }
 }
 
-} // thread
+} // concurrency
 } // mas
