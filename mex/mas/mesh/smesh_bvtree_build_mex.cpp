@@ -40,7 +40,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     std::vector<SharedVertex3d> vtxs;
-    std::vector<SharedBoundable> boundableGroups;
+    std::vector<SharedBoundablePolygon> boundableGroups;
 
     // Get data
     if (nrhs > PNTS_IDX && mxIsDouble(prhs[PNTS_IDX])) {
@@ -87,9 +87,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
                 SharedPolygon poly = std::make_shared<Polygon>(
                         std::move(polyvtxs));
+                poly->setIndex(idx++);
                 SharedBoundablePolygon bpoly =
                         std::make_shared<BoundablePolygon>(std::move(poly));
-                bpoly->setIndex(idx++);
                 boundableGroups.push_back(std::move(bpoly));
             }
 
@@ -112,9 +112,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 }
                 SharedPolygon poly = std::make_shared<Polygon>(
                         std::move(polyvtxs));
+                poly->setIndex(idx++);
                 SharedBoundablePolygon bpoly =
                         std::make_shared<BoundablePolygon>(std::move(poly));
-                bpoly->setIndex(idx++);
                 boundableGroups.push_back(std::move(bpoly));
             }
         } else {
@@ -148,16 +148,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     // construct the actual BVTree using an OBB as a base
-
-    // construct the actual BVTree using an AABB as a base
-    UniqueBV bv(new OBB());
-    mex::class_handle<BVTree> *tree = new mex::class_handle<BVTree>(
-            MESH_TREE_SIGNATURE, std::move(bv), std::move(boundableGroups),
-            tol);
+    mex::class_handle<BVTreeType> *tree = new mex::class_handle<BVTreeType>(
+            MESH_TREE_SIGNATURE, std::move(boundableGroups), tol);
 
     // return tree
     if (nlhs > TREE_IDX) {
-        plhs[TREE_IDX] = mex::get_mex_handle<BVTree>(tree);
+        plhs[TREE_IDX] = mex::get_mex_handle<BVTreeType>(tree);
     }
 
 }

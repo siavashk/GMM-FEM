@@ -9,7 +9,7 @@ namespace mas {
 namespace mesh {
 
 BoundablePolygon::BoundablePolygon(const SharedPolygon& poly) :
-		Boundable(-1), polygon(), tris() {
+		polygon(), tris(), centroid(0,0,0) {
 	setPolygon(poly);
 }
 
@@ -337,91 +337,19 @@ void InsideMeshQueryData::reset() {
 
 // methods for meshes
 
-BSTree* get_bs_tree(const PolygonMesh& mesh, double margin) {
-	return get_bv_tree_T<BoundingSphere>(mesh, margin);
+BVTree<SharedBoundablePolygon,BoundingSphere>* get_bs_tree(const PolygonMesh& mesh, double margin) {
+	return get_bv_tree<BoundingSphere>(mesh, margin);
 }
 
-AABBTree* get_aabb_tree(const PolygonMesh& mesh, double margin) {
-	return get_bv_tree_T<AABB>(mesh, margin);
+BVTree<SharedBoundablePolygon,AABB>* get_aabb_tree(const PolygonMesh& mesh, double margin) {
+	return get_bv_tree<AABB>(mesh, margin);
 }
 
-OBBTree* get_obb_tree(const PolygonMesh& mesh, double margin) {
-	return get_bv_tree_T<OBB>(mesh, margin);
+BVTree<SharedBoundablePolygon,OBB>* get_obb_tree(const PolygonMesh& mesh, double margin) {
+	return get_bv_tree<OBB>(mesh, margin);
 }
 
-SharedPolygon nearest_polygon(const Point3d& pnt, const PolygonMesh& mesh,
-		Point3d& nearestPoint) {
-	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	UniqueOBBTree tree = std::unique_ptr<OBBTree>(get_obb_tree(mesh));
-	SharedBoundable nearest = mas::bvtree::nearest_boundable(*tree, pnt,
-			nearestPoint);
-	SharedBoundablePolygon poly = std::static_pointer_cast<BoundablePolygon>(
-			nearest);
-	return poly->polygon;
-}
 
-SharedPolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
-		const PolygonMesh& mesh, Point3d& nearestPoint) {
-	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	UniqueOBBTree tree = std::unique_ptr<OBBTree>(get_obb_tree(mesh));
-	SharedBoundable nearest = mas::bvtree::nearest_boundable(*tree, pnt, dir,
-			nearestPoint);
-	SharedBoundablePolygon poly = std::static_pointer_cast<BoundablePolygon>(
-			nearest);
-	return poly->polygon;
-}
-
-SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const BVTree& bvt,
-		Point3d& nearestPoint) {
-	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	SharedBoundable nearest = mas::bvtree::nearest_boundable(bvt, pnt,
-			nearestPoint);
-	SharedBoundablePolygon poly = std::dynamic_pointer_cast<BoundablePolygon>(
-			nearest);
-	return poly;
-}
-
-SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
-		const BVTree& bvt, Point3d& nearestPoint) {
-	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	SharedBoundable nearest = mas::bvtree::nearest_boundable(bvt, pnt, dir,
-			nearestPoint);
-	SharedBoundablePolygon poly = std::dynamic_pointer_cast<BoundablePolygon>(
-			nearest);
-	return poly;
-}
-
-bool is_inside(const Point3d& pnt, const PolygonMesh& mesh, double tol,
-		int maxRetries) {
-
-	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	double margin = tol;
-	if (margin < 0) {
-		margin = 0;
-	}
-	UniqueOBBTree tree = std::unique_ptr<OBBTree>(get_obb_tree(mesh, margin));
-	InsideMeshQueryData data;
-	return is_inside(pnt, *tree, data, tol, maxRetries);
-}
-
-bool is_inside(const Point3d& pnt, const PolygonMesh& mesh, InsideMeshQueryData& data, double tol,
-		int maxRetries) {
-
-	// build tree from polygons, get nearest boundable, cast to PBoundablePolygon
-	double margin = tol;
-	if (margin < 0) {
-		margin = 0;
-	}
-	UniqueOBBTree tree = std::unique_ptr<OBBTree>(get_obb_tree(mesh, margin));
-	return is_inside(pnt, *tree, data, tol, maxRetries);
-}
-
-bool is_inside(const Point3d& pnt, const BVTree& tree, double tol,
-		int maxRetries) {
-
-	InsideMeshQueryData data;
-	return is_inside(pnt, tree, data, tol, maxRetries);
-}
 
 bool poly_contains_coordinate(Point3d& pnt, const BoundablePolygon& bpoly,
 		Vector3d& bary, SharedPolygon& tri) {
@@ -450,159 +378,6 @@ bool poly_contains_coordinate(Point3d& pnt, const BoundablePolygon& bpoly,
 			}
 		}
 	}
-	return false;
-}
-
-bool is_inside(const Point3d& pnt, const BVTree& bvt, InsideMeshQueryData& data,
-		double tol, int maxRetries) {
-
-	const SharedBVNode& root = bvt.getRoot();
-	Point3d centroid;
-
-	if (tol < 0) {
-		// default tolerance
-		double r = root->bv->getBoundingSphere(centroid);
-		tol = 1e-12 * r;
-	}
-
-	// initialize
-	data.reset();
-
-	// check if is inside root bounding box
-	if (!root->bv->intersectsSphere(pnt, tol)) {
-		return false;
-	}
-
-	// find the nearest polygon
-	data.nearestFace = nearest_polygon(pnt, bvt, data.nearestPoint);
-
-	// cast direction
-	Vector3d dir(data.nearestPoint);
-	dir.subtract(pnt);
-
-	// first check if within tolerance
-	if (dir.normSquared() <= tol * tol) {
-		data.in = true;
-		data.on = true;
-		return true;
-	}
-
-	// check if closest point is within the center of the triangle
-	// i.e. not on an edge or vertex
-	// Because then we just need to check the face normal
-	Vector3d bary;
-	SharedPolygon tri;
-	bool success = poly_contains_coordinate(data.nearestPoint,
-			*(data.nearestFace), bary, tri);
-
-	// make sure within eps of boundary of face
-	double eps = 1e-12;
-	if (bary.x > eps && bary.y > eps && bary.z > eps) {
-		// check normal
-		if (data.nearestFace->polygon->plane.normal.dot(dir) > 0) {
-			data.in = true;
-			return true;
-		} else {
-			data.in = false;
-			return false;
-		}
-	}
-
-	// resort to ray-cast, starting with aimed at mid-face
-	tri->computeCentroid(centroid);
-	dir.set(centroid);
-	dir.subtract(pnt);
-
-	// uniform random distribution for direction generation
-	std::uniform_real_distribution<double> uniform(-1, 1);
-	std::default_random_engine randomengine;
-
-	Polygon* prevPoly = tri.get();
-
-	data.nRetries = 0;
-	do {
-		data.nHits = 0;
-		data.unsure = false;
-		BoundablePolygon* unsureFace = nullptr;
-
-		std::vector<BVNode*> bvnodes;
-		bvt.intersectRay(pnt, dir, bvnodes);
-		double dmin = mas::math::DOUBLE_INFINITY;
-		data.in = false;
-
-		// find closest face among nodes in direction of dir
-		for (BVNode* node : bvnodes) {
-			for (SharedBoundable& boundable : node->elems) {
-
-				// dynamic cast to PBoundablePolygon
-				SharedBoundablePolygon poly = std::dynamic_pointer_cast<
-						BoundablePolygon>(boundable);
-				if (poly != nullptr) {
-
-					// intersect ray with face
-					double d = fabs(
-							poly->distanceToPoint(pnt, dir, data.nearestPoint,
-									bary, tri));
-
-					// check if ray hits face
-					if (d < dmin) {
-
-						// check that it hits the face in the correct direction
-						Vector3d ndir(data.nearestPoint);
-						ndir.subtract(pnt);
-						if (ndir.dot(dir) > 0) {
-
-							dmin = d;
-							// make sure barycentric coordinates are not on edges
-							if (bary.x >= eps && bary.x <= 1 - eps
-									&& bary.y >= eps && bary.y <= 1 - eps
-									&& bary.z >= eps && bary.z <= 1 - eps) {
-								data.nHits++;
-								data.unsure = false;
-								if (poly->polygon->plane.normal.dot(dir) > 0) {
-									data.in = true;
-								} else {
-									data.in = false;
-								}
-							} else {
-								data.unsure = true;
-								unsureFace = poly.get();
-							}
-						}
-					}
-				}
-
-			}
-		}
-
-		if (!data.unsure) {
-			return data.in;
-		}
-
-		// pick next direction as centroid of closest unsure face
-		const SharedPolygon& nextPoly = unsureFace->getTriangulation()[0];
-		if (nextPoly.get() == prevPoly) {
-			// randomize direction
-			do {
-				dir.x = uniform(randomengine);
-				dir.y = uniform(randomengine);
-				dir.z = uniform(randomengine);
-			} while (dir.norm() == 0);
-			dir.normalize();
-
-			prevPoly = nullptr;
-		} else {
-			nextPoly->computeCentroid(centroid);
-			dir.set(centroid);
-			dir.subtract(pnt);
-			prevPoly = nextPoly.get();
-		}
-
-		data.nRetries++;
-	} while (data.nRetries < maxRetries);
-
-	// failed to converge
-	data.unsure = true;
 	return false;
 }
 

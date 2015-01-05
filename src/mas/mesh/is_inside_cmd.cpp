@@ -60,7 +60,7 @@ bool doInsideTest(const char filename[], double pnt[], double dx[], int nx[]) {
    pStart.y = pnt[1];
    pStart.z = pnt[2];
 
-   UniqueOBBTree obbt(get_obb_tree(*mesh));
+   auto obbt(get_obb_tree(*mesh));
 
    Point3d p;
    for (int i=0; i<nx[0]; i++) {

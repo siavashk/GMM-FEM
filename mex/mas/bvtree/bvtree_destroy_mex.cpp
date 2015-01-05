@@ -20,10 +20,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 "Too many output arguments.");
     }
 
+    // Create shared indexed points
+    using SharedPoint = std::shared_ptr<mas::IndexedPoint3d>;
+    using BoundablePoints = mas::bvtree::BoundablePointPtrSet<SharedPoint>;
+    using SharedBoundablePoints = std::shared_ptr<BoundablePoints>;
+    using OBBTree = mas::bvtree::BVTree<SharedBoundablePoints, OBB>;
+
     // Get data
     if (nrhs > TREE_IDX) {
         // mexPrintf("Finding tree to cut down... \n");
-        mex::class_handle<BVTree> *tree = mex::get_class_handle<BVTree>(
+        mex::class_handle<OBBTree> *tree = mex::get_class_handle<OBBTree>(
                 POINTSET_TREE_SIGNATURE, prhs[TREE_IDX]);
         // mexPrintf("Destroying tree\n");
         if (tree->isValid(POINTSET_TREE_SIGNATURE)) {

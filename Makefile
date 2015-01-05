@@ -18,7 +18,7 @@ else
 CPPFLAGS:=$(CPPFLAGS) -O3
 endif
 
-LDFLAGS=
+LDFLAGS= -pthread
 ifdef PROFILE
 CPPFLAGS:=$(CPPFLAGS) -pg
 LDFLAGS:=$(LDFLAGS) -pg

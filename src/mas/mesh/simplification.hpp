@@ -429,7 +429,7 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
     size_t tvidx = edge->tail->getIndex();
     size_t hvidx = edge->head->getIndex();
     mesh.removeVertex(tvidx, true);
-    VERIFY_VERTEX_REMOVED(mesh, edge->tail);
+    // VERIFY_VERTEX_REMOVED(mesh, edge->tail);
     size_t ntvidx = edge->tail->getIndex();
     size_t nhvidx = edge->head->getIndex();
 
@@ -483,6 +483,7 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapseTo(size_t targetFaces) {
         SharedHalfEdge edge = edgeinfo[eidx]->edge;
         bool valid = collapseKeepsTopology(edge);
         if (valid) {
+            // std::cout << "cost: " << edgeinfo[eidx]->cost << std::endl;
             collapse(edge);
         } else {
             edgeinfo[eidx]->cost = mas::math::DOUBLE_INFINITY;
