@@ -228,10 +228,10 @@ void EdgeCollapseQuadricCost::init(PolygonMesh& mesh) {
             Qi.add(Kp[fidx]);
         }
 
-        std::cout << "Qv[" << i << "]: " << Qi.A(0,0) << " " << Qi.A(0,1) << " " << Qi.A(0,2) << " " << Qi.b[0] <<  std::endl;
-        std::cout << "       " << Qi.A(1,0) << " " << Qi.A(1,1) << " " << Qi.A(1,2) << " " << Qi.b[1] <<  std::endl;
-        std::cout << "       " << Qi.A(2,0) << " " << Qi.A(2,1) << " " << Qi.A(2,2) << " " << Qi.b[2] <<  std::endl;
-        std::cout << "       " << Qi.b[0] << " " << Qi.b[1] << " " << Qi.b[2] << " " << Qi.c <<  std::endl;
+        //        std::cout << "Qv(" << (i+1) << ")= [" << Qi.A(0,0) << " " << Qi.A(0,1) << " " << Qi.A(0,2) << " " << Qi.b[0] << ";" << std::endl;
+        //        std::cout << "        " << Qi.A(1,0) << " " << Qi.A(1,1) << " " << Qi.A(1,2) << " " << Qi.b[1] <<   ";" << std::endl;
+        //        std::cout << "        " << Qi.A(2,0) << " " << Qi.A(2,1) << " " << Qi.A(2,2) << " " << Qi.b[2] <<   ";" << std::endl;
+        //        std::cout << "        " << Qi.b[0] << " " << Qi.b[1] << " " << Qi.b[2] << " " << Qi.c <<   "];" << std::endl;
 
         Qv.push_back(std::move(Qi));
     }
@@ -262,13 +262,13 @@ double EdgeCollapseQuadricCost::operator ()(PolygonMesh& mesh, HalfEdge &he,
 
     double c = ecq.cost(v);
 
-    std::cout << "Edge " << he.idx << ": " << he.head->idx << " --> " << he.tail->idx << std::endl;
-    std::cout << "    Q: " << ecq.A(0,0) << " " << ecq.A(0,1) << " " << ecq.A(0,2) << " " << ecq.b[0] <<  std::endl;
-    std::cout << "       " << ecq.A(1,0) << " " << ecq.A(1,1) << " " << ecq.A(1,2) << " " << ecq.b[1] <<  std::endl;
-    std::cout << "       " << ecq.A(2,0) << " " << ecq.A(2,1) << " " << ecq.A(2,2) << " " << ecq.b[2] <<  std::endl;
-    std::cout << "       " << ecq.b[0] << " " << ecq.b[1] << " " << ecq.b[2] << " " << ecq.c <<  std::endl;
-    std::cout << "    v: " << v.x << " " << v.y << " " << v.z << std::endl;
-    std::cout << "    c: " << c << std::endl << std::endl;
+    //    std::cout << "Edge " << he.idx << ": " << he.head->idx << " --> " << he.tail->idx << std::endl;
+    //    std::cout << " Qe(" << he.idx << ") = [" << ecq.A(0,0) << " " << ecq.A(0,1) << " " << ecq.A(0,2) << " " << ecq.b[0] <<  ";" << std::endl;
+    //    std::cout << "          " << ecq.A(1,0) << " " << ecq.A(1,1) << " " << ecq.A(1,2) << " " << ecq.b[1] << ";" << std::endl;
+    //    std::cout << "          " << ecq.A(2,0) << " " << ecq.A(2,1) << " " << ecq.A(2,2) << " " << ecq.b[2] << ";" <<  std::endl;
+    //    std::cout << "          " << ecq.b[0] << " " << ecq.b[1] << " " << ecq.b[2] << " " << ecq.c << "];" <<  std::endl;
+    //    std::cout << "  v(" << he.idx << ") = [" << v.x << " " << v.y << " " << v.z << "]';" << std::endl;
+        //std::cout << "  c(" << he.idx << ") = " << c << ";" << std::endl;// << std::endl;
 
     return c;
 }

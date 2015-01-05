@@ -1,6 +1,13 @@
 #ifndef MAS_CORE_HEAP_HPP_
 #define MAS_CORE_HEAP_HPP_
 
+// for parellel make_heap implementation
+#if __cplusplus >= 201103L
+#include <vector>
+#include <atomic>
+#include "mas/concurrency/thread.h"
+#endif
+
 namespace mas {
 namespace heap {
 
@@ -25,7 +32,7 @@ namespace heap {
 template<typename RandomAccessIterator, typename SizeType, typename ValueType,
         typename Compare>
 void __up_heap(RandomAccessIterator first, SizeType pos, ValueType p,
-        Compare compare) {
+        Compare& compare) {
 
     SizeType parent = (pos - 1) / 2;
     SizeType child = pos;
@@ -77,7 +84,7 @@ void __up_heap(RandomAccessIterator first, SizeType pos, ValueType p) {
 template<typename RandomAccessIterator, typename SizeType, typename ValueType,
         typename Compare>
 void __down_heap(RandomAccessIterator first, SizeType length, SizeType hole,
-        ValueType p, Compare compare) {
+        ValueType p, Compare& compare) {
 
     SizeType parent = hole;
     SizeType child = 2 * parent + 1;   // first child
@@ -151,14 +158,14 @@ void __down_heap(RandomAccessIterator first, SizeType length, SizeType hole,
 
 template<typename RandomAccessIterator, typename Compare>
 inline void __pop_heap(RandomAccessIterator first, RandomAccessIterator last,
-        RandomAccessIterator result, Compare compare) {
+        RandomAccessIterator result, Compare& compare) {
     typedef typename std::iterator_traits<RandomAccessIterator>::value_type ValueType;
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
 
     ValueType value = __MAS_MOVE(*last); // back gets moved to the front, since reducing length
     *result = __MAS_MOVE(*first);
-    mas::heap::__down_heap(first, last - first, SizeType(0),
-            __MAS_MOVE(value), compare);
+    mas::heap::__down_heap(first, last - first, SizeType(0), __MAS_MOVE(value),
+            compare);
 
 }
 
@@ -168,10 +175,9 @@ inline void __pop_heap(RandomAccessIterator first, RandomAccessIterator last,
     typedef typename std::iterator_traits<RandomAccessIterator>::value_type ValueType;
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
 
-    ValueType value = __MAS_MOVE(*last);  //back gets moved to front, since reducing length
+    ValueType value = __MAS_MOVE(*last); //back gets moved to front, since reducing length
     *result = __MAS_MOVE(*first);
-    mas::heap::__down_heap(first, last - first, SizeType(0),
-            __MAS_MOVE(value));
+    mas::heap::__down_heap(first, last - first, SizeType(0), __MAS_MOVE(value));
 }
 
 /**
@@ -188,7 +194,7 @@ void make_heap(RandomAccessIterator first, RandomAccessIterator last,
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
     // starting with deepest parent, bubble down
     const SizeType len = last - first;
-    for (SizeType parent = len / 2; parent-- > 0; ) {
+    for (SizeType parent = len / 2; parent-- > 0;) {
         __down_heap(first, len, parent, __MAS_MOVE(*(first + parent)), compare);
     }
 }
@@ -204,7 +210,7 @@ void make_heap(RandomAccessIterator first, RandomAccessIterator last) {
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
     // starting with deepest parent, bubble down
     const SizeType len = last - first;
-    for (SizeType parent = len / 2; parent-- > 0; ) {
+    for (SizeType parent = len / 2; parent-- > 0;) {
         __down_heap(first, len, parent, __MAS_MOVE(*(first + parent)));
     }
 }
@@ -408,47 +414,48 @@ inline bool is_heap(RandomAccessIterator first, RandomAccessIterator last) {
 //========================================================================
 
 template<typename RandomAccessIterator, typename Compare>
-void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last, RandomAccessIterator pos,
-        RandomAccessIterator result, Compare compare) {
+void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last,
+        RandomAccessIterator pos, RandomAccessIterator result,
+        Compare& compare) {
     typedef typename std::iterator_traits<RandomAccessIterator>::value_type ValueType;
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
 
-    ValueType value = __MAS_MOVE(*result);  // move out element from last position (will be re-inserted)
+    ValueType value = __MAS_MOVE(*result); // move out element from last position (will be re-inserted)
     *result = __MAS_MOVE(*pos);             // move value from 'pos' to the end
-    SizeType hole = pos-first;          // location of the hole
+    SizeType hole = pos - first;          // location of the hole
 
-    SizeType parent = (hole-1)/2;
+    SizeType parent = (hole - 1) / 2;
 
     // see if we need to move value up
-    if (pos > first && compare(*(first+parent), value)) {
+    if (pos > first && compare(*(first + parent), value)) {
         // value needs to move up
         __up_heap(first, hole, __MAS_MOVE(value), compare);
     } else {
         // move down or stay in place
-        __down_heap(first, last-first, hole, value, compare);
+        __down_heap(first, last - first, hole, value, compare);
     }
 
 }
 
 template<typename RandomAccessIterator>
-void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last, RandomAccessIterator pos,
-        RandomAccessIterator result) {
+void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last,
+        RandomAccessIterator pos, RandomAccessIterator result) {
     typedef typename std::iterator_traits<RandomAccessIterator>::value_type ValueType;
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
 
-    ValueType value = __MAS_MOVE(*result);  // move out element from last position (will be re-inserted)
+    ValueType value = __MAS_MOVE(*result); // move out element from last position (will be re-inserted)
     *result = __MAS_MOVE(*pos);             // move value from 'pos' to the end
-    SizeType hole = pos-first;          // location of the hole
+    SizeType hole = pos - first;          // location of the hole
 
-    SizeType parent = (hole-1)/2;
+    SizeType parent = (hole - 1) / 2;
 
     // see if we need to move value up
-    if (pos > first && (*(first+parent) < value)) {
+    if (pos > first && (*(first + parent) < value)) {
         // value needs to move up
         __up_heap(first, hole, __MAS_MOVE(value));
     } else {
         // move down or stay in place
-        __down_heap(first, last-first, hole, value);
+        __down_heap(first, last - first, hole, value);
     }
 
 }
@@ -469,10 +476,11 @@ void update_heap(RandomAccessIterator first, RandomAccessIterator last,
 
     SizeType posd = pos - first;
     // check if parent is smaller or child is bigger, bubble where necessary
-    if ((pos > first) && compare(*(first + (posd - 1) / 2), *(first + posd)) ) {
+    if ((pos > first) && compare(*(first + (posd - 1) / 2), *(first + posd))) {
         __up_heap(first, posd, __MAS_MOVE(*(first + posd)), compare);
     } else {
-        __down_heap(first, last - first, posd, __MAS_MOVE(*(first + posd)), compare);
+        __down_heap(first, last - first, posd, __MAS_MOVE(*(first + posd)),
+                compare);
     }
 
 }
@@ -551,22 +559,22 @@ void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
  */
 template<typename RandomAccessIterator, typename SizeType, typename ValueType,
         typename Compare, typename MoveCallback>
-void __up_heap(RandomAccessIterator first, SizeType pos, ValueType p, SizeType ppos,
-      Compare compare, MoveCallback moved) {
+void __up_heap(RandomAccessIterator first, SizeType pos, ValueType p,
+        SizeType ppos, Compare& compare, MoveCallback& moved) {
 
     SizeType parent = (pos - 1) / 2;
     SizeType child = pos;
     while (child > 0 && compare(*(first + parent), p)) {
 
-       *(first+child) = __MAS_MOVE(*(first+parent));
-        moved( *(first+child), parent, child );
+        *(first + child) = __MAS_MOVE(*(first + parent));
+        moved(*(first + child), parent, child);
         child = parent;
         parent = (child - 1) / 2;
     }
 
     // move value into new slot
-    *(first+child) = __MAS_MOVE(p);
-    moved(*(first+child), ppos, child);
+    *(first + child) = __MAS_MOVE(p);
+    moved(*(first + child), ppos, child);
 
 }
 
@@ -583,7 +591,7 @@ void __up_heap(RandomAccessIterator first, SizeType pos, ValueType p, SizeType p
 template<typename RandomAccessIterator, typename SizeType, typename ValueType,
         typename Compare, typename MoveCallback>
 void __down_heap(RandomAccessIterator first, SizeType length, SizeType hole,
-        ValueType p, SizeType ppos, Compare compare, MoveCallback moved) {
+        ValueType p, SizeType ppos, Compare& compare, MoveCallback& moved) {
 
     SizeType parent = hole;
     SizeType child = 2 * parent + 1;   // first child
@@ -603,8 +611,8 @@ void __down_heap(RandomAccessIterator first, SizeType length, SizeType hole,
         }
 
         // replace hole with child
-        *(first+parent) = __MAS_MOVE(*(first+child));
-        moved(*(first+parent), child, parent);
+        *(first + parent) = __MAS_MOVE(*(first + child));
+        moved(*(first + parent), child, parent);
 
         // move down next branch
         parent = child;
@@ -612,43 +620,45 @@ void __down_heap(RandomAccessIterator first, SizeType length, SizeType hole,
     }
 
     // move value into new slot
-    *(first+parent) = __MAS_MOVE(p);
-    moved(*(first+parent), ppos, parent);
+    *(first + parent) = __MAS_MOVE(p);
+    moved(*(first + parent), ppos, parent);
 
 }
 
 template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 inline void __pop_heap(RandomAccessIterator first, RandomAccessIterator last,
-        RandomAccessIterator result, Compare compare, MoveCallback moved) {
+        RandomAccessIterator result, Compare& compare, MoveCallback& moved) {
     typedef typename std::iterator_traits<RandomAccessIterator>::value_type ValueType;
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
 
     ValueType value = __MAS_MOVE(*last);  // move out last (making heap smaller)
     *result = __MAS_MOVE(*first);
-    SizeType ppos = last-first;
-    mas::heap::__down_heap(first, ppos, SizeType(0), __MAS_MOVE(value), ppos, compare, moved);
+    SizeType ppos = last - first;
+    mas::heap::__down_heap(first, ppos, SizeType(0), __MAS_MOVE(value), ppos,
+            compare, moved);
 
 }
 
 template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
-void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last, RandomAccessIterator pos,
-        RandomAccessIterator result, Compare compare, MoveCallback moved) {
+void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last,
+        RandomAccessIterator pos, RandomAccessIterator result, Compare& compare,
+        MoveCallback& moved) {
     typedef typename std::iterator_traits<RandomAccessIterator>::value_type ValueType;
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
 
-    ValueType value = __MAS_MOVE(*last);  // move out element from last position (will be re-inserted)
+    ValueType value = __MAS_MOVE(*last); // move out element from last position (will be re-inserted)
     *result = __MAS_MOVE(*pos);           // pop out element at given position
 
-    SizeType hole = pos-first;          // location of the hole
-    SizeType parent = (hole-1)/2;       // location of parent
+    SizeType hole = pos - first;          // location of the hole
+    SizeType parent = (hole - 1) / 2;       // location of parent
 
     // see if we need to move value up
-    if (pos > first && compare(*(first+parent), value)) {
+    if (pos > first && compare(*(first + parent), value)) {
         // value needs to move up
-        __up_heap(first, hole, __MAS_MOVE(value), last-first, compare, moved);
+        __up_heap(first, hole, __MAS_MOVE(value), last - first, compare, moved);
     } else {
         // move down or stay in place
-       SizeType ppos = last-first; // position of element being moved
+        SizeType ppos = last - first; // position of element being moved
         __down_heap(first, ppos, hole, value, ppos, compare, moved);
     }
 
@@ -660,7 +670,7 @@ void __pop_heap_pos(RandomAccessIterator first, RandomAccessIterator last, Rando
  * @param  first  start of heap
  * @param  last   end of heap
  * @param  compare  comparison functor, compare(a,b)=true if a < b
-  * @param moved callback, moved(val&, const a, const b) is called after val is moved from first+a to first+b
+ * @param moved callback, moved(val&, const a, const b) is called after val is moved from first+a to first+b
  */
 template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 void make_heap(RandomAccessIterator first, RandomAccessIterator last,
@@ -668,8 +678,9 @@ void make_heap(RandomAccessIterator first, RandomAccessIterator last,
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
     // starting with deepest parent, bubble down
     const SizeType len = last - first;
-    for (SizeType parent = len / 2; parent-- > 0; ) {
-        __down_heap(first, len, parent, __MAS_MOVE(*(first + parent)), parent, compare, moved);
+    for (SizeType parent = len / 2; parent-- > 0;) {
+        __down_heap(first, len, parent, __MAS_MOVE(*(first + parent)), parent,
+                compare, moved);
     }
 }
 
@@ -691,9 +702,10 @@ void push_heap(RandomAccessIterator first, RandomAccessIterator last,
     SizeType lastPos = last - first - 1; // length-1
     SizeType parent = (lastPos - 1) / 2;
     if ((lastPos > 0) && compare(*(first + parent), *(last - 1))) {
-        __up_heap(first, lastPos, __MAS_MOVE(*(first + lastPos)), lastPos, compare, moved);
+        __up_heap(first, lastPos, __MAS_MOVE(*(first + lastPos)), lastPos,
+                compare, moved);
     } else {
-       moved(*(first+lastPos), lastPos, lastPos);
+        moved(*(first + lastPos), lastPos, lastPos);
     }
 
 }
@@ -710,13 +722,13 @@ template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
         Compare compare, MoveCallback moved) {
 
-   typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
-   RandomAccessIterator end = last;
+    typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
+    RandomAccessIterator end = last;
     if (end - first > 1) {
         end--;
         mas::heap::__pop_heap(first, end, end, compare, moved);
     }
-    moved(*(last-1), SizeType(0), last-first-1);
+    moved(*(last - 1), SizeType(0), last - first - 1);
 }
 
 /**
@@ -738,7 +750,7 @@ void pop_heap(RandomAccessIterator first, RandomAccessIterator last,
         end--;
         mas::heap::__pop_heap_pos(first, end, pos, end, compare, moved);
     }
-    moved(*(last-1), pos-first, last-first-1);
+    moved(*(last - 1), pos - first, last - first - 1);
 }
 
 /**
@@ -753,11 +765,11 @@ template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
 void sort_heap(RandomAccessIterator first, RandomAccessIterator last,
         Compare compare, MoveCallback moved) {
 
-   typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
+    typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
     while (last - first > 1) {
         last--;
         mas::heap::__pop_heap(first, last, last, compare, moved);
-        moved(*last, SizeType(0), last-first);
+        moved(*last, SizeType(0), last - first);
     }
 }
 
@@ -779,14 +791,412 @@ void update_heap(RandomAccessIterator first, RandomAccessIterator last,
     SizeType posd = pos - first;
 
     // check if parent is smaller or child is bigger, bubble where necessary
-    if ((pos > first) && compare(*(first + (posd - 1) / 2), *(first + posd)) ) {
-        __up_heap(first, posd, __MAS_MOVE(*(first + posd)), posd, compare, moved);
+    if ((pos > first) && compare(*(first + (posd - 1) / 2), *(first + posd))) {
+        __up_heap(first, posd, __MAS_MOVE(*(first + posd)), posd, compare,
+                moved);
     } else {
         // might have to move down if less then either child
-        __down_heap(first, last - first, posd, __MAS_MOVE(*(first + posd)), posd, compare, moved);
+        __down_heap(first, last - first, posd, __MAS_MOVE(*(first + posd)),
+                posd, compare, moved);
+    }
+}
+
+//========================================================================
+// Parallel versions
+//========================================================================
+
+#if __cplusplus >= 201103L
+
+template<typename RandomAccessIterator, typename SizeType, typename Compare>
+void __down_block(RandomAccessIterator first, SizeType length,
+        SizeType blockFront, SizeType blockLength, Compare& compare) {
+    SizeType parent = blockFront + blockLength - 1;
+    for (SizeType i = 0; i < blockLength; i++) {
+        __down_heap(first, length, parent, __MAS_MOVE(*(first + parent)),
+                compare);
+        parent--;
+    }
+}
+
+template<typename RandomAccessIterator, typename SizeType>
+void __down_block(RandomAccessIterator first, SizeType length,
+        SizeType blockFront, SizeType blockLength) {
+    SizeType parent = blockFront + blockLength - 1;
+    for (SizeType i = 0; i < blockLength; i++) {
+        __down_heap(first, length, parent, __MAS_MOVE(*(first + parent)));
+        parent--;
+    }
+}
+
+template<typename RandomAccessIterator, typename SizeType, typename Compare>
+void __thread_worker(int threadIdx, int nthreads,
+        std::atomic<size_t>& blocksRemaining, SizeType blockSize,
+        std::vector<std::atomic<SizeType>>& threadBacks,
+        RandomAccessIterator first, SizeType len, Compare& compare) {
+
+    bool complete = false;
+    while (!complete) {
+        size_t processBlock = --blocksRemaining;
+
+        // safe check for negative value accounting for overflow
+        if (processBlock + nthreads < nthreads) {
+            complete = true;
+            threadBacks[threadIdx].store(-1);
+            break;
+        }
+
+        // we are processing block 'processBlock'
+        SizeType blockFront = processBlock * blockSize;
+        SizeType firstChild = 2 * blockFront + 1;
+
+        // check that we can go
+        threadBacks[threadIdx].store(blockFront + blockSize - 1);
+
+        bool safe = true;
+        for (int i = 0; i < nthreads; i++) {
+            // check backs of all *other* threads
+            if (i != threadIdx && threadBacks[i].load() > firstChild) {
+                safe = false;
+                break;
+            }
+        }
+
+        while (!safe) {
+            std::this_thread::yield();
+            safe = true;
+            for (int i = 0; i < nthreads; i++) {
+                // check backs of all *other* threads
+                if (i != threadIdx && threadBacks[i].load() > firstChild) {
+                    safe = false;
+                    break;
+                }
+            }
+        }
+        __down_block(first, len, blockFront, blockSize, compare);
+        threadBacks[threadIdx].store(blockFront - 1);
+    }
+}
+
+template<typename RandomAccessIterator, typename SizeType>
+void __thread_worker(int threadIdx, int nthreads,
+        std::atomic<size_t>& blocksRemaining, SizeType blockSize,
+        std::vector<std::atomic<SizeType>>& threadBacks,
+        RandomAccessIterator first, SizeType len) {
+
+    bool complete = false;
+    while (!complete) {
+        size_t processBlock = --blocksRemaining;
+
+        // safe check for negative value accounting for overflow
+        if (processBlock + nthreads < nthreads) {
+            complete = true;
+            threadBacks[threadIdx].store(-1);
+            break;
+        }
+
+        // we are processing block 'processBlock'
+        SizeType blockFront = processBlock * blockSize;
+        SizeType firstChild = 2 * blockFront + 1;
+
+        // check that we can go
+        threadBacks[threadIdx].store(blockFront + blockSize - 1);
+
+        bool safe = true;
+        for (int i = 0; i < nthreads; i++) {
+            // check backs of all *other* threads
+            if (i != threadIdx && threadBacks[i].load() > firstChild) {
+                safe = false;
+                break;
+            }
+        }
+
+        while (!safe) {
+            std::this_thread::yield();
+            safe = true;
+            for (int i = 0; i < nthreads; i++) {
+                // check backs of all *other* threads
+                if (i != threadIdx && threadBacks[i].load() > firstChild) {
+                    safe = false;
+                    break;
+                }
+            }
+        }
+        __down_block(first, len, blockFront, blockSize);
+        threadBacks[threadIdx].store(blockFront - 1);
+    }
+}
+
+template<typename RandomAccessIterator, typename Compare>
+void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
+        Compare compare,
+        typename std::iterator_traits<RandomAccessIterator>::difference_type blockSize,
+        int maxThreads) {
+
+    typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
+
+    // starting with deepest parent, bubble down
+    const SizeType len = last - first;
+    SizeType processEnd = len / 2;
+
+    // number of blocks
+    size_t nblocks = processEnd / blockSize;
+    if (processEnd % blockSize != 0) {
+        nblocks++;
+    }
+
+    if (maxThreads <= 0) {
+        maxThreads = std::max(std::thread::hardware_concurrency(), (unsigned int)2); // try 2 threads if hardware_concurrency returns 0
+    }
+
+    size_t nthreads = std::min(nblocks, (size_t)maxThreads);
+    std::vector<std::thread> threads;
+    threads.reserve(nthreads - 1);
+
+    std::vector < std::atomic < SizeType >> threadBacks(nthreads);
+
+    std::atomic<size_t> blocksRemaining;
+    blocksRemaining.store(nblocks);
+
+    // current thread's work
+    {
+        int threadIdx = nthreads - 1;  // this thread is the last one
+        // current thread will start the last block to avoid having to check partial block
+        size_t processBlock = --blocksRemaining;
+
+        // front/back
+        SizeType blockFront = processBlock * blockSize;
+        SizeType blockLength = processEnd - blockFront;
+        threadBacks[threadIdx].store(processEnd - 1);
+
+        // initialize other threads
+        for (int i = 0; i < nthreads - 1; i++) {
+            threads.push_back(
+                    std::thread(
+                            __thread_worker<RandomAccessIterator, SizeType,
+                                    Compare>, i, nthreads,
+                            std::ref(blocksRemaining), blockSize,
+                            std::ref(threadBacks), first, len,
+                            std::ref(compare)));
+        }
+
+        mas::thread::thread_group<std::vector<std::thread>::iterator> threadGroup(
+                threads); // for closing off threads
+
+        // process current block
+        __down_block(first, len, blockFront, blockLength, compare);
+        threadBacks[threadIdx].store(blockFront - 1);
+
+        // continue processing other blocks
+        __thread_worker(threadIdx, nthreads, blocksRemaining, blockSize,
+                threadBacks, first, len, compare);
+
+        // done!!
+        // std::cout << "DONE!" << std::endl;
+
     }
 
 }
+
+template<typename RandomAccessIterator>
+void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
+        typename std::iterator_traits<RandomAccessIterator>::difference_type blockSize,
+        int maxThreads) {
+
+    typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
+
+    // starting with deepest parent, bubble down
+    const SizeType len = last - first;
+    SizeType processEnd = len / 2;
+
+    // number of blocks
+    size_t nblocks = processEnd / blockSize;
+    if (processEnd % blockSize != 0) {
+        nblocks++;
+    }
+
+    if (maxThreads <= 0) {
+        maxThreads = std::max(std::thread::hardware_concurrency(), (unsigned int)2); // try 2 threads if hardware_concurrency returns 0
+    }
+
+    size_t nthreads = std::min(nblocks, (size_t)maxThreads);
+    std::vector<std::thread> threads;
+    threads.reserve(nthreads - 1);
+
+    std::vector < std::atomic < SizeType >> threadBacks(nthreads);
+
+    std::atomic<size_t> blocksRemaining;
+    blocksRemaining.store(nblocks);
+
+    // current thread's work
+    {
+        int threadIdx = nthreads - 1;  // this thread is the last one
+        // current thread will start the last block to avoid having to check partial block
+        size_t processBlock = --blocksRemaining;
+
+        // front/back
+        SizeType blockFront = processBlock * blockSize;
+        SizeType blockLength = processEnd - blockFront;
+        threadBacks[threadIdx].store(processEnd - 1);
+
+        // initialize other threads
+        for (int i = 0; i < nthreads - 1; i++) {
+            threads.push_back(
+                    std::thread(__thread_worker<RandomAccessIterator, SizeType>,
+                            i, nthreads, std::ref(blocksRemaining), blockSize,
+                            std::ref(threadBacks), first, len));
+        }
+
+        mas::thread::thread_group<std::vector<std::thread>::iterator> threadGroup(
+                threads); // for closing off threads
+
+        // process current block
+        __down_block(first, len, blockFront, blockLength);
+        threadBacks[threadIdx].store(blockFront - 1);
+
+        // continue processing other blocks
+        __thread_worker(threadIdx, nthreads, blocksRemaining, blockSize,
+                threadBacks, first, len);
+
+        // done!!
+        // std::cout << "DONE!" << std::endl;
+
+    }
+
+}
+
+template<typename RandomAccessIterator, typename SizeType, typename Compare, typename MoveCallback>
+void __down_block(RandomAccessIterator first, SizeType length,
+        SizeType blockFront, SizeType blockLength, Compare& compare, MoveCallback& moved) {
+    SizeType parent = blockFront + blockLength - 1;
+    for (SizeType i = 0; i < blockLength; i++) {
+        __down_heap(first, length, parent, __MAS_MOVE(*(first + parent)), parent,
+                compare, moved);
+        parent--;
+    }
+}
+
+
+template<typename RandomAccessIterator, typename SizeType, typename Compare, typename MoveCallback>
+void __thread_worker(int threadIdx, int nthreads,
+        std::atomic<size_t>& blocksRemaining, SizeType blockSize,
+        std::vector<std::atomic<SizeType>>& threadBacks,
+        RandomAccessIterator first, SizeType len, Compare& compare, MoveCallback& moved) {
+
+    bool complete = false;
+    while (!complete) {
+        size_t processBlock = --blocksRemaining;
+
+        // safe check for negative value accounting for overflow
+        if (processBlock + nthreads < nthreads) {
+            complete = true;
+            threadBacks[threadIdx].store(-1);
+            break;
+        }
+
+        // we are processing block 'processBlock'
+        SizeType blockFront = processBlock * blockSize;
+        SizeType firstChild = 2 * blockFront + 1;
+
+        // check that we can go
+        threadBacks[threadIdx].store(blockFront + blockSize - 1);
+
+        bool safe = true;
+        for (int i = 0; i < nthreads; i++) {
+            // check backs of all *other* threads
+            if (i != threadIdx && threadBacks[i].load() > firstChild) {
+                safe = false;
+                break;
+            }
+        }
+
+        while (!safe) {
+            std::this_thread::yield();
+            safe = true;
+            for (int i = 0; i < nthreads; i++) {
+                // check backs of all *other* threads
+                if (i != threadIdx && threadBacks[i].load() > firstChild) {
+                    safe = false;
+                    break;
+                }
+            }
+        }
+        __down_block(first, len, blockFront, blockSize, compare, moved);
+        threadBacks[threadIdx].store(blockFront - 1);
+    }
+}
+
+template<typename RandomAccessIterator, typename Compare, typename MoveCallback>
+void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
+        Compare compare, MoveCallback moved,
+        typename std::iterator_traits<RandomAccessIterator>::difference_type blockSize,
+        int maxThreads) {
+
+    typedef typename std::iterator_traits<RandomAccessIterator>::difference_type SizeType;
+
+    // starting with deepest parent, bubble down
+    const SizeType len = last - first;
+    SizeType processEnd = len / 2;
+
+    // number of blocks
+    size_t nblocks = processEnd / blockSize;
+    if (processEnd % blockSize != 0) {
+        nblocks++;
+    }
+
+    if (maxThreads <= 0) {
+        maxThreads = std::max(std::thread::hardware_concurrency(), (unsigned int)2); // try 2 threads if hardware_concurrency returns 0
+    }
+
+    size_t nthreads = std::min(nblocks, (size_t)maxThreads);
+    std::vector<std::thread> threads;
+    threads.reserve(nthreads - 1);
+
+    std::vector < std::atomic < SizeType >> threadBacks(nthreads);
+
+    std::atomic<size_t> blocksRemaining;
+    blocksRemaining.store(nblocks);
+
+    // current thread's work
+    {
+        int threadIdx = nthreads - 1;  // this thread is the last one
+        // current thread will start the last block to avoid having to check partial block
+        size_t processBlock = --blocksRemaining;
+
+        // front/back
+        SizeType blockFront = processBlock * blockSize;
+        SizeType blockLength = processEnd - blockFront;
+        threadBacks[threadIdx].store(processEnd - 1);
+
+        // initialize other threads
+        for (int i = 0; i < nthreads - 1; i++) {
+            threads.push_back(
+                    std::thread(
+                            __thread_worker<RandomAccessIterator, SizeType,
+                                    Compare>, i, nthreads,
+                            std::ref(blocksRemaining), blockSize,
+                            std::ref(threadBacks), first, len,
+                            std::ref(compare)), std::ref(moved));
+        }
+
+        mas::thread::thread_group<std::vector<std::thread>::iterator> threadGroup(
+                threads); // for closing off threads
+
+        // process current block
+        __down_block(first, len, blockFront, blockLength, compare, moved);
+        threadBacks[threadIdx].store(blockFront - 1);
+
+        // continue processing other blocks
+        __thread_worker(threadIdx, nthreads, blocksRemaining, blockSize,
+                threadBacks, first, len, compare, moved);
+
+        // done!!
+        // std::cout << "DONE!" << std::endl;
+
+    }
+
+}
+
+#endif
 
 }
 }

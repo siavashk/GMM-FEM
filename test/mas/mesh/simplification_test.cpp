@@ -105,11 +105,11 @@ bool doEdgeCollapseTest(const char filename[], const char out[], int reduce) {
     mesh->connect(); // build connectivity
 
     if (mesh->numFaces() < 20) {
-        printstuff(*mesh, 0);
+        //printstuff(*mesh, 0);
     }
 
-    std::cout << "# faces: " << mesh->numFaces() << std::endl;
-    std::cout << "# vertices: " << mesh->numVertices() << std::endl;
+    std::cout << "# faces in: " << mesh->numFaces() << std::endl;
+    std::cout << "# vertices in: " << mesh->numVertices() << std::endl;
 
     // check connectivity
     for (SharedPolygon& face : mesh->faces) {
@@ -135,11 +135,11 @@ bool doEdgeCollapseTest(const char filename[], const char out[], int reduce) {
 
     writer.write(*mesh, out);
 
-    std::cout << "# faces: " << mesh->numFaces() << std::endl;
-    std::cout << "# vertices: " << mesh->numVertices() << std::endl;
-    if (mesh->numFaces() < 20) {
-        printstuff(*mesh, 0);
-    }
+    std::cout << "# faces out: " << mesh->numFaces() << std::endl;
+    std::cout << "# vertices out: " << mesh->numVertices() << std::endl;
+    //    if (mesh->numFaces() < 20) {
+    //        printstuff(*mesh, 0);
+    //    }
 
     // remove faces?
     mesh->disconnect();

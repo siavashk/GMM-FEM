@@ -383,7 +383,45 @@ bool basic_heap_test() {
     }
 }
 
+bool parallel_heap_test() {
+
+    auto cmp = [](int a, int b) {return (a > b);};
+    auto mv = [](int& v, const size_t& a, const size_t& b) {};
+
+    int len = 100000000;
+    std::vector<int> v1(len);
+    for (int i = 0; i < v1.size(); i++) {
+        v1[i] = i;
+    }
+    std::random_shuffle(v1.begin(), v1.end());
+
+    std::vector<int> v2 = v1;
+
+    mas::time::Timer timer;
+
+    timer.start();
+    mas::heap::make_heap(v1.begin(), v1.end(), cmp);
+    timer.stop();
+    double ms = timer.getMilliseconds();
+    std::cout << "mas make_heap took " << ms << "ms" << std::endl;
+
+    timer.start();
+    // mas::heap::parallel_make_heap(v2.begin(), v2.end(), cmp, 32, std::thread::hardware_concurrency());
+    mas::heap::parallel_make_heap(v2.begin(), v2.end(), cmp, 32, 0);
+    timer.stop();
+    ms = timer.getMilliseconds();
+    std::cout << "mas parallel_make_heap took " << ms << "ms" << std::endl;
+
+    check_equal(v1, v2);
+
+}
+
 int main(int argc, char **argv) {
-    move_test();
+    // basic_heap_test();
+    // move_test();
+
+    //for (int i=0; i<2; i++) {
+        parallel_heap_test();
+    //}
 }
 
