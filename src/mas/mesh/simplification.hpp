@@ -348,12 +348,30 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
 
     } else {
 
-        // shift edges along
+        // shift edges along on face
         const SharedHalfEdge& next = edge->next;
-        HalfEdge* prev = next.get();
+
+        // find vertex idx and "prev" edge to adjust
+        HalfEdge* he0 = edge->face->he0.get();
+        HalfEdge* prev = he0;
+        int vidx = 0;
         while (prev->next != edge) {
             prev = prev->next.get();
+            vidx++;
         }
+
+        // remove actual vertex
+        std::vector<SharedVertex3d>& vtxs = edge->face->verts;
+        for (int i=vidx; i<vtxs.size()-1; i++) {
+            vtxs[i] = std::move(vtxs[i+1]);
+        }
+        vtxs.pop_back();
+
+        // replace he0 if need be
+        if (edge->face->he0 == edge) {
+            edge->face->he0 == edge->next;
+        }
+
         prev->next = next; // skip edge
         prev->head->addIncidentEdge(prev);
         prev->head->removeIncidentEdge(edge.get());
@@ -412,14 +430,32 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
     } else {
         // shift edges along
         const SharedHalfEdge& next = oedge->next;
-        HalfEdge* prev = next.get();
+
+        // find vertex idx and "prev" edge to adjust
+        HalfEdge* he0 = oedge->face->he0.get();
+        HalfEdge* prev = he0;
+        int vidx = 0;
         while (prev->next != edge) {
             prev = prev->next.get();
+            vidx++;
         }
+
+        // remove actual vertex
+        std::vector<SharedVertex3d>& vtxs = oedge->face->verts;
+        for (int i=vidx; i<vtxs.size()-1; i++) {
+            vtxs[i] = std::move(vtxs[i+1]);
+        }
+        vtxs.pop_back();
+
+        // replace he0 if need be
+        if (oedge->face->he0 == oedge) {
+            oedge->face->he0 == oedge->next;
+        }
+
         prev->next = next; // skip edge
         prev->head->addIncidentEdge(prev);
         prev->head->removeIncidentEdge(edge.get());
-        edge->next = nullptr;
+        oedge->next = nullptr;
 
     }
 
