@@ -19,33 +19,16 @@ double BoundingVolume::getMargin() const {
     return margin;
 }
 
-// default visitor pattern
-bool BoundingVolume::intersects(const BoundingVolume& bv) const {
-    return bv.intersectsVisitor(*this);
-}
-
-bool BoundingVolume::intersectsVisitor(const BoundingVolume& bv) const {
-    // I don't know what I am, so take my bounding sphere
-    BoundingSphere bs = getBoundingSphere();
-    return bv.intersectsSphere(bs.c, bs.r);
-}
-
-const unsigned long BoundingSphere::UNIQUE_ID = BVTREE_BVID_BS;
-
 BoundingSphere::BoundingSphere() :
-        BoundingVolume(0), r(0), c(0, 0, 0) {
+        margin(0), r(0), c(0, 0, 0) {
 }
 
 BoundingSphere::BoundingSphere(const BoundingSphere& copyMe) :
-        BoundingVolume(copyMe.margin), r(copyMe.r), c(copyMe.c) {
+        margin(copyMe.margin), r(copyMe.r), c(copyMe.c) {
 }
 
 BoundingSphere::BoundingSphere(const Point3d& c, double r, double margin) :
-        BoundingVolume(margin), r(r), c(c) {
-}
-
-unsigned long BoundingSphere::uniqueClassId() const {
-    return BoundingSphere::UNIQUE_ID;
+        margin(margin), r(r), c(c) {
 }
 
 void BoundingSphere::set(const Point3d& c, double r) {
@@ -72,6 +55,10 @@ void BoundingSphere::getCentre(Point3d& c) const {
 void BoundingSphere::setMargin(double m) {
     r = r - margin + m;	// adjust margin
     margin = m;
+}
+
+double BoundingSphere::getMargin() {
+   return margin;
 }
 
 bool BoundingSphere::intersectsPoint(const Point3d& p) const {
@@ -129,18 +116,6 @@ bool BoundingSphere::intersectsPlane(const Plane& p) const {
         return true;
     }
     return false;
-}
-
-bool BoundingSphere::intersects(const BoundingVolume& bv) const {
-    return bv.intersectsSphere(c, r);
-}
-
-bool BoundingSphere::intersects(const BoundingSphere& bs) const {
-    return intersectsSphere(bs.c, bs.r);
-}
-
-bool BoundingSphere::intersectsVisitor(const BoundingVolume& bv) const {
-    return bv.intersectsSphere(c, r);
 }
 
 double BoundingSphere::distanceToPoint(const Point3d& pnt,
@@ -234,29 +209,21 @@ bool BoundingSphere::updateSphere(const Point3d& c, double r) {
     return false;
 }
 
-BoundingSphere* BoundingSphere::clone() const {
-    return new BoundingSphere(*this);
-}
-
-BoundingSphere* BoundingSphere::newInstance() const {
-    return new BoundingSphere();
-}
-
 int BoundingBox::boxCorners[8][3] = { { -1, -1, -1 }, { 1, -1, -1 },
         { 1, 1, -1 }, { -1, 1, -1 }, { -1, -1, 1 }, { 1, -1, 1 }, { 1, 1, 1 }, {
                 -1, 1, 1 } };
 
 BoundingBox::BoundingBox() :
-        BoundingVolume(0), c(0, 0, 0), halfWidths(0, 0, 0) {
+        margin(0), c(0, 0, 0), halfWidths(0, 0, 0) {
 }
 
 BoundingBox::BoundingBox(const BoundingBox& copyMe) :
-        BoundingVolume(copyMe.margin), c(copyMe.c), halfWidths(
+        margin(copyMe.margin), c(copyMe.c), halfWidths(
                 copyMe.halfWidths) {
 }
 
 BoundingBox::BoundingBox(const Point3d& c, const Vector3d& hw, double margin) :
-        BoundingVolume(margin), c(c), halfWidths(hw) {
+        margin(margin), c(c), halfWidths(hw) {
 }
 
 void BoundingBox::set(const Point3d& c, const Vector3d& hw) {
@@ -283,6 +250,10 @@ void BoundingBox::getCentre(Point3d& c) const {
 void BoundingBox::setMargin(double m) {
     halfWidths.add(m - margin, m - margin, m - margin);
     margin = m;
+}
+
+double BoundingBox::getMargin() {
+   return margin;
 }
 
 void BoundingBox::getCorner(int idx, Point3d& pnt) const {
@@ -690,8 +661,6 @@ double BoundingBox::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
     return dmin;
 }
 
-const unsigned long AABB::UNIQUE_ID = BVTREE_BVID_AABB;
-
 AABB::AABB() :
         BoundingBox() {
 }
@@ -702,10 +671,6 @@ AABB::AABB(const AABB& copyMe) :
 
 AABB::AABB(const Point3d& c, const Vector3d& hw, double margin) :
         BoundingBox(c, hw, margin) {
-}
-
-unsigned long AABB::uniqueClassId() const {
-    return AABB::UNIQUE_ID;
 }
 
 void AABB::getLocalCoords(const Point3d& p, Point3d& out) const {
@@ -724,67 +689,6 @@ void AABB::getWorldCoords(const Point3d& p, Point3d& out) const {
 void AABB::getWorldCoords(const Vector3d& v, Vector3d& out) const {
     out = v;
 }
-
-bool AABB::intersects(const BoundingVolume& bv) const {
-    switch (bv.uniqueClassId()) {
-    case BoundingSphere::UNIQUE_ID: {
-        const BoundingSphere& bs = static_cast<const BoundingSphere&>(bv);
-        return intersectsSphere(bs.c, bs.r);
-    }
-    case AABB::UNIQUE_ID: {
-        const AABB& aabb = static_cast<const AABB&>(bv);
-        return intersects(aabb);
-    }
-    }
-    return bv.intersectsVisitor(*this);
-}
-
-bool AABB::intersectsVisitor(const BoundingVolume& bv) const {
-    switch (bv.uniqueClassId()) {
-    case BoundingSphere::UNIQUE_ID: {
-        const BoundingSphere& bs = static_cast<const BoundingSphere&>(bv);
-        return intersectsSphere(bs.c, bs.r);
-    }
-    case AABB::UNIQUE_ID: {
-        const AABB& aabb = static_cast<const AABB&>(bv);
-        return intersects(aabb);
-    }
-    }
-
-    // rely on bounding sphere
-    const BoundingSphere& bs = bv.getBoundingSphere();
-    return intersectsSphere(bs.c, bs.r);
-}
-
-bool AABB::intersects(const AABB& bv) const {
-
-    // both axis-aligned, check if off to any side
-    if (bv.c.x - bv.halfWidths.x > c.x + halfWidths.x) {
-        return false;
-    } else if (bv.c.x + bv.halfWidths.x < c.x - halfWidths.x) {
-        return false;
-    } else if (bv.c.y - bv.halfWidths.y > c.y + halfWidths.y) {
-        return false;
-    } else if (bv.c.y + bv.halfWidths.y < c.y - halfWidths.y) {
-        return false;
-    } else if (bv.c.z - bv.halfWidths.z > c.z + halfWidths.z) {
-        return false;
-    } else if (bv.c.z + bv.halfWidths.z < c.z - halfWidths.z) {
-        return false;
-    }
-
-    return true;
-}
-
-AABB* AABB::clone() const {
-    return new AABB(*this);
-}
-
-AABB* AABB::newInstance() const {
-    return new AABB();
-}
-
-const unsigned long OBB::UNIQUE_ID = BVTREE_BVID_OBB;
 
 // Game Physics, David Eberly, Pg. 445
 bool OBB::boxesIntersect(const Vector3d& hw1, const Vector3d& hw2,
@@ -1120,10 +1024,6 @@ OBB::OBB(const RigidTransform3d& trans, const Vector3d& hw) :
         BoundingBox(trans.t, hw), R(trans.R) {
 }
 
-unsigned long OBB::uniqueClassId() const {
-    return OBB::UNIQUE_ID;
-}
-
 void OBB::set(const Point3d& c, const RotationMatrix3d& R, const Vector3d& hw) {
     this->c = c;
     this->halfWidths = hw;
@@ -1160,108 +1060,44 @@ void OBB::getWorldCoords(const Vector3d& v, Vector3d& out) const {
     R.multiply(v, out);
 }
 
-bool OBB::intersects(const BoundingVolume& bv) const {
 
-    switch (bv.uniqueClassId()) {
-    case BoundingSphere::UNIQUE_ID: {
-        const BoundingSphere& bs = static_cast<const BoundingSphere&>(bv);
-        return intersectsSphere(bs.c, bs.r);
-    }
-    case AABB::UNIQUE_ID: {
-        const AABB& aabb = static_cast<const AABB&>(bv);
-        return intersects(aabb);
-    }
-    case OBB::UNIQUE_ID: {
-        const OBB& obb = static_cast<const OBB&>(bv);
-        return intersects(obb);
-    }
-    }
-    return bv.intersectsVisitor(*this);
-}
 
-bool OBB::intersectsVisitor(const BoundingVolume& bv) const {
-
-    switch (bv.uniqueClassId()) {
-    case BoundingSphere::UNIQUE_ID: {
-        const BoundingSphere& bs = static_cast<const BoundingSphere&>(bv);
-        return intersectsSphere(bs.c, bs.r);
-    }
-    case AABB::UNIQUE_ID: {
-        const AABB& aabb = static_cast<const AABB&>(bv);
-        return intersects(aabb);
-    }
-    case OBB::UNIQUE_ID: {
-        const OBB& obb = static_cast<const OBB&>(bv);
-        return intersects(obb);
-    }
-    }
-
-    // resort to using bounding sphere
-    BoundingSphere bs = bv.getBoundingSphere();
-    return intersectsSphere(bs.c, bs.r);
-}
-
-bool OBB::intersects(const AABB& bv) const {
-    Vector3d t21 = c;
-    t21.subtract(bv.c);
-    return boxesIntersect(bv.halfWidths, halfWidths, R, t21);
-}
-
-void printBoxDetails(const OBB& obb) {
-    printf("hw: %.17g %.17g %.17g\n", obb.halfWidths.x, obb.halfWidths.y,
-            obb.halfWidths.z);
-    printf(" c: %.17g %.17g %.17g\n", obb.c.x, obb.c.y, obb.c.z);
-    printf(" R: %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g\n",
-            obb.R.m[0], obb.R.m[1], obb.R.m[2], obb.R.m[3], obb.R.m[4],
-            obb.R.m[5], obb.R.m[6], obb.R.m[7], obb.R.m[8]);
-}
-
-int printBox(const OBB& obb, int vidx) {
-
-    double x = obb.halfWidths.x;
-    double y = obb.halfWidths.y;
-    double z = obb.halfWidths.z;
-
-    Point3d p[8] = { Point3d(-x, -y, -z), Point3d(x, -y, -z), Point3d(x, y, -z),
-            Point3d(-x, y, -z), Point3d(-x, -y, z), Point3d(x, -y, z), Point3d(
-                    x, y, z), Point3d(-x, y, z) };
-
-    Point3d pout;
-    for (int i = 0; i < 8; i++) {
-        obb.getWorldCoords(p[i], pout);
-        printf("v %lf %lf %lf\n", pout.x, pout.y, pout.z);
-    }
-
-    // faces
-    printf("f %d %d %d %d\n", vidx, vidx + 3, vidx + 2, vidx + 1);
-    printf("f %d %d %d %d\n", vidx + 4, vidx + 5, vidx + 6, vidx + 7);
-    printf("f %d %d %d %d\n", vidx, vidx + 1, vidx + 5, vidx + 4);
-    printf("f %d %d %d %d\n", vidx + 2, vidx + 3, vidx + 7, vidx + 6);
-    printf("f %d %d %d %d\n", vidx + 1, vidx + 2, vidx + 6, vidx + 5);
-    printf("f %d %d %d %d\n", vidx + 3, vidx, vidx + 4, vidx + 7);
-
-    return vidx + 8;
-
-}
-
-bool OBB::intersects(const OBB& bv) const {
-
-    Vector3d pd;
-    pd.subtract(bv.c, c);
-
-    bool isect = boxesIntersect(halfWidths, bv.halfWidths, R, bv.R, pd,
-            Vector3d::ZERO);
-
-    return isect;
-}
-
-OBB* OBB::clone() const {
-    return new OBB(*this);
-}
-
-OBB* OBB::newInstance() const {
-    return new OBB();
-}
+//void printBoxDetails(const OBB& obb) {
+//    printf("hw: %.17g %.17g %.17g\n", obb.halfWidths.x, obb.halfWidths.y,
+//            obb.halfWidths.z);
+//    printf(" c: %.17g %.17g %.17g\n", obb.c.x, obb.c.y, obb.c.z);
+//    printf(" R: %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g\n",
+//            obb.R.m[0], obb.R.m[1], obb.R.m[2], obb.R.m[3], obb.R.m[4],
+//            obb.R.m[5], obb.R.m[6], obb.R.m[7], obb.R.m[8]);
+//}
+//
+//int printBox(const OBB& obb, int vidx) {
+//
+//    double x = obb.halfWidths.x;
+//    double y = obb.halfWidths.y;
+//    double z = obb.halfWidths.z;
+//
+//    Point3d p[8] = { Point3d(-x, -y, -z), Point3d(x, -y, -z), Point3d(x, y, -z),
+//            Point3d(-x, y, -z), Point3d(-x, -y, z), Point3d(x, -y, z), Point3d(
+//                    x, y, z), Point3d(-x, y, z) };
+//
+//    Point3d pout;
+//    for (int i = 0; i < 8; i++) {
+//        obb.getWorldCoords(p[i], pout);
+//        printf("v %lf %lf %lf\n", pout.x, pout.y, pout.z);
+//    }
+//
+//    // faces
+//    printf("f %d %d %d %d\n", vidx, vidx + 3, vidx + 2, vidx + 1);
+//    printf("f %d %d %d %d\n", vidx + 4, vidx + 5, vidx + 6, vidx + 7);
+//    printf("f %d %d %d %d\n", vidx, vidx + 1, vidx + 5, vidx + 4);
+//    printf("f %d %d %d %d\n", vidx + 2, vidx + 3, vidx + 7, vidx + 6);
+//    printf("f %d %d %d %d\n", vidx + 1, vidx + 2, vidx + 6, vidx + 5);
+//    printf("f %d %d %d %d\n", vidx + 3, vidx, vidx + 4, vidx + 7);
+//
+//    return vidx + 8;
+//
+//}
 
 }
 }
