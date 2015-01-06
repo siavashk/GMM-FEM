@@ -56,7 +56,8 @@ void BoundablePointSet<Point3d>::addPoint(Point3d&& pnt) {
 }
 
 template<typename Point3d>
-bool BoundablePointSet<Point3d>::updateBV(BoundingVolume& bv) const {
+template<typename BV>
+bool BoundablePointSet<Point3d>::updateBV(BV& bv) const {
 
     bool updated = false;
     for (const Point3d& pnt : pnts) {
@@ -188,7 +189,8 @@ void BoundablePointPtrSet<PointPtr>::addPoint(PointPtr&& pnt) {
 }
 
 template<typename PointPtr>
-bool BoundablePointPtrSet<PointPtr>::updateBV(BoundingVolume& bv) const {
+template<typename BV>
+bool BoundablePointPtrSet<PointPtr>::updateBV(BV& bv) const {
 
     bool updated = false;
     for (const PointPtr& pnt : pnts) {
@@ -278,6 +280,11 @@ bool BoundingVolume::update(const BoundablePtr& b) {
     return b->updateBV(*this);
 }
 
+template<typename BV>
+bool BoundingSphere::intersects(const BV& bv) const {
+    return bv.intersectsSphere(c, r);
+}
+
 template<typename BoundablePtr>
 void BoundingSphere::bound(const std::vector<BoundablePtr>& blist) {
 
@@ -344,6 +351,50 @@ bool BoundingSphere::split(std::vector<BoundablePtr>&& b,
     }
 
     return true;
+}
+
+// generic implementation
+template<typename BV>
+bool AABB::intersects(const BV& bv) const {
+
+   // get sphere:
+   Point3d c;
+   double r = bv.getBoundingSphere(c);
+   return intersectsSphere(c, r);
+
+}
+
+template<>
+bool AABB::intersects(const BoundingSphere& bv) const {
+    return intersectsSphere(bv.c, bv.r);
+}
+
+// AABB specialization
+template<>
+bool AABB::intersects(const AABB& bv) const {
+
+    // both axis-aligned, check if off to any side
+    if (bv.c.x - bv.halfWidths.x > c.x + halfWidths.x) {
+        return false;
+    } else if (bv.c.x + bv.halfWidths.x < c.x - halfWidths.x) {
+        return false;
+    } else if (bv.c.y - bv.halfWidths.y > c.y + halfWidths.y) {
+        return false;
+    } else if (bv.c.y + bv.halfWidths.y < c.y - halfWidths.y) {
+        return false;
+    } else if (bv.c.z - bv.halfWidths.z > c.z + halfWidths.z) {
+        return false;
+    } else if (bv.c.z + bv.halfWidths.z < c.z - halfWidths.z) {
+        return false;
+    }
+
+    return true;
+}
+
+// OBB specialization
+template<>
+bool AABB::intersects(const OBB& bv) const {
+   return bv.intersects(*this);
 }
 
 template<typename BoundablePtr>
@@ -504,6 +555,36 @@ bool AABB::split(std::vector<BoundablePtr>&& b,
     // all splitting failed, put all in one
     out = std::vector<std::vector<BoundablePtr> >(1, std::move(b));
     return false;
+}
+
+template<>
+bool OBB::intersects(const BoundingSphere& bv) const {
+    return intersectsSphere(bv.c, bv.r);
+}
+
+template<>
+bool OBB::intersects(const AABB& bv) const {
+    Vector3d t21 = c;
+    t21.subtract(bv.c);
+    return boxesIntersect(bv.halfWidths, halfWidths, R, t21);
+}
+
+template<>
+bool OBB::intersects(const OBB& bv) const {
+    Vector3d pd;
+    pd.subtract(bv.c, c);
+    bool isect = boxesIntersect(halfWidths, bv.halfWidths, R, bv.R, pd,
+            Vector3d::ZERO);
+
+    return isect;
+}
+
+template<typename BV>
+bool OBB::intersects(const BV& bv) const {
+
+   Point3d c;
+   double r = bv.getBoundingSphere(c);
+   return intersectsSphere(c, r);
 }
 
 template<typename BoundablePtr>
