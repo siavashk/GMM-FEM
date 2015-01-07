@@ -1026,6 +1026,8 @@ std::shared_ptr<BVNode<BoundablePtr,BV>> BVTree<BoundablePtr, BV>::recursive_bui
 
     std::shared_ptr<BVNodeType> parent = std::make_shared<BVNodeType>(margin);
     parent->setIndex(nextNodeIdx);
+    parent->bv->bound(elems);  // bound all elements
+
     nodes[nextNodeIdx++] = parent;
 
     // try to split
@@ -1084,14 +1086,14 @@ void BVTree<BoundablePtr, BV>::build(std::vector<BoundablePtr>&& elems, double m
     size_t nNodes = 2*elems.size()-1;
     size_t nextNodeIdx = 0;
     leavesIdx = elems.size()-1;
-    size_t nextLeafIdx = elems.size()-1;
+    size_t nextLeafIdx = leavesIdx;
 
     nodes = std::vector<std::shared_ptr<BVNodeType>>(nNodes, nullptr);
 
     // root at 0
     // XXX would be nice if elems kept their order
     recursive_build(nextNodeIdx, nextLeafIdx, std::move(elems));
-    nleaves = nextLeafIdx;
+    nleaves = nextLeafIdx-leavesIdx;
 }
 
 template<typename BoundablePtr, typename BV>
@@ -1251,6 +1253,16 @@ size_t BVTree<BoundablePtr, BV>::getLeaves(
         leaves.push_back(nodes[i].get());
     }
     return leaves.size() - os;
+}
+
+template<typename BoundablePtr, typename BV>
+size_t BVTree<BoundablePtr, BV>::numLeaves() {
+    return nleaves;
+}
+
+template<typename BoundablePtr, typename BV>
+BVNode<BoundablePtr,BV>& BVTree<BoundablePtr, BV>::getLeaf(size_t leafIdx) {
+    return *(nodes[leavesIdx+leafIdx]);
 }
 
 template<typename BoundablePtr, typename BV>
