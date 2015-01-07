@@ -19,8 +19,8 @@ double BoundingVolume::getMargin() const {
     return margin;
 }
 
-BoundingSphere::BoundingSphere() :
-        margin(0), r(0), c(0, 0, 0) {
+BoundingSphere::BoundingSphere(double margin) :
+        margin(margin), r(margin), c(0, 0, 0) {
 }
 
 BoundingSphere::BoundingSphere(const BoundingSphere& copyMe) :
@@ -213,8 +213,8 @@ int BoundingBox::boxCorners[8][3] = { { -1, -1, -1 }, { 1, -1, -1 },
         { 1, 1, -1 }, { -1, 1, -1 }, { -1, -1, 1 }, { 1, -1, 1 }, { 1, 1, 1 }, {
                 -1, 1, 1 } };
 
-BoundingBox::BoundingBox() :
-        margin(0), c(0, 0, 0), halfWidths(0, 0, 0) {
+BoundingBox::BoundingBox(double margin) :
+        margin(margin), c(0, 0, 0), halfWidths(margin, margin, margin) {
 }
 
 BoundingBox::BoundingBox(const BoundingBox& copyMe) :
@@ -224,19 +224,22 @@ BoundingBox::BoundingBox(const BoundingBox& copyMe) :
 
 BoundingBox::BoundingBox(const Point3d& c, const Vector3d& hw, double margin) :
         margin(margin), c(c), halfWidths(hw) {
+    halfWidths.add(margin,margin,margin);
 }
 
 void BoundingBox::set(const Point3d& c, const Vector3d& hw) {
     this->c = c;
     halfWidths = hw;
+    halfWidths.add(margin,margin,margin);
 }
 
 void BoundingBox::setHalfWidths(const Vector3d& hw) {
     halfWidths = hw;
+    halfWidths.add(margin,margin,margin);
 }
 
 void BoundingBox::getHalfWidths(Vector3d& hw) const {
-    hw = halfWidths;
+    hw.set(halfWidths.x-margin, halfWidths.y-margin, halfWidths.z-margin);
 }
 
 void BoundingBox::setCentre(const Point3d& c) {
@@ -661,8 +664,8 @@ double BoundingBox::distanceToPoint(const Point3d& pnt, const Vector3d& dir,
     return dmin;
 }
 
-AABB::AABB() :
-        BoundingBox() {
+AABB::AABB(double margin) :
+        BoundingBox(margin) {
 }
 
 AABB::AABB(const AABB& copyMe) :
@@ -688,6 +691,39 @@ void AABB::getWorldCoords(const Point3d& p, Point3d& out) const {
 
 void AABB::getWorldCoords(const Vector3d& v, Vector3d& out) const {
     out = v;
+}
+
+template<>
+bool AABB::intersects(const BoundingSphere& bv) const {
+    return intersectsSphere(bv.c, bv.r);
+}
+
+// AABB specialization
+template<>
+bool AABB::intersects(const AABB& bv) const {
+
+    // both axis-aligned, check if off to any side
+    if (bv.c.x - bv.halfWidths.x > c.x + halfWidths.x) {
+        return false;
+    } else if (bv.c.x + bv.halfWidths.x < c.x - halfWidths.x) {
+        return false;
+    } else if (bv.c.y - bv.halfWidths.y > c.y + halfWidths.y) {
+        return false;
+    } else if (bv.c.y + bv.halfWidths.y < c.y - halfWidths.y) {
+        return false;
+    } else if (bv.c.z - bv.halfWidths.z > c.z + halfWidths.z) {
+        return false;
+    } else if (bv.c.z + bv.halfWidths.z < c.z - halfWidths.z) {
+        return false;
+    }
+
+    return true;
+}
+
+// OBB specialization
+template<>
+bool AABB::intersects(const OBB& bv) const {
+   return bv.intersects(*this);
 }
 
 // Game Physics, David Eberly, Pg. 445
@@ -1004,8 +1040,8 @@ bool OBB::boxesIntersect(const Vector3d& hw1, const Vector3d& hw2,
 
 }
 
-OBB::OBB() :
-        BoundingBox() {
+OBB::OBB(double margin) :
+        BoundingBox(margin) {
 }
 
 OBB::OBB(const OBB& copyMe) :
@@ -1060,6 +1096,28 @@ void OBB::getWorldCoords(const Vector3d& v, Vector3d& out) const {
     R.multiply(v, out);
 }
 
+// template specializations
+template<>
+bool OBB::intersects(const BoundingSphere& bv) const {
+    return intersectsSphere(bv.c, bv.r);
+}
+
+template<>
+bool OBB::intersects(const AABB& bv) const {
+    Vector3d t21 = c;
+    t21.subtract(bv.c);
+    return boxesIntersect(bv.halfWidths, halfWidths, R, t21);
+}
+
+template<>
+bool OBB::intersects(const OBB& bv) const {
+    Vector3d pd;
+    pd.subtract(bv.c, c);
+    bool isect = boxesIntersect(halfWidths, bv.halfWidths, R, bv.R, pd,
+            Vector3d::ZERO);
+
+    return isect;
+}
 
 
 //void printBoxDetails(const OBB& obb) {

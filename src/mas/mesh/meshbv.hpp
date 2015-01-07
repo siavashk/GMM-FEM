@@ -6,6 +6,15 @@ namespace mesh {
 using namespace mas::bvtree;
 
 template<typename BV>
+bool BoundablePolygon::updateBV(BV& bv) const {
+    bool updated = false;
+    for (SharedVertex3d& vtx : polygon->verts) {
+        updated |= bv.updatePoint(*vtx);
+    }
+    return updated;
+}
+
+template<typename BV>
 BVTree<SharedBoundablePolygon,BV>*  get_bv_tree(const PolygonMesh &mesh,
 		double margin) {
 

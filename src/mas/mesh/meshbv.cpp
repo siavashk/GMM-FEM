@@ -80,12 +80,6 @@ void BoundablePolygon::getCovariance(const Point3d& center,
 	cov.scale(1.0 / verts.size());
 }
 
-bool BoundablePolygon::updateBV(BoundingVolume& bv) const {
-	for (SharedVertex3d& vtx : polygon->verts) {
-		bv.updatePoint(*vtx);
-	}
-}
-
 double BoundablePolygon::distanceToPoint(const Point3d& pnt, Point3d& nearest,
 		Vector3d& bary, SharedPolygon& tri) const {
 

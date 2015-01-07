@@ -389,6 +389,7 @@ public:
 
    void outerProduct(const Vector2d& v1, const Vector2d& v2);
    void addOuterProduct(const Vector2d& v1, const Vector2d& v2);
+   void addScaledOuterProduct(double s, const Vector2d& v1, const Vector2d& v2);
 
    double determinant() const;
    double condition() const;
@@ -473,6 +474,7 @@ public:
 
    void outerProduct(const Vector3d& v1, const Vector3d& v2);
    void addOuterProduct(const Vector3d& v1, const Vector3d& v2);
+   void addScaledOuterProduct(double s, const Vector3d& v1, const Vector3d& v2);
 
    double determinant() const;
    double condition() const;
@@ -540,6 +542,7 @@ public:
 
    void outerProduct(const Vector4d& v1, const Vector4d& v2);
    void addOuterProduct(const Vector4d& v1, const Vector4d& v2);
+   void addScaledOuterProduct(double s, const Vector4d& v1, const Vector4d& v2);
 
    double determinant() const;
 

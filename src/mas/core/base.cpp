@@ -1232,6 +1232,13 @@ void Matrix2d::addOuterProduct(const Vector2d& v1, const Vector2d& v2) {
    m[IDX2D_11] += v1.y * v2.y;
 }
 
+void Matrix2d::addScaledOuterProduct(double s, const Vector2d& v1, const Vector2d& v2) {
+   m[IDX2D_00] += s*v1.x * v2.x;
+   m[IDX2D_01] += s*v1.x * v2.y;
+   m[IDX2D_10] += s*v1.y * v2.x;
+   m[IDX2D_11] += s*v1.y * v2.y;
+}
+
 double Matrix2d::determinant() const {
    double det = m[IDX2D_00] * m[IDX2D_11] - m[IDX2D_01] * m[IDX2D_10];
    return det;
@@ -1576,6 +1583,18 @@ void Matrix3d::addOuterProduct(const Vector3d& v1, const Vector3d& v2) {
    m[IDX3D_20] += v1.z * v2.x;
    m[IDX3D_21] += v1.z * v2.y;
    m[IDX3D_22] += v1.z * v2.z;
+}
+
+void Matrix3d::addScaledOuterProduct(double s, const Vector3d& v1, const Vector3d& v2) {
+   m[IDX3D_00] += s*v1.x * v2.x;
+   m[IDX3D_01] += s*v1.x * v2.y;
+   m[IDX3D_02] += s*v1.x * v2.z;
+   m[IDX3D_10] += s*v1.y * v2.x;
+   m[IDX3D_11] += s*v1.y * v2.y;
+   m[IDX3D_12] += s*v1.y * v2.z;
+   m[IDX3D_20] += s*v1.z * v2.x;
+   m[IDX3D_21] += s*v1.z * v2.y;
+   m[IDX3D_22] += s*v1.z * v2.z;
 }
 
 double Matrix3d::determinant() const {
@@ -2337,6 +2356,28 @@ void Matrix4d::addOuterProduct(const Vector4d& v1, const Vector4d& v2) {
    m[IDX4D_31] += v1.z * v2.x;
    m[IDX4D_32] += v1.z * v2.y;
    m[IDX4D_33] += v1.z * v2.z;
+}
+
+void Matrix4d::addScaledOuterProduct(double s, const Vector4d& v1, const Vector4d& v2) {
+   m[IDX4D_00] += s*v1.w * v2.w;
+   m[IDX4D_01] += s*v1.w * v2.x;
+   m[IDX4D_02] += s*v1.w * v2.y;
+   m[IDX4D_03] += s*v1.w * v2.z;
+
+   m[IDX4D_10] += s*v1.x * v2.w;
+   m[IDX4D_11] += s*v1.x * v2.x;
+   m[IDX4D_12] += s*v1.x * v2.y;
+   m[IDX4D_13] += s*v1.x * v2.z;
+
+   m[IDX4D_20] += s*v1.y * v2.w;
+   m[IDX4D_21] += s*v1.y * v2.x;
+   m[IDX4D_22] += s*v1.y * v2.y;
+   m[IDX4D_23] += s*v1.y * v2.z;
+
+   m[IDX4D_30] += s*v1.z * v2.w;
+   m[IDX4D_31] += s*v1.z * v2.x;
+   m[IDX4D_32] += s*v1.z * v2.y;
+   m[IDX4D_33] += s*v1.z * v2.z;
 }
 
 double Matrix4d::determinant() const {

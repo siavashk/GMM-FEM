@@ -30,7 +30,9 @@ private:
 public:
 	BoundablePolygon(const SharedPolygon& poly);
 
-	bool updateBV(BoundingVolume& bv) const;
+	template<typename BV>
+	bool updateBV(BV& bv) const;
+
 	void getCentroid(Point3d& c) const;
 	void getCovariance(const Point3d& centre, Matrix3d& cov) const;
 
