@@ -388,7 +388,7 @@ bool parallel_heap_test() {
     auto cmp = [](int a, int b) {return (a > b);};
     auto mv = [](int& v, const size_t& a, const size_t& b) {};
 
-    int len = 100000000;
+    int len = 200000000;
     std::vector<int> v1(len);
     for (int i = 0; i < v1.size(); i++) {
         v1[i] = i;

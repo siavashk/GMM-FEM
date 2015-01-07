@@ -179,7 +179,7 @@ public:
    Point3d c;
 
 public:
-   BoundingSphere();
+   BoundingSphere(double margin = 0);
    BoundingSphere(const BoundingSphere& copyMe);
    BoundingSphere(const Point3d& c, double r, double margin = 0);
 
@@ -236,7 +236,7 @@ public:
    Vector3d halfWidths;
 
 public:
-   BoundingBox();
+   BoundingBox(double margin = 0);
    BoundingBox(const BoundingBox& copyMe);
    BoundingBox(const Point3d& c, const Vector3d& hw, double margin = 0);
 
@@ -278,7 +278,7 @@ public:
 class AABB: public BoundingBox {
 
 public:
-   AABB();
+   AABB(double margin = 0);
    AABB(const AABB& copyMe);
    AABB(const Point3d& c, const Vector3d& hw, double margin = 0);
 
@@ -318,7 +318,7 @@ public:
    RotationMatrix3d R;
 
 public:
-   OBB();
+   OBB(double margin = 0);
    OBB(const OBB& copyMe);
    OBB(const AABB& copyMe);
    OBB(const Point3d& c, const RotationMatrix3d& R, const Vector3d& hw);
@@ -370,20 +370,21 @@ bool OBB::intersects(const OBB& bv) const;
 // basic abstract binary node
 template<typename BoundablePtr, typename BV>
 class BVNode {
+public:
+    typedef std::shared_ptr<BVNode<BoundablePtr, BV>> SharedBVNode;
 private:
    BVNode<BoundablePtr, BV>* parent; // raw parent node (so can observe strong or weak parent)
-public:
-   typedef std::shared_ptr<BVNode<BoundablePtr, BV>> SharedBVNode;
 
+public:
+   size_t idx;
    std::unique_ptr<BV> bv;
-   std::vector<SharedBVNode> children;
    std::vector<BoundablePtr> elems;
+   std::vector<SharedBVNode> children;
 
 private:
    BVNode(const BVNode<BoundablePtr, BV>& copyMe) = delete;
    BVNode& operator=(const BVNode<BoundablePtr, BV>& assignMe) = delete;
-protected:
-   BVNode();
+
 public:
    BVNode(double margin = 0);
 
@@ -392,6 +393,9 @@ public:
 
    // move elements
    BVNode(std::vector<BoundablePtr>&& elems, double margin = 0);
+
+   void setIndex(size_t idx);
+   size_t getIndex();
 
    BVNode<BoundablePtr, BV>* getParent();
    void setParent(BVNode<BoundablePtr, BV>* parent);
@@ -435,13 +439,17 @@ protected:
 
 };
 
-// Abstract tree
+// Abstract BINARY Bounding-volume tree
 template<typename BoundablePtr, typename BV>
 class BVTree {
-protected:
-   std::shared_ptr<BVNode<BoundablePtr, BV>> root;
 public:
    typedef BVNode<BoundablePtr, BV> BVNodeType;
+
+private:
+   double margin;
+   std::vector<std::shared_ptr<BVNodeType>> nodes;
+   size_t leavesIdx;
+   size_t nleaves;
 
 private:
    BVTree(const BVTree<BoundablePtr, BV>& copyMe) = delete;
@@ -461,6 +469,9 @@ public:
 
    void build(const std::vector<BoundablePtr>& elems, double margin = 0);
    void build(std::vector<BoundablePtr>&& elems, double margin = 0);
+
+   void parallel_build(const std::vector<BoundablePtr>& elems, double margin = 0);
+   void parallel_build(std::vector<BoundablePtr>&& elems, double margin = 0);
 
    // intersection, return number of leaves
    size_t intersectPoint(const Point3d& p,
@@ -506,9 +517,17 @@ public:
    size_t getLeaves(std::vector<std::shared_ptr<BVNodeType>>& leaves);
    size_t getLeaves(std::vector<BVNodeType*>& leaves);
 
+   size_t numLeaves();
+   BVNodeType& getLeaf(size_t leafIdx);
+
    void update();
+   void parallel_update();
 
 protected:
+
+   std::shared_ptr<BVNodeType> recursive_build(
+           size_t& nextNodeIdx, size_t& nextLeafIdx, std::vector<BoundablePtr>&& elems);
+
    // intersection, return number of leaves
    void intersectPointRecursively(const Point3d& p,
    std::vector<std::shared_ptr<BVNodeType>>& out, const std::shared_ptr<BVNodeType>& node) const;

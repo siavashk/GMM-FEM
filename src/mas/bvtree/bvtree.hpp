@@ -10,7 +10,7 @@ namespace bvtree {
 
 template<typename Point3d>
 BoundablePointSet<Point3d>::BoundablePointSet(size_t idx) :
-        idx(idx), pnts() {
+idx(idx), pnts() {
 }
 
 template<typename Point3d>
@@ -142,7 +142,7 @@ double BoundablePointSet<Point3d>::distanceToPoint(const Point3d& pnt,
 
 template<typename PointPtr>
 BoundablePointPtrSet<PointPtr>::BoundablePointPtrSet(size_t idx) :
-        idx(idx), pnts() {
+idx(idx), pnts() {
 }
 
 template<typename PointPtr>
@@ -307,26 +307,54 @@ void BoundingSphere::bound(const std::vector<BoundablePtr>& blist) {
 
 }
 
-#define OCTANT_SIGN(a) (a >= 0 ? 1 : 0)
-#define OCTANT(a,o) (OCTANT_SIGN(a.x-o.x)+2*OCTANT_SIGN(a.y-o.y)\
-        +4*OCTANT_SIGN(a.z-o.z))
-
 // copy shared boundables
 template<typename BoundablePtr>
 bool BoundingSphere::split(const std::vector<BoundablePtr>& b,
         std::vector<std::vector<BoundablePtr>>& out) const {
 
-    // split by octree
-    out = std::vector<std::vector<BoundablePtr>>(8,
-            std::vector<BoundablePtr>());
-    int outSizes[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    if (b.size() < 2) {
+        out = std::vector<std::vector<BoundablePtr> >(1, b);
+        return false;
+    }
+
+    Matrix3d covl;
+    Matrix3d cov;
+    // Split by covariance about sphere centre
+    for (const BoundablePtr& sb : b) {
+        sb->getCovariance(c, covl);
+        cov.add(covl);
+    }
+
+    Matrix3d U;
+    Vector3d S;
+    Matrix3d V;
+    math::svd3(cov, U, S, V);
+    Vector3d dir;
+    U.getColumn(0, dir);
+
+    // split along dominant axis
+    out = std::vector<std::vector<BoundablePtr>>(2, std::vector<BoundablePtr>());
+
     Point3d centroid;
     for (const BoundablePtr& sb : b) {
-        // separate into quadrants
         sb->getCentroid(centroid);
-        int octant = OCTANT(centroid, c);
-        out[octant].push_back(sb);
-        outSizes[octant]++;
+        centroid.subtract(c);
+
+        if (centroid.dot(dir) <= 0) {
+            out[0].push_back(sb);
+        } else {
+            out[1].push_back(sb);
+        }
+    }
+
+    // remove empty
+    if (out[0].size() == 0) {
+        out[0] = std::move(out[1]);
+        out.pop_back();
+        return false;
+    } else if (out[1].size() == 0) {
+        out.pop_back();
+        return false;
     }
 
     return true;
@@ -337,64 +365,64 @@ template<typename BoundablePtr>
 bool BoundingSphere::split(std::vector<BoundablePtr>&& b,
         std::vector<std::vector<BoundablePtr>>& out) const {
 
-    // split by octree
-    out = std::vector<std::vector<BoundablePtr>>(8,
-            std::vector<BoundablePtr>());
-    int outSizes[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    if (b.size() < 2) {
+        out = std::vector<std::vector<BoundablePtr> >(1, std::move(b));
+        return false;
+    }
+
+    Matrix3d covl;
+    Matrix3d cov;
+    // Split by covariance about sphere centre
+    for (const BoundablePtr& sb : b) {
+        sb->getCovariance(c, covl);
+        cov.add(covl);
+    }
+
+    Matrix3d U;
+    Vector3d S;
+    Matrix3d V;
+    math::svd3(cov, U, S, V);
+    Vector3d dir;
+    U.getColumn(0, dir);
+
+    // split along dominant axis
+    out = std::vector<std::vector<BoundablePtr>>(2, std::vector<BoundablePtr>());
+
     Point3d centroid;
-    for (BoundablePtr& sb : b) {
-        // separate into quadrants
+    for (const BoundablePtr& sb : b) {
         sb->getCentroid(centroid);
-        int octant = OCTANT(centroid, c);
-        out[octant].push_back(std::move(sb));
-        outSizes[octant]++;
+        centroid.subtract(c);
+
+        if (centroid.dot(dir) <= 0) {
+            out[0].push_back(std::move(sb));
+        } else {
+            out[1].push_back(std::move(sb));
+        }
+    }
+
+    // remove empty
+    if (out[0].size() == 0) {
+        out[0] = std::move(out[1]);
+        out.pop_back();
+        return false;
+    } else if (out[1].size() == 0) {
+        out.pop_back();
+        return false;
     }
 
     return true;
+
 }
 
 // generic implementation
 template<typename BV>
 bool AABB::intersects(const BV& bv) const {
 
-   // get sphere:
-   Point3d c;
-   double r = bv.getBoundingSphere(c);
-   return intersectsSphere(c, r);
+    // get sphere:
+    Point3d c;
+    double r = bv.getBoundingSphere(c);
+    return intersectsSphere(c, r);
 
-}
-
-template<>
-bool AABB::intersects(const BoundingSphere& bv) const {
-    return intersectsSphere(bv.c, bv.r);
-}
-
-// AABB specialization
-template<>
-bool AABB::intersects(const AABB& bv) const {
-
-    // both axis-aligned, check if off to any side
-    if (bv.c.x - bv.halfWidths.x > c.x + halfWidths.x) {
-        return false;
-    } else if (bv.c.x + bv.halfWidths.x < c.x - halfWidths.x) {
-        return false;
-    } else if (bv.c.y - bv.halfWidths.y > c.y + halfWidths.y) {
-        return false;
-    } else if (bv.c.y + bv.halfWidths.y < c.y - halfWidths.y) {
-        return false;
-    } else if (bv.c.z - bv.halfWidths.z > c.z + halfWidths.z) {
-        return false;
-    } else if (bv.c.z + bv.halfWidths.z < c.z - halfWidths.z) {
-        return false;
-    }
-
-    return true;
-}
-
-// OBB specialization
-template<>
-bool AABB::intersects(const OBB& bv) const {
-   return bv.intersects(*this);
 }
 
 template<typename BoundablePtr>
@@ -423,6 +451,11 @@ void AABB::bound(const std::vector<BoundablePtr>& b) {
 template<typename BoundablePtr>
 bool AABB::split(const std::vector<BoundablePtr>& b,
         std::vector<std::vector<BoundablePtr>>& out) const {
+
+    if (b.size() < 2) {
+        out = std::vector<std::vector<BoundablePtr> >(1, b);
+        return false;
+    }
 
     // split box
     const Vector3d* axes[] = { &Vector3d::X_AXIS, &Vector3d::Y_AXIS,
@@ -489,6 +522,11 @@ bool AABB::split(const std::vector<BoundablePtr>& b,
 template<typename BoundablePtr>
 bool AABB::split(std::vector<BoundablePtr>&& b,
         std::vector<std::vector<BoundablePtr>>& out) const {
+
+    if (b.size() < 2) {
+        out = std::vector<std::vector<BoundablePtr> >(1, std::move(b));
+        return false;
+    }
 
     // split box
     const Vector3d* axes[] = { &Vector3d::X_AXIS, &Vector3d::Y_AXIS,
@@ -557,34 +595,12 @@ bool AABB::split(std::vector<BoundablePtr>&& b,
     return false;
 }
 
-template<>
-bool OBB::intersects(const BoundingSphere& bv) const {
-    return intersectsSphere(bv.c, bv.r);
-}
-
-template<>
-bool OBB::intersects(const AABB& bv) const {
-    Vector3d t21 = c;
-    t21.subtract(bv.c);
-    return boxesIntersect(bv.halfWidths, halfWidths, R, t21);
-}
-
-template<>
-bool OBB::intersects(const OBB& bv) const {
-    Vector3d pd;
-    pd.subtract(bv.c, c);
-    bool isect = boxesIntersect(halfWidths, bv.halfWidths, R, bv.R, pd,
-            Vector3d::ZERO);
-
-    return isect;
-}
-
 template<typename BV>
 bool OBB::intersects(const BV& bv) const {
 
-   Point3d c;
-   double r = bv.getBoundingSphere(c);
-   return intersectsSphere(c, r);
+    Point3d c;
+    double r = bv.getBoundingSphere(c);
+    return intersectsSphere(c, r);
 }
 
 template<typename BoundablePtr>
@@ -637,6 +653,11 @@ template<typename BoundablePtr>
 bool OBB::split(const std::vector<BoundablePtr>& b,
         std::vector<std::vector<BoundablePtr>>& out) const {
 
+    if (b.size() < 2) {
+        out = std::vector<std::vector<BoundablePtr> >(1, b);
+        return false;
+    }
+
     // division plane given by normal.dot(x) + d = 0
     Vector3d normal;
     Point3d centroid;
@@ -678,6 +699,11 @@ template<typename BoundablePtr>
 bool OBB::split(std::vector<BoundablePtr>&& b,
         std::vector<std::vector<BoundablePtr>>& out) const {
 
+    if (b.size() < 2) {
+        out = std::vector<std::vector<BoundablePtr> >(1, std::move(b));
+        return false;
+    }
+
     // division plane given by normal.dot(x) + d = 0
     Vector3d normal;
     Point3d centroid;
@@ -711,25 +737,19 @@ bool OBB::split(std::vector<BoundablePtr>&& b,
     }
 
     out = std::vector<std::vector<BoundablePtr> >(1, std::move(b));
-
     return false;
 }
 
 // BV Node
 template<typename BoundablePtr, typename BV>
-BVNode<BoundablePtr, BV>::BVNode() :
-        bv(new BV()), elems(), children(), parent() {
-}
-
-template<typename BoundablePtr, typename BV>
 BVNode<BoundablePtr, BV>::BVNode(double margin) :
-        bv(new BV(margin)), elems(), children(), parent() {
+parent(), idx(-1), bv(new BV(margin)), elems(), children() {
 }
 
 template<typename BoundablePtr, typename BV>
 BVNode<BoundablePtr, BV>::BVNode(const std::vector<BoundablePtr>& elems,
         double margin) :
-        parent(), bv(new BV()), elems(elems), children() {
+        parent(), idx(-1), bv(new BV()), elems(elems), children() {
     bv->setMargin(margin);
     bv->bound(this->elems);
 }
@@ -737,9 +757,19 @@ BVNode<BoundablePtr, BV>::BVNode(const std::vector<BoundablePtr>& elems,
 template<typename BoundablePtr, typename BV>
 BVNode<BoundablePtr, BV>::BVNode(std::vector<BoundablePtr>&& elems,
         double margin) :
-        parent(), bv(new BV()), elems(std::move(elems)), children() {
+        parent(), idx(-1), bv(new BV()), elems(std::move(elems)), children() {
     bv->setMargin(margin);
     bv->bound(this->elems);
+}
+
+template<typename BoundablePtr, typename BV>
+void BVNode<BoundablePtr, BV>::setIndex(size_t idx) {
+    this->idx = idx;
+}
+
+template<typename BoundablePtr, typename BV>
+size_t BVNode<BoundablePtr, BV>::getIndex() {
+    return idx;
 }
 
 template<typename BoundablePtr, typename BV>
@@ -944,62 +974,131 @@ void BVNode<BoundablePtr, BV>::updateBoundsUp(const BoundablePtr& b) {
 
 // Tree
 template<typename BoundablePtr, typename BV>
-BVTree<BoundablePtr, BV>::BVTree(double margin) {
-    root = std::make_shared <BVNode<BoundablePtr, BV> >(margin);
-}
+BVTree<BoundablePtr, BV>::BVTree(double margin) :
+margin(margin), nodes(), leavesIdx(0), nleaves(0)  {}
 
 template<typename BoundablePtr, typename BV>
 BVTree<BoundablePtr, BV>::BVTree(const std::vector<BoundablePtr>& elems,
         double margin) :
-        root(nullptr) {
+        margin(margin), nodes(), leavesIdx(0), nleaves(0) {
     build(elems, margin);
 }
 
 template<typename BoundablePtr, typename BV>
 BVTree<BoundablePtr, BV>::BVTree(std::vector<BoundablePtr>&& elems,
         double margin) :
-        root(nullptr) {
+        margin(margin), nodes(), leavesIdx(0), nleaves(0) {
     build(std::move(elems), margin);
 }
 
 template<typename BoundablePtr, typename BV>
 BVNode<BoundablePtr, BV>& BVTree<BoundablePtr, BV>::getRoot() const {
-    return *root;
+    return *(nodes.front());
 }
 
 template<typename BoundablePtr, typename BV>
 double BVTree<BoundablePtr, BV>::getRadius() const {
-    return root->getBoundingSphere().getRadius();
+    return nodes.front()->getBoundingSphere().getRadius();
 }
 
 template<typename BoundablePtr, typename BV>
 void BVTree<BoundablePtr, BV>::setMargin(double margin) {
-    root->setMargin(margin);
+    this->margin = margin;
+    nodes->back->setMargin(margin);
 }
 
 template<typename BoundablePtr, typename BV>
 double BVTree<BoundablePtr, BV>::getMargin() const {
-    return root->getMargin();
+    return margin;
+}
+
+template<typename BoundablePtr, typename BV>
+std::shared_ptr<BVNode<BoundablePtr,BV>> BVTree<BoundablePtr, BV>::recursive_build(
+        size_t& nextNodeIdx, size_t& nextLeafIdx, std::vector<BoundablePtr>&& elems) {
+
+    // bound all elements
+    if (elems.size() < 2) {
+        std::shared_ptr<BVNodeType> node = std::make_shared<BVNodeType>(std::move(elems), margin);
+        node->setIndex(nextLeafIdx);
+        nodes[nextLeafIdx++] = node;
+        return node;
+    }
+
+    std::shared_ptr<BVNodeType> parent = std::make_shared<BVNodeType>(margin);
+    parent->setIndex(nextNodeIdx);
+    nodes[nextNodeIdx++] = parent;
+
+    // try to split
+    std::vector<std::vector<BoundablePtr>> out;
+    parent->bv->split(std::move(elems), out);
+
+    if (out.size() == 1) {
+        // split off one leaf node and one non-leaf node?
+        out.push_back( std::vector<BoundablePtr>(1, nullptr) );
+        out[1][0] = std::move(out[0].back());
+        out[0].pop_back();
+
+    } else if (out.size() > 2) {
+        // hopefully doesn't happen often
+        while (out.size() > 2) {
+            out[0].reserve(out[1].size()+out.back().size());
+            // append out.back() to out[0]
+            std::move(out.back().begin(), out.back().end(), out[0].end());
+            out.pop_back();
+        }
+    }
+
+    std::vector<std::shared_ptr<BVNodeType>> children = std::vector<std::shared_ptr<BVNodeType>>(2);
+    children[0] = recursive_build(nextNodeIdx, nextLeafIdx, std::move(out[0]));
+    children[1] = recursive_build(nextNodeIdx, nextLeafIdx, std::move(out[1]));
+    if (children[0]->getIndex() > children[1]->getIndex()) {
+        std::swap(children[0], children[1]);
+    }
+
+    parent->setChildren(std::move(children));
+    return parent;
+
 }
 
 template<typename BoundablePtr, typename BV>
 void BVTree<BoundablePtr, BV>::build(const std::vector<BoundablePtr>& elems,
         double margin) {
-    root = std::make_shared<BVNode<BoundablePtr, BV>>(elems, margin);
-    root->growRecursively();
+
+    size_t nNodes = 2*elems.size()-1;
+    size_t nextNodeIdx = 0;
+    leavesIdx = elems.size()-1;
+    size_t nextLeafIdx = elems.size()-1;
+
+    nodes = std::vector<std::shared_ptr<BVNodeType>>(nNodes, nullptr);
+    std::vector<BoundablePtr> elemsCopy = elems;
+
+    // root at 0
+    // XXX would be nice if elems kept their order
+    recursive_build(nextNodeIdx, nextLeafIdx, std::move(elemsCopy));
+    nleaves = nextLeafIdx;
+
 }
 
 template<typename BoundablePtr, typename BV>
 void BVTree<BoundablePtr, BV>::build(std::vector<BoundablePtr>&& elems, double margin) {
-    root = std::make_shared<BVNodeType> (std::move(elems), margin);
-    root->growRecursively();
+    size_t nNodes = 2*elems.size()-1;
+    size_t nextNodeIdx = 0;
+    leavesIdx = elems.size()-1;
+    size_t nextLeafIdx = elems.size()-1;
+
+    nodes = std::vector<std::shared_ptr<BVNodeType>>(nNodes, nullptr);
+
+    // root at 0
+    // XXX would be nice if elems kept their order
+    recursive_build(nextNodeIdx, nextLeafIdx, std::move(elems));
+    nleaves = nextLeafIdx;
 }
 
 template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectPoint(const Point3d& p,
         std::vector<std::shared_ptr<BVNodeType>>& out) const {
     size_t os = out.size();
-    intersectPointRecursively(p, out, root);
+    intersectPointRecursively(p, out, nodes.front());
     return out.size() - os;
 }
 
@@ -1007,7 +1106,7 @@ template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectPoint(const Point3d& p,
         std::vector<BVNodeType*>& out) const {
     size_t os = out.size();
-    intersectPointRecursively(p, out, root.get());
+    intersectPointRecursively(p, out, nodes.front().get());
     return out.size() - os;
 }
 
@@ -1015,7 +1114,7 @@ template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectSphere(const Point3d& c, double r,
         std::vector<std::shared_ptr<BVNodeType>>& out) const {
     size_t os = out.size();
-    intersectSphereRecursively(c, r, out, root);
+    intersectSphereRecursively(c, r, out, nodes.front());
     return out.size() - os;
 }
 
@@ -1023,7 +1122,7 @@ template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectSphere(const Point3d& c, double r,
         std::vector<BVNodeType*>& out) const {
     size_t os = out.size();
-    intersectSphereRecursively(c, r, out, root.get());
+    intersectSphereRecursively(c, r, out, nodes.front().get());
     return out.size() - os;
 }
 
@@ -1031,7 +1130,7 @@ template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectLine(const Point3d& p, const Vector3d& dir,
         std::vector<std::shared_ptr<BVNodeType>>& out) const {
     size_t os = out.size();
-    intersectLineRecursively(p, dir, out, root);
+    intersectLineRecursively(p, dir, out, nodes.front());
     return out.size() - os;
 }
 
@@ -1039,7 +1138,7 @@ template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectLine(const Point3d& p, const Vector3d& dir,
         std::vector<BVNodeType*>& out) const {
     size_t os = out.size();
-    intersectLineRecursively(p, dir, out, root.get());
+    intersectLineRecursively(p, dir, out, nodes.front().get());
     return out.size() - os;
 }
 
@@ -1048,7 +1147,7 @@ size_t BVTree<BoundablePtr, BV>::intersectRay(const Point3d& p,
         const Vector3d& dir,
         std::vector<std::shared_ptr<BVNodeType>>& out) const {
     size_t os = out.size();
-    intersectRayRecursively(p, dir, out, root);
+    intersectRayRecursively(p, dir, out, nodes.front());
     return out.size() - os;
 }
 
@@ -1057,7 +1156,7 @@ size_t BVTree<BoundablePtr, BV>::intersectRay(const Point3d& p,
         const Vector3d& dir,
         std::vector<BVNodeType*>& out) const {
     size_t os = out.size();
-    intersectRayRecursively(p, dir, out, root.get());
+    intersectRayRecursively(p, dir, out, nodes.front().get());
     return out.size() - os;
 }
 
@@ -1065,7 +1164,7 @@ template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectPlane(const Plane& plane,
         std::vector<std::shared_ptr<BVNodeType>>& out) const {
     size_t os = out.size();
-    intersectPlaneRecursively(plane, out, root);
+    intersectPlaneRecursively(plane, out, nodes.front());
     return out.size() - os;
 }
 
@@ -1073,7 +1172,7 @@ template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectPlane(const Plane& plane,
         std::vector<BVNodeType*>& out) const {
     size_t os = out.size();
-    intersectPlaneRecursively(plane, out, root.get());
+    intersectPlaneRecursively(plane, out, nodes.front().get());
     return out.size() - os;
 }
 
@@ -1082,7 +1181,7 @@ template<typename BV2>
 size_t BVTree<BoundablePtr, BV>::intersectBV(const BV2& bv,
         std::vector<std::shared_ptr<BVNodeType>>& out) const {
     size_t os = out.size();
-    intersectBVRecursively(bv, out, root);
+    intersectBVRecursively(bv, out, nodes.front());
     return out.size() - os;
 }
 
@@ -1091,7 +1190,7 @@ template<typename BV2>
 size_t BVTree<BoundablePtr, BV>::intersectBV(const BV2& bv,
         std::vector<BVNodeType*>& out) const {
     size_t os = out.size();
-    intersectBVRecursively(bv, out, root.get());
+    intersectBVRecursively(bv, out, nodes.front().get());
     return out.size() - os;
 }
 
@@ -1102,7 +1201,7 @@ size_t BVTree<BoundablePtr, BV>::intersectTree(
         std::vector<std::shared_ptr<BVNodeType>>& mine,
         std::vector<std::shared_ptr<BVNode<BoundablePtr2,BV2>>>& hers) const {
     size_t os = mine.size();
-    intersectTreeRecursively(root, tree.root, mine, hers);
+    intersectTreeRecursively(nodes.front(), tree.nodes.front(), mine, hers);
     return mine.size() - os;
 }
 
@@ -1113,15 +1212,34 @@ size_t BVTree<BoundablePtr, BV>::intersectTree(
         std::vector<BVNodeType*>& mine,
         std::vector<BVNode<BoundablePtr2,BV2>*>& hers) const {
     size_t os = mine.size();
-    intersectTreeRecursively(root.get(), tree.root.get(), mine, hers);
+    intersectTreeRecursively(nodes.front().get(), tree.nodes.front().get(), mine, hers);
     return mine.size() - os;
 }
+
+//template<typename BoundablePtr, typename BV>
+//size_t BVTree<BoundablePtr, BV>::getLeaves(
+//        std::vector<std::shared_ptr<BVNodeType>>& leaves) {
+//    size_t os = leaves.size();
+//    getLeavesRecursively(leaves, nodes.front());
+//    return leaves.size() - os;
+//}
+//
+//template<typename BoundablePtr, typename BV>
+//size_t BVTree<BoundablePtr, BV>::getLeaves(
+//        std::vector<BVNodeType*>& leaves) {
+//    size_t os = leaves.size();
+//    getLeavesRecursively(leaves, nodes.front().get());
+//    return leaves.size() - os;
+//}
 
 template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::getLeaves(
         std::vector<std::shared_ptr<BVNodeType>>& leaves) {
+
     size_t os = leaves.size();
-    getLeavesRecursively(leaves, root);
+    for (int i=nleaves-1; i<nodes.size(); i++) {
+        leaves.push_back(nodes[i]);
+    }
     return leaves.size() - os;
 }
 
@@ -1129,13 +1247,15 @@ template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::getLeaves(
         std::vector<BVNodeType*>& leaves) {
     size_t os = leaves.size();
-    getLeavesRecursively(leaves, root.get());
+    for (int i=nleaves-1; i<nodes.size(); i++) {
+        leaves.push_back(nodes[i].get());
+    }
     return leaves.size() - os;
 }
 
 template<typename BoundablePtr, typename BV>
 void BVTree<BoundablePtr, BV>::update() {
-    root->updateBounds();
+    nodes.front()->updateBounds();
 }
 
 template<typename BoundablePtr, typename BV>
@@ -1483,7 +1603,7 @@ double nearest_boundable_recursive(const Point3d& pnt,
         // sort indices by distance
         std::sort(nidxs.begin(), std::next(nidxs.begin(), idx),
                 [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];}
-            );
+        );
 
         // recurse through children in order of shortest distance
         for (int i=0; i<idx; i++) {
@@ -1491,7 +1611,7 @@ double nearest_boundable_recursive(const Point3d& pnt,
             const auto& child = node.children[childIdx];
             if (ndists[childIdx] < nearestDist) {
                 nearestDist = nearest_boundable_recursive(pnt, *child,
-                                nearest, nearestPoint, nearestDist);
+                        nearest, nearestPoint, nearestDist);
             }
         }
 
@@ -1537,7 +1657,7 @@ double nearest_boundable_recursive(const Point3d& pnt, const Vector3d& dir,
         // sort indices by distance
         std::sort(nidxs.begin(), std::next(nidxs.begin(), idx),
                 [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];}
-            );
+        );
 
         // recurse through children in order of shortest distance
         for (int i=0; i<idx; i++) {
@@ -1545,7 +1665,7 @@ double nearest_boundable_recursive(const Point3d& pnt, const Vector3d& dir,
             const auto& child = node.children[childIdx];
             if (ndists[childIdx] < nearestDist) {
                 nearestDist = nearest_boundable_recursive(pnt, dir, *child,
-                                nearest, nearestPoint, nearestDist);
+                        nearest, nearestPoint, nearestDist);
             }
         }
 

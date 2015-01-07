@@ -831,7 +831,7 @@ void __down_block(RandomAccessIterator first, SizeType length,
 template<typename RandomAccessIterator, typename SizeType, typename Compare>
 void __thread_worker(int threadIdx, int nthreads,
         std::atomic<size_t>& blocksRemaining, SizeType blockSize,
-        std::vector<std::atomic<SizeType>>& threadBacks,
+        mas::concurrency::rolling_barrier& barrier,
         RandomAccessIterator first, SizeType len, Compare& compare) {
 
     bool complete = false;
@@ -841,7 +841,7 @@ void __thread_worker(int threadIdx, int nthreads,
         // safe check for negative value accounting for overflow
         if (processBlock + nthreads < nthreads) {
             complete = true;
-            threadBacks[threadIdx].store(-1);
+            barrier.set(threadIdx, -1);
             break;
         }
 
@@ -850,37 +850,20 @@ void __thread_worker(int threadIdx, int nthreads,
         SizeType firstChild = 2 * blockFront + 1;
 
         // check that we can go
-        threadBacks[threadIdx].store(blockFront + blockSize - 1);
-
-        bool safe = true;
-        for (int i = 0; i < nthreads; i++) {
-            // check backs of all *other* threads
-            if (i != threadIdx && threadBacks[i].load() > firstChild) {
-                safe = false;
-                break;
-            }
-        }
-
-        while (!safe) {
+        barrier.set(threadIdx, len-blockFront-blockSize);
+        SizeType waitFor = len - firstChild - 1;
+        while (!barrier.poll(threadIdx, waitFor)) {
             std::this_thread::yield();
-            safe = true;
-            for (int i = 0; i < nthreads; i++) {
-                // check backs of all *other* threads
-                if (i != threadIdx && threadBacks[i].load() > firstChild) {
-                    safe = false;
-                    break;
-                }
-            }
         }
         __down_block(first, len, blockFront, blockSize, compare);
-        threadBacks[threadIdx].store(blockFront - 1);
+        barrier.set(threadIdx, -1);
     }
 }
 
 template<typename RandomAccessIterator, typename SizeType>
 void __thread_worker(int threadIdx, int nthreads,
         std::atomic<size_t>& blocksRemaining, SizeType blockSize,
-        std::vector<std::atomic<SizeType>>& threadBacks,
+        mas::concurrency::rolling_barrier& barrier,
         RandomAccessIterator first, SizeType len) {
 
     bool complete = false;
@@ -890,7 +873,7 @@ void __thread_worker(int threadIdx, int nthreads,
         // safe check for negative value accounting for overflow
         if (processBlock + nthreads < nthreads) {
             complete = true;
-            threadBacks[threadIdx].store(-1);
+            barrier.set(threadIdx, -1);
             break;
         }
 
@@ -899,30 +882,13 @@ void __thread_worker(int threadIdx, int nthreads,
         SizeType firstChild = 2 * blockFront + 1;
 
         // check that we can go
-        threadBacks[threadIdx].store(blockFront + blockSize - 1);
-
-        bool safe = true;
-        for (int i = 0; i < nthreads; i++) {
-            // check backs of all *other* threads
-            if (i != threadIdx && threadBacks[i].load() > firstChild) {
-                safe = false;
-                break;
-            }
-        }
-
-        while (!safe) {
+        barrier.set(threadIdx, len-blockFront-blockSize);
+        SizeType waitFor = len - firstChild - 1;
+        while (!barrier.poll(threadIdx, waitFor)) {
             std::this_thread::yield();
-            safe = true;
-            for (int i = 0; i < nthreads; i++) {
-                // check backs of all *other* threads
-                if (i != threadIdx && threadBacks[i].load() > firstChild) {
-                    safe = false;
-                    break;
-                }
-            }
         }
         __down_block(first, len, blockFront, blockSize);
-        threadBacks[threadIdx].store(blockFront - 1);
+        barrier.set(threadIdx, -1);
     }
 }
 
@@ -949,10 +915,9 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
     }
 
     size_t nthreads = std::min(nblocks, (size_t)maxThreads);
+    mas::concurrency::rolling_barrier barrier(nthreads);
     std::vector<std::thread> threads;
     threads.reserve(nthreads - 1);
-
-    std::vector < std::atomic < SizeType >> threadBacks(nthreads);
 
     std::atomic<size_t> blocksRemaining;
     blocksRemaining.store(nblocks);
@@ -966,7 +931,6 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
         // front/back
         SizeType blockFront = processBlock * blockSize;
         SizeType blockLength = processEnd - blockFront;
-        threadBacks[threadIdx].store(processEnd - 1);
 
         // initialize other threads
         for (int i = 0; i < nthreads - 1; i++) {
@@ -975,7 +939,7 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
                             __thread_worker<RandomAccessIterator, SizeType,
                                     Compare>, i, nthreads,
                             std::ref(blocksRemaining), blockSize,
-                            std::ref(threadBacks), first, len,
+                            std::ref(barrier), first, len,
                             std::ref(compare)));
         }
 
@@ -983,11 +947,11 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
 
         // process current block
         __down_block(first, len, blockFront, blockLength, compare);
-        threadBacks[threadIdx].store(blockFront - 1);
+        barrier.set(threadIdx, -1);
 
         // continue processing other blocks
         __thread_worker(threadIdx, nthreads, blocksRemaining, blockSize,
-                threadBacks, first, len, compare);
+                barrier, first, len, compare);
 
         // done!!
         // std::cout << "DONE!" << std::endl;
@@ -1018,10 +982,9 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
     }
 
     size_t nthreads = std::min(nblocks, (size_t)maxThreads);
+    mas::concurrency::rolling_barrier barrier(nthreads);
     std::vector<std::thread> threads;
     threads.reserve(nthreads - 1);
-
-    std::vector < std::atomic < SizeType >> threadBacks(nthreads);
 
     std::atomic<size_t> blocksRemaining;
     blocksRemaining.store(nblocks);
@@ -1035,26 +998,25 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
         // front/back
         SizeType blockFront = processBlock * blockSize;
         SizeType blockLength = processEnd - blockFront;
-        threadBacks[threadIdx].store(processEnd - 1);
 
         // initialize other threads
         for (int i = 0; i < nthreads - 1; i++) {
             threads.push_back(
-                    std::thread(__thread_worker<RandomAccessIterator, SizeType>,
-                            i, nthreads, std::ref(blocksRemaining), blockSize,
-                            std::ref(threadBacks), first, len));
+                    std::thread(
+                            __thread_worker<RandomAccessIterator, SizeType>, i, nthreads,
+                            std::ref(blocksRemaining), blockSize,
+                            std::ref(barrier), first, len));
         }
 
-        mas::concurrency::thread_group<std::vector<std::thread>::iterator> threadGroup(
-                threads); // for closing off threads
+        mas::concurrency::thread_group<std::vector<std::thread>> threadGroup(threads); // for closing off threads
 
         // process current block
         __down_block(first, len, blockFront, blockLength);
-        threadBacks[threadIdx].store(blockFront - 1);
+        barrier.set(threadIdx, -1);
 
         // continue processing other blocks
         __thread_worker(threadIdx, nthreads, blocksRemaining, blockSize,
-                threadBacks, first, len);
+                barrier, first, len);
 
         // done!!
         // std::cout << "DONE!" << std::endl;
@@ -1078,7 +1040,7 @@ void __down_block(RandomAccessIterator first, SizeType length,
 template<typename RandomAccessIterator, typename SizeType, typename Compare, typename MoveCallback>
 void __thread_worker(int threadIdx, int nthreads,
         std::atomic<size_t>& blocksRemaining, SizeType blockSize,
-        std::vector<std::atomic<SizeType>>& threadBacks,
+        mas::concurrency::rolling_barrier& barrier,
         RandomAccessIterator first, SizeType len, Compare& compare, MoveCallback& moved) {
 
     bool complete = false;
@@ -1088,7 +1050,7 @@ void __thread_worker(int threadIdx, int nthreads,
         // safe check for negative value accounting for overflow
         if (processBlock + nthreads < nthreads) {
             complete = true;
-            threadBacks[threadIdx].store(-1);
+            barrier.set(threadIdx, -1);
             break;
         }
 
@@ -1097,30 +1059,13 @@ void __thread_worker(int threadIdx, int nthreads,
         SizeType firstChild = 2 * blockFront + 1;
 
         // check that we can go
-        threadBacks[threadIdx].store(blockFront + blockSize - 1);
-
-        bool safe = true;
-        for (int i = 0; i < nthreads; i++) {
-            // check backs of all *other* threads
-            if (i != threadIdx && threadBacks[i].load() > firstChild) {
-                safe = false;
-                break;
-            }
-        }
-
-        while (!safe) {
+        barrier.set(threadIdx, len-blockFront-blockSize);
+        SizeType waitFor = len - firstChild - 1;
+        while (!barrier.poll(threadIdx, waitFor)) {
             std::this_thread::yield();
-            safe = true;
-            for (int i = 0; i < nthreads; i++) {
-                // check backs of all *other* threads
-                if (i != threadIdx && threadBacks[i].load() > firstChild) {
-                    safe = false;
-                    break;
-                }
-            }
         }
         __down_block(first, len, blockFront, blockSize, compare, moved);
-        threadBacks[threadIdx].store(blockFront - 1);
+        barrier.set(threadIdx, -1);
     }
 }
 
@@ -1147,10 +1092,9 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
     }
 
     size_t nthreads = std::min(nblocks, (size_t)maxThreads);
+    mas::concurrency::rolling_barrier barrier(nthreads);
     std::vector<std::thread> threads;
     threads.reserve(nthreads - 1);
-
-    std::vector < std::atomic < SizeType >> threadBacks(nthreads);
 
     std::atomic<size_t> blocksRemaining;
     blocksRemaining.store(nblocks);
@@ -1164,7 +1108,6 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
         // front/back
         SizeType blockFront = processBlock * blockSize;
         SizeType blockLength = processEnd - blockFront;
-        threadBacks[threadIdx].store(processEnd - 1);
 
         // initialize other threads
         for (int i = 0; i < nthreads - 1; i++) {
@@ -1173,20 +1116,19 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
                             __thread_worker<RandomAccessIterator, SizeType,
                                     Compare>, i, nthreads,
                             std::ref(blocksRemaining), blockSize,
-                            std::ref(threadBacks), first, len,
-                            std::ref(compare)), std::ref(moved));
+                            std::ref(barrier), first, len,
+                            std::ref(compare), std::ref(moved)));
         }
 
-        mas::concurrency::thread_group<std::vector<std::thread>::iterator> threadGroup(
-                threads); // for closing off threads
+        mas::concurrency::thread_group<std::vector<std::thread>> threadGroup(threads); // for closing off threads
 
         // process current block
         __down_block(first, len, blockFront, blockLength, compare, moved);
-        threadBacks[threadIdx].store(blockFront - 1);
+        barrier.set(threadIdx, -1);
 
         // continue processing other blocks
         __thread_worker(threadIdx, nthreads, blocksRemaining, blockSize,
-                threadBacks, first, len, compare, moved);
+                barrier, first, len, compare, moved);
 
         // done!!
         // std::cout << "DONE!" << std::endl;
