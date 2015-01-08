@@ -8,10 +8,11 @@
 #ifndef MAS_CONCURRENCY_THREAD_H_
 #define MAS_CONCURRENCY_THREAD_H_
 
+#include "mas/concurrency/queue.h"
 #include <thread>
 #include <mutex>
-#include <condition_variable>
 #include <atomic>
+#include <future>
 #include <vector>
 
 namespace mas {
@@ -37,9 +38,6 @@ public:
  */
 class rolling_barrier {
 private:
-    std::mutex mutex;
-    std::condition_variable cv;
-
     std::vector<size_t> vals;
     std::atomic<bool> terminate;
 
@@ -53,6 +51,67 @@ public:
     bool wait(size_t idx, size_t val);
 
     ~rolling_barrier(); // force all to stop waiting?
+};
+
+class void_function_wrapper {
+private:
+    struct impl_type {
+        virtual void call() = 0;
+    };
+    template<typename F>
+    struct impl_F : impl_type {
+        F f;
+        impl_F(F&& f_) : f(std::move(f_)){};
+        void call();
+    };
+
+    std::unique_ptr<impl_type> impl;
+
+public:
+    template<typename F>
+    void_function_wrapper(F&& f);
+    void_function_wrapper(void_function_wrapper&& f);
+    void_function_wrapper() = default;
+    void_function_wrapper(const void_function_wrapper&)=delete;
+    void_function_wrapper(void_function_wrapper&)=delete;
+
+    void_function_wrapper& operator=(void_function_wrapper&& f);
+    void_function_wrapper& operator=(const void_function_wrapper&)=delete;
+
+    void operator() ();
+};
+
+/**
+ * A pool of threads
+ */
+class thread_pool {
+private:
+    std::atomic<bool> done;
+    threadsafe_queue<void_function_wrapper> workQueue;
+    std::vector<std::thread> threads;
+    thread_group<decltype(threads)> threadJoiner;
+
+    void doWork();
+
+public:
+    thread_pool(const thread_pool&) = delete;
+    thread_pool(thread_pool&&) = delete;
+    thread_pool& operator = (const thread_pool&) = delete;
+    thread_pool& operator = (thread_pool&&) = delete;
+
+    thread_pool(size_t nthreads = 0);
+    ~thread_pool();
+    void terminate();
+
+    template<typename FunctionType>
+    std::future<typename std::result_of<FunctionType()>::type> submit_back(FunctionType f);
+
+    template<typename FunctionType>
+    std::future<typename std::result_of<FunctionType()>::type> submit_front(FunctionType f);
+
+    void run_pending_task();
+    //    template<typename FunctionType, typename... Args>
+    //    std::future<typename std::result_of<FunctionType()>::type> submit(FunctionType&& f, Args&&... args);
 };
 
 } // concurrency

@@ -1,5 +1,5 @@
-CC=g++
-LD=g++
+CC=g++-4.9
+LD=g++-4.9
 
 # DEBUG = 0
 # PROFILE = 0
