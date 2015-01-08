@@ -44,6 +44,27 @@ bool doNearestTest(const char filename[], double pnt[]) {
 
 }
 
+template<typename BV>
+mas::bvtree::BVNode<mas::mesh::SharedBoundablePolygon,BV>* get_bv_node(mas::mesh::PolygonMesh& mesh, double margin = 0) {
+
+    using mas::mesh::SharedPolygon;
+    using mas::mesh::BoundablePolygon;
+    using mas::mesh::SharedBoundablePolygon;
+    using namespace mas::bvtree;
+
+    const std::vector<SharedPolygon>& faces = mesh.faces;
+    std::vector<SharedBoundablePolygon> elems;
+    elems.reserve(faces.size());
+
+    for (const SharedPolygon& face : faces) {
+        elems.push_back(std::make_shared<BoundablePolygon>(face));
+    }
+
+    BVNode<SharedBoundablePolygon,BV>* root = new BVNode<SharedBoundablePolygon,BV>(std::move(elems), margin);
+    root->growRecursively();
+    return root;
+}
+
 bool doInsideTest(const char filename[], double pnt[], double dx[], int nx[]) {
 
    mas::mesh::io::SimpleObjReader reader;
@@ -60,7 +81,20 @@ bool doInsideTest(const char filename[], double pnt[], double dx[], int nx[]) {
    pStart.y = pnt[1];
    pStart.z = pnt[2];
 
-   auto obbt(get_obb_tree(*mesh));
+   mas::time::Timer timer;
+   timer.start();
+   auto obbt(mas::mesh::get_bv_tree<OBB>(*mesh));
+   timer.stop();
+   double ms = timer.getMilliseconds();
+
+   timer.start();
+   auto obbn(get_bv_node<OBB>(*mesh));
+   timer.stop();
+   double ms2 = timer.getMilliseconds();
+
+   printf("Build time: %g ms\n", ms);
+   printf("Grow time: %g ms\n", ms2);
+   fflush(stdout);
 
    Point3d p;
    for (int i=0; i<nx[0]; i++) {

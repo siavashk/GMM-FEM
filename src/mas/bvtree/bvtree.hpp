@@ -2,6 +2,7 @@
 #define MAS_BVTREE_HPP
 
 #include <algorithm>
+#include <future>
 #include "mas/core/math.h"
 
 // template implementation
@@ -10,7 +11,7 @@ namespace bvtree {
 
 template<typename Point3d>
 BoundablePointSet<Point3d>::BoundablePointSet(size_t idx) :
-idx(idx), pnts() {
+        idx(idx), pnts() {
 }
 
 template<typename Point3d>
@@ -142,7 +143,7 @@ double BoundablePointSet<Point3d>::distanceToPoint(const Point3d& pnt,
 
 template<typename PointPtr>
 BoundablePointPtrSet<PointPtr>::BoundablePointPtrSet(size_t idx) :
-idx(idx), pnts() {
+        idx(idx), pnts() {
 }
 
 template<typename PointPtr>
@@ -333,7 +334,8 @@ bool BoundingSphere::split(const std::vector<BoundablePtr>& b,
     U.getColumn(0, dir);
 
     // split along dominant axis
-    out = std::vector<std::vector<BoundablePtr>>(2, std::vector<BoundablePtr>());
+    out = std::vector<std::vector<BoundablePtr>>(2,
+            std::vector<BoundablePtr>());
 
     Point3d centroid;
     for (const BoundablePtr& sb : b) {
@@ -386,7 +388,8 @@ bool BoundingSphere::split(std::vector<BoundablePtr>&& b,
     U.getColumn(0, dir);
 
     // split along dominant axis
-    out = std::vector<std::vector<BoundablePtr>>(2, std::vector<BoundablePtr>());
+    out = std::vector<std::vector<BoundablePtr>>(2,
+            std::vector<BoundablePtr>());
 
     Point3d centroid;
     for (const BoundablePtr& sb : b) {
@@ -743,7 +746,7 @@ bool OBB::split(std::vector<BoundablePtr>&& b,
 // BV Node
 template<typename BoundablePtr, typename BV>
 BVNode<BoundablePtr, BV>::BVNode(double margin) :
-parent(), idx(-1), bv(new BV(margin)), elems(), children() {
+        parent(), idx(-1), bv(new BV(margin)), elems(), children() {
 }
 
 template<typename BoundablePtr, typename BV>
@@ -826,7 +829,7 @@ void BVNode<BoundablePtr, BV>::clearElements() {
 }
 
 template<typename BoundablePtr, typename BV>
-std::vector<std::shared_ptr<BVNode<BoundablePtr,BV>>>& BVNode<BoundablePtr, BV>::getChildren() {
+std::vector<std::shared_ptr<BVNode<BoundablePtr, BV>>>& BVNode<BoundablePtr, BV>::getChildren() {
     return children;
 }
 
@@ -965,7 +968,7 @@ void BVNode<BoundablePtr, BV>::updateBounds() {
 template<typename BoundablePtr, typename BV>
 void BVNode<BoundablePtr, BV>::updateBoundsUp(const BoundablePtr& b) {
     b->updateBV(*bv);
-    BVNode<BoundablePtr,BV>* parent = getParent();
+    BVNode < BoundablePtr, BV > *parent = getParent();
     if (parent == nullptr) {
         return;
     }
@@ -975,12 +978,14 @@ void BVNode<BoundablePtr, BV>::updateBoundsUp(const BoundablePtr& b) {
 // Tree
 template<typename BoundablePtr, typename BV>
 BVTree<BoundablePtr, BV>::BVTree(double margin) :
-margin(margin), nodes(), leavesIdx(0), nleaves(0)  {}
+        margin(margin), nodes(), leavesIdx(0), nleaves(0) {
+}
 
 template<typename BoundablePtr, typename BV>
 BVTree<BoundablePtr, BV>::BVTree(const std::vector<BoundablePtr>& elems,
         double margin) :
         margin(margin), nodes(), leavesIdx(0), nleaves(0) {
+    // parallel_build(elems, margin);
     build(elems, margin);
 }
 
@@ -988,6 +993,7 @@ template<typename BoundablePtr, typename BV>
 BVTree<BoundablePtr, BV>::BVTree(std::vector<BoundablePtr>&& elems,
         double margin) :
         margin(margin), nodes(), leavesIdx(0), nleaves(0) {
+    // parallel_build(std::move(elems), margin);
     build(std::move(elems), margin);
 }
 
@@ -1013,44 +1019,52 @@ double BVTree<BoundablePtr, BV>::getMargin() const {
 }
 
 template<typename BoundablePtr, typename BV>
-std::shared_ptr<BVNode<BoundablePtr,BV>> BVTree<BoundablePtr, BV>::recursive_build(
-        size_t& nextNodeIdx, size_t& nextLeafIdx, std::vector<BoundablePtr>&& elems) {
+std::shared_ptr<BVNode<BoundablePtr, BV>> BVTree<BoundablePtr, BV>::recursive_build(
+        size_t& nextNodeIdx, size_t& nextLeafIdx,
+        std::vector<BoundablePtr>&& elems) {
 
     // bound all elements
     if (elems.size() < 2) {
-        std::shared_ptr<BVNodeType> node = std::make_shared<BVNodeType>(std::move(elems), margin);
+        std::shared_ptr < BVNodeType > node = std::make_shared < BVNodeType
+                > (std::move(elems), margin);
         node->setIndex(nextLeafIdx);
         nodes[nextLeafIdx++] = node;
         return node;
     }
 
-    std::shared_ptr<BVNodeType> parent = std::make_shared<BVNodeType>(margin);
+    std::shared_ptr < BVNodeType > parent = std::make_shared < BVNodeType
+            > (margin);
     parent->setIndex(nextNodeIdx);
     parent->bv->bound(elems);  // bound all elements
 
     nodes[nextNodeIdx++] = parent;
 
     // try to split
-    std::vector<std::vector<BoundablePtr>> out;
+    std::vector < std::vector < BoundablePtr >> out;
     parent->bv->split(std::move(elems), out);
 
     if (out.size() == 1) {
         // split off one leaf node and one non-leaf node?
-        out.push_back( std::vector<BoundablePtr>(1, nullptr) );
+        out.push_back(std::vector < BoundablePtr > (1, nullptr));
         out[1][0] = std::move(out[0].back());
         out[0].pop_back();
 
     } else if (out.size() > 2) {
         // hopefully doesn't happen often
         while (out.size() > 2) {
-            out[0].reserve(out[1].size()+out.back().size());
+            out[0].reserve(out[1].size() + out.back().size());
             // append out.back() to out[0]
             std::move(out.back().begin(), out.back().end(), out[0].end());
             out.pop_back();
         }
     }
 
-    std::vector<std::shared_ptr<BVNodeType>> children = std::vector<std::shared_ptr<BVNodeType>>(2);
+    std::vector < std::shared_ptr < BVNodeType >> children = std::vector
+            < std::shared_ptr < BVNodeType >> (2);
+
+    //    auto func = std::bind(&BVTree::recursive_build, this, std::ref(nextNodeIdx), std::ref(nextLeafIdx), std::move(out[0]));
+    //    func();
+
     children[0] = recursive_build(nextNodeIdx, nextLeafIdx, std::move(out[0]));
     children[1] = recursive_build(nextNodeIdx, nextLeafIdx, std::move(out[1]));
     if (children[0]->getIndex() > children[1]->getIndex()) {
@@ -1062,17 +1076,92 @@ std::shared_ptr<BVNode<BoundablePtr,BV>> BVTree<BoundablePtr, BV>::recursive_bui
 
 }
 
+//template<typename BoundablePtr, typename BV>
+//std::shared_ptr<BVNode<BoundablePtr, BV>> BVTree<BoundablePtr, BV>::parallel_recursive_build(
+//        size_t& nextNodeIdx, size_t& nextLeafIdx,
+//        std::vector<BoundablePtr>&& elems,
+//        mas::concurrency::thread_pool &pool) {
+//
+//    // bound all elements
+//    size_t s = elems.size();
+//    if (s < 2) {
+//        std::shared_ptr < BVNodeType > node = std::make_shared < BVNodeType
+//                > (std::move(elems), margin);
+//        node->setIndex(nextLeafIdx);
+//        nodes[nextLeafIdx++] = node;
+//        return node;
+//    } else {
+//        // nothing
+//    }
+//
+//    std::shared_ptr < BVNodeType > parent = std::make_shared < BVNodeType
+//            > (margin);
+//    parent->setIndex(nextNodeIdx);
+//    parent->bv->bound(elems);  // bound all elements
+//
+//    nodes[nextNodeIdx++] = parent;
+//
+//    // try to split
+//    std::vector < std::vector < BoundablePtr >> out;
+//    parent->bv->split(std::move(elems), out);
+//
+//    if (out.size() == 1) {
+//        // split off one leaf node and one non-leaf node?
+//        out.push_back(std::vector < BoundablePtr > (1, nullptr));
+//        out[1][0] = std::move(out[0].back());
+//        out[0].pop_back();
+//
+//    } else if (out.size() > 2) {
+//        // hopefully doesn't happen often
+//        while (out.size() > 2) {
+//            out[0].reserve(out[1].size() + out.back().size());
+//            // append out.back() to out[0]
+//            std::move(out.back().begin(), out.back().end(), out[0].end());
+//            out.pop_back();
+//        }
+//    }
+//
+//    std::vector < std::shared_ptr < BVNodeType >> children = std::vector
+//            < std::shared_ptr < BVNodeType >> (2);
+//
+//    auto func = mas::concurrency::bind_simple(
+//            &BVTree<BoundablePtr, BV>::parallel_recursive_build, this,
+//            std::ref(nextNodeIdx), std::ref(nextLeafIdx), std::move(out[0]),
+//            std::ref(pool));
+//    //            [&] () {
+//    //        return parallel_recursive_build(nextNodeIdx, nextLeafIdx, std::move(out[0]), pool);
+//    //    };
+//
+//    std::future < std::shared_ptr<BVNode<BoundablePtr, BV>>>fut =
+//            pool.submit_front(func);
+//    children[1] = parallel_recursive_build(nextNodeIdx, nextLeafIdx,
+//            std::move(out[1]), pool);
+//
+//    while (!(fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready)) {
+//        pool.run_pending_task();
+//    }
+//    children[0] = fut.get();
+//
+//    if (children[0]->getIndex() > children[1]->getIndex()) {
+//        std::swap(children[0], children[1]);
+//    }
+//
+//    parent->setChildren(std::move(children));
+//    return parent;
+//
+//}
+
 template<typename BoundablePtr, typename BV>
 void BVTree<BoundablePtr, BV>::build(const std::vector<BoundablePtr>& elems,
         double margin) {
 
-    size_t nNodes = 2*elems.size()-1;
+    size_t nNodes = 2 * elems.size() - 1;
     size_t nextNodeIdx = 0;
-    leavesIdx = elems.size()-1;
-    size_t nextLeafIdx = elems.size()-1;
+    leavesIdx = elems.size() - 1;
+    size_t nextLeafIdx = elems.size() - 1;
 
-    nodes = std::vector<std::shared_ptr<BVNodeType>>(nNodes, nullptr);
-    std::vector<BoundablePtr> elemsCopy = elems;
+    nodes = std::vector < std::shared_ptr < BVNodeType >> (nNodes, nullptr);
+    std::vector < BoundablePtr > elemsCopy = elems;
 
     // root at 0
     // XXX would be nice if elems kept their order
@@ -1082,19 +1171,82 @@ void BVTree<BoundablePtr, BV>::build(const std::vector<BoundablePtr>& elems,
 }
 
 template<typename BoundablePtr, typename BV>
-void BVTree<BoundablePtr, BV>::build(std::vector<BoundablePtr>&& elems, double margin) {
-    size_t nNodes = 2*elems.size()-1;
+void BVTree<BoundablePtr, BV>::build(std::vector<BoundablePtr>&& elems,
+        double margin) {
+
+    size_t nNodes = 2 * elems.size() - 1;
     size_t nextNodeIdx = 0;
-    leavesIdx = elems.size()-1;
+    leavesIdx = elems.size() - 1;
     size_t nextLeafIdx = leavesIdx;
 
-    nodes = std::vector<std::shared_ptr<BVNodeType>>(nNodes, nullptr);
+    nodes = std::vector < std::shared_ptr < BVNodeType >> (nNodes, nullptr);
 
     // root at 0
     // XXX would be nice if elems kept their order
     recursive_build(nextNodeIdx, nextLeafIdx, std::move(elems));
-    nleaves = nextLeafIdx-leavesIdx;
+    nleaves = nextLeafIdx - leavesIdx;
 }
+
+//template<typename BoundablePtr, typename BV>
+//void BVTree<BoundablePtr, BV>::parallel_build(
+//        const std::vector<BoundablePtr>& elems, double margin,
+//        size_t maxThreads) {
+//
+//    if (maxThreads == 0) {
+//        maxThreads = std::max(std::thread::hardware_concurrency(), (unsigned)2);
+//    }
+//
+//    if (maxThreads < 2) {
+//        build(elems, margin);
+//        return;
+//    }
+//
+//    maxThreads--;  // one less, since this thread itself does work
+//
+//    size_t nNodes = 2 * elems.size() - 1;
+//    size_t nextNodeIdx = 0;
+//    leavesIdx = elems.size() - 1;
+//    size_t nextLeafIdx = elems.size() - 1;
+//
+//    nodes = std::vector < std::shared_ptr < BVNodeType >> (nNodes, nullptr);
+//    std::vector < BoundablePtr > elemsCopy = elems;
+//
+//    // root at 0
+//    // XXX would be nice if elems kept their order
+//    mas::concurrency::thread_pool pool(maxThreads);
+//    parallel_recursive_build(nextNodeIdx, nextLeafIdx, std::move(elemsCopy), pool);
+//    nleaves = nextLeafIdx;
+//
+//}
+//
+//template<typename BoundablePtr, typename BV>
+//void BVTree<BoundablePtr, BV>::parallel_build(std::vector<BoundablePtr>&& elems,
+//        double margin, size_t maxThreads) {
+//
+//    if (maxThreads == 0) {
+//        maxThreads = std::max(std::thread::hardware_concurrency(), (unsigned)2);
+//    }
+//
+//    if (maxThreads < 2) {
+//        build(std::move(elems), margin);
+//        return;
+//    }
+//
+//    maxThreads--;  // one less, since this thread itself does work
+//
+//    size_t nNodes = 2 * elems.size() - 1;
+//    size_t nextNodeIdx = 0;
+//    leavesIdx = elems.size() - 1;
+//    size_t nextLeafIdx = leavesIdx;
+//
+//    nodes = std::vector < std::shared_ptr < BVNodeType >> (nNodes, nullptr);
+//
+//    // root at 0
+//    // XXX would be nice if elems kept their order
+//    mas::concurrency::thread_pool pool(maxThreads);
+//    parallel_recursive_build(nextNodeIdx, nextLeafIdx, std::move(elems), pool);
+//    nleaves = nextLeafIdx - leavesIdx;
+//}
 
 template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectPoint(const Point3d& p,
@@ -1129,7 +1281,8 @@ size_t BVTree<BoundablePtr, BV>::intersectSphere(const Point3d& c, double r,
 }
 
 template<typename BoundablePtr, typename BV>
-size_t BVTree<BoundablePtr, BV>::intersectLine(const Point3d& p, const Vector3d& dir,
+size_t BVTree<BoundablePtr, BV>::intersectLine(const Point3d& p,
+        const Vector3d& dir,
         std::vector<std::shared_ptr<BVNodeType>>& out) const {
     size_t os = out.size();
     intersectLineRecursively(p, dir, out, nodes.front());
@@ -1137,8 +1290,8 @@ size_t BVTree<BoundablePtr, BV>::intersectLine(const Point3d& p, const Vector3d&
 }
 
 template<typename BoundablePtr, typename BV>
-size_t BVTree<BoundablePtr, BV>::intersectLine(const Point3d& p, const Vector3d& dir,
-        std::vector<BVNodeType*>& out) const {
+size_t BVTree<BoundablePtr, BV>::intersectLine(const Point3d& p,
+        const Vector3d& dir, std::vector<BVNodeType*>& out) const {
     size_t os = out.size();
     intersectLineRecursively(p, dir, out, nodes.front().get());
     return out.size() - os;
@@ -1155,8 +1308,7 @@ size_t BVTree<BoundablePtr, BV>::intersectRay(const Point3d& p,
 
 template<typename BoundablePtr, typename BV>
 size_t BVTree<BoundablePtr, BV>::intersectRay(const Point3d& p,
-        const Vector3d& dir,
-        std::vector<BVNodeType*>& out) const {
+        const Vector3d& dir, std::vector<BVNodeType*>& out) const {
     size_t os = out.size();
     intersectRayRecursively(p, dir, out, nodes.front().get());
     return out.size() - os;
@@ -1201,7 +1353,7 @@ template<typename BoundablePtr2, typename BV2>
 size_t BVTree<BoundablePtr, BV>::intersectTree(
         const BVTree<BoundablePtr2, BV2>& tree,
         std::vector<std::shared_ptr<BVNodeType>>& mine,
-        std::vector<std::shared_ptr<BVNode<BoundablePtr2,BV2>>>& hers) const {
+        std::vector<std::shared_ptr<BVNode<BoundablePtr2, BV2>>>& hers) const {
     size_t os = mine.size();
     intersectTreeRecursively(nodes.front(), tree.nodes.front(), mine, hers);
     return mine.size() - os;
@@ -1210,11 +1362,11 @@ size_t BVTree<BoundablePtr, BV>::intersectTree(
 template<typename BoundablePtr, typename BV>
 template<typename BoundablePtr2, typename BV2>
 size_t BVTree<BoundablePtr, BV>::intersectTree(
-        const BVTree<BoundablePtr2, BV2>& tree,
-        std::vector<BVNodeType*>& mine,
-        std::vector<BVNode<BoundablePtr2,BV2>*>& hers) const {
+        const BVTree<BoundablePtr2, BV2>& tree, std::vector<BVNodeType*>& mine,
+        std::vector<BVNode<BoundablePtr2, BV2>*>& hers) const {
     size_t os = mine.size();
-    intersectTreeRecursively(nodes.front().get(), tree.nodes.front().get(), mine, hers);
+    intersectTreeRecursively(nodes.front().get(), tree.nodes.front().get(),
+            mine, hers);
     return mine.size() - os;
 }
 
@@ -1239,17 +1391,16 @@ size_t BVTree<BoundablePtr, BV>::getLeaves(
         std::vector<std::shared_ptr<BVNodeType>>& leaves) {
 
     size_t os = leaves.size();
-    for (int i=nleaves-1; i<nodes.size(); i++) {
+    for (int i = nleaves - 1; i < nodes.size(); i++) {
         leaves.push_back(nodes[i]);
     }
     return leaves.size() - os;
 }
 
 template<typename BoundablePtr, typename BV>
-size_t BVTree<BoundablePtr, BV>::getLeaves(
-        std::vector<BVNodeType*>& leaves) {
+size_t BVTree<BoundablePtr, BV>::getLeaves(std::vector<BVNodeType*>& leaves) {
     size_t os = leaves.size();
-    for (int i=nleaves-1; i<nodes.size(); i++) {
+    for (int i = nleaves - 1; i < nodes.size(); i++) {
         leaves.push_back(nodes[i].get());
     }
     return leaves.size() - os;
@@ -1261,8 +1412,8 @@ size_t BVTree<BoundablePtr, BV>::numLeaves() {
 }
 
 template<typename BoundablePtr, typename BV>
-BVNode<BoundablePtr,BV>& BVTree<BoundablePtr, BV>::getLeaf(size_t leafIdx) {
-    return *(nodes[leavesIdx+leafIdx]);
+BVNode<BoundablePtr, BV>& BVTree<BoundablePtr, BV>::getLeaf(size_t leafIdx) {
+    return *(nodes[leavesIdx + leafIdx]);
 }
 
 template<typename BoundablePtr, typename BV>
@@ -1350,7 +1501,8 @@ void BVTree<BoundablePtr, BV>::intersectLineRecursively(const Point3d& p,
 
 template<typename BoundablePtr, typename BV>
 void BVTree<BoundablePtr, BV>::intersectLineRecursively(const Point3d& p,
-        const Vector3d& dir, std::vector<BVNodeType*>& out, BVNodeType* node) const {
+        const Vector3d& dir, std::vector<BVNodeType*>& out,
+        BVNodeType* node) const {
 
     if (node->bv->intersectsLine(p, dir)) {
         if (node->isLeaf()) {
@@ -1381,7 +1533,8 @@ void BVTree<BoundablePtr, BV>::intersectRayRecursively(const Point3d& p,
 
 template<typename BoundablePtr, typename BV>
 void BVTree<BoundablePtr, BV>::intersectRayRecursively(const Point3d& p,
-        const Vector3d& dir, std::vector<BVNodeType*>& out, BVNodeType* node) const {
+        const Vector3d& dir, std::vector<BVNodeType*>& out,
+        BVNodeType* node) const {
 
     if (node->bv->intersectsRay(p, dir)) {
         if (node->isLeaf()) {
@@ -1460,10 +1613,11 @@ void BVTree<BoundablePtr, BV>::intersectBVRecursively(const BV2& bv,
 
 template<typename BoundablePtr, typename BV>
 template<typename BoundablePtr2, typename BV2>
-void BVTree<BoundablePtr, BV>::intersectTreeRecursively(const std::shared_ptr<BVNodeType>& me,
-        const std::shared_ptr<BVNode<BoundablePtr2,BV2>>& her,
+void BVTree<BoundablePtr, BV>::intersectTreeRecursively(
+        const std::shared_ptr<BVNodeType>& me,
+        const std::shared_ptr<BVNode<BoundablePtr2, BV2>>& her,
         std::vector<std::shared_ptr<BVNodeType>>& mine,
-        std::vector<std::shared_ptr<BVNode<BoundablePtr2,BV2>>>& hers) const {
+        std::vector<std::shared_ptr<BVNode<BoundablePtr2, BV2>>>& hers) const {
 
     //  if (me->bv->intersects(her->bv)) {
     //      printf("yes\n");
@@ -1505,9 +1659,8 @@ void BVTree<BoundablePtr, BV>::intersectTreeRecursively(const std::shared_ptr<BV
 template<typename BoundablePtr, typename BV>
 template<typename BoundablePtr2, typename BV2>
 void BVTree<BoundablePtr, BV>::intersectTreeRecursively(BVNodeType* me,
-        BVNode<BoundablePtr2,BV2>* her,
-        std::vector<BVNodeType*>& mine,
-        std::vector<BVNode<BoundablePtr2,BV2>*>& hers) const {
+        BVNode<BoundablePtr2, BV2>* her, std::vector<BVNodeType*>& mine,
+        std::vector<BVNode<BoundablePtr2, BV2>*>& hers) const {
 
     //  if (me->bv->intersects(her->bv)) {
     //      printf("yes\n");
@@ -1577,7 +1730,7 @@ void BVTree<BoundablePtr, BV>::getLeavesRecursively(
 // nearest boundable stuff
 template<typename BoundablePtr, typename BV>
 double nearest_boundable_recursive(const Point3d& pnt,
-        const BVNode<BoundablePtr,BV>& node,
+        const BVNode<BoundablePtr, BV>& node,
         std::reference_wrapper<const BoundablePtr>& nearest,
         Point3d& nearestPoint, double nearestDist) {
 
@@ -1593,7 +1746,6 @@ double nearest_boundable_recursive(const Point3d& pnt,
                 nearestPoint = p;
             }
         }
-
 
     } else {
 
@@ -1614,16 +1766,15 @@ double nearest_boundable_recursive(const Point3d& pnt,
 
         // sort indices by distance
         std::sort(nidxs.begin(), std::next(nidxs.begin(), idx),
-                [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];}
-        );
+                [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];});
 
         // recurse through children in order of shortest distance
-        for (int i=0; i<idx; i++) {
+        for (int i = 0; i < idx; i++) {
             int childIdx = nidxs[i];
             const auto& child = node.children[childIdx];
             if (ndists[childIdx] < nearestDist) {
-                nearestDist = nearest_boundable_recursive(pnt, *child,
-                        nearest, nearestPoint, nearestDist);
+                nearestDist = nearest_boundable_recursive(pnt, *child, nearest,
+                        nearestPoint, nearestDist);
             }
         }
 
@@ -1634,7 +1785,7 @@ double nearest_boundable_recursive(const Point3d& pnt,
 
 template<typename BoundablePtr, typename BV>
 double nearest_boundable_recursive(const Point3d& pnt, const Vector3d& dir,
-        const BVNode<BoundablePtr,BV>& node,
+        const BVNode<BoundablePtr, BV>& node,
         std::reference_wrapper<BoundablePtr>& nearest, Point3d& nearestPoint,
         double nearestDist) {
 
@@ -1668,11 +1819,10 @@ double nearest_boundable_recursive(const Point3d& pnt, const Vector3d& dir,
 
         // sort indices by distance
         std::sort(nidxs.begin(), std::next(nidxs.begin(), idx),
-                [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];}
-        );
+                [&ndists](size_t i1, size_t i2) {return ndists[i1] < ndists[i2];});
 
         // recurse through children in order of shortest distance
-        for (int i=0; i<idx; i++) {
+        for (int i = 0; i < idx; i++) {
             int childIdx = nidxs[i];
             const auto& child = node.children[childIdx];
             if (ndists[childIdx] < nearestDist) {
@@ -1687,7 +1837,7 @@ double nearest_boundable_recursive(const Point3d& pnt, const Vector3d& dir,
 }
 
 template<typename BoundablePtr, typename BV>
-BoundablePtr nearest_boundable(const BVTree<BoundablePtr,BV>& bvh,
+BoundablePtr nearest_boundable(const BVTree<BoundablePtr, BV>& bvh,
         const Point3d& pnt, Point3d& nearestPoint) {
 
     const BoundablePtr nearest = nullptr;
@@ -1696,13 +1846,14 @@ BoundablePtr nearest_boundable(const BVTree<BoundablePtr,BV>& bvh,
     double dist = math::DOUBLE_INFINITY;
 
     std::reference_wrapper<const BoundablePtr> nearest_ref = std::ref(nearest);
-    dist = nearest_boundable_recursive(pnt, bvh.getRoot(), nearest_ref, nearestPoint, dist);
+    dist = nearest_boundable_recursive(pnt, bvh.getRoot(), nearest_ref,
+            nearestPoint, dist);
 
     return nearest_ref.get();
 }
 
 template<typename BoundablePtr, typename BV>
-BoundablePtr nearest_boundable(const BVTree<BoundablePtr,BV>& bvh,
+BoundablePtr nearest_boundable(const BVTree<BoundablePtr, BV>& bvh,
         const Point3d& pnt, const Vector3d& dir, Point3d& nearestPoint) {
 
     const BoundablePtr nearest = nullptr;
@@ -1711,8 +1862,8 @@ BoundablePtr nearest_boundable(const BVTree<BoundablePtr,BV>& bvh,
     double dist = math::DOUBLE_INFINITY;
 
     std::reference_wrapper<const BoundablePtr> nearest_ref = std::ref(nearest);
-    dist = nearest_boundable_recursive(pnt, dir, bvh.getRoot(), nearest_ref, nearestPoint,
-            dist);
+    dist = nearest_boundable_recursive(pnt, dir, bvh.getRoot(), nearest_ref,
+            nearestPoint, dist);
 
     return nearest_ref.get();
 

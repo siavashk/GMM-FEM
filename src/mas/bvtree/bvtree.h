@@ -2,6 +2,7 @@
 #define MAS_BVTREE_H
 
 #include "mas/core/base.h"
+#include "mas/concurrency/thread.h"
 #include <vector>
 #include <memory>
 
@@ -470,8 +471,8 @@ public:
    void build(const std::vector<BoundablePtr>& elems, double margin = 0);
    void build(std::vector<BoundablePtr>&& elems, double margin = 0);
 
-   void parallel_build(const std::vector<BoundablePtr>& elems, double margin = 0);
-   void parallel_build(std::vector<BoundablePtr>&& elems, double margin = 0);
+//   void parallel_build(const std::vector<BoundablePtr>& elems, double margin = 0, size_t maxThreads = 0);
+//   void parallel_build(std::vector<BoundablePtr>&& elems, double margin = 0, size_t maxThreads = 0);
 
    // intersection, return number of leaves
    size_t intersectPoint(const Point3d& p,
@@ -525,8 +526,14 @@ public:
 
 protected:
 
+   std::shared_ptr<BVNodeType> bind_test(int& val1, int& val2,
+           std::vector<BoundablePtr>&& elems);
+
    std::shared_ptr<BVNodeType> recursive_build(
            size_t& nextNodeIdx, size_t& nextLeafIdx, std::vector<BoundablePtr>&& elems);
+//   std::shared_ptr<BVNodeType> parallel_recursive_build(
+//              size_t& nextNodeIdx, size_t& nextLeafIdx, std::vector<BoundablePtr>&& elems,
+//              mas::concurrency::thread_pool &pool);
 
    // intersection, return number of leaves
    void intersectPointRecursively(const Point3d& p,
