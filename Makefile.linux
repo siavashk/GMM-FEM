@@ -115,6 +115,9 @@ test: $(TEST_CMD)
 
 deps: $(DEPS) $(MEX_DEPS) $(CMD_DEPS) $(TEST_DEPS)
 	
+tuple: 
+	$(CC) $(CPPFLAGS) -o bin/mas/concurrency/tuple_test test/mas/concurrency/tuple_test.cpp
+	
 # include dependency rules	
 -include $(DEPS)
 -include $(MEX_DEPS)

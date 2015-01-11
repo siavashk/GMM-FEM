@@ -528,84 +528,6 @@ struct _Reference_wrapper_base<_Res (_T1::*)(_T2) const volatile> : std::binary_
         const volatile _T1*, _T2, _Res> {
 };
 
-/**
- *  @brief Primary class template for reference_wrapper.
- *  @ingroup functors
- *  @{
- */
-template<typename _Tp>
-class reference_wrapper: public _Reference_wrapper_base<
-        typename std::remove_cv<_Tp>::type> {
-    _Tp* _M_data;
-
-public:
-    typedef _Tp type;
-
-    reference_wrapper(_Tp& __indata) noexcept
-    : _M_data(std::__addressof(__indata))
-    {}
-
-    reference_wrapper(_Tp&&) = delete;
-
-    reference_wrapper(const reference_wrapper<_Tp>& __inref) noexcept
-    : _M_data(__inref._M_data)
-    {}
-
-    reference_wrapper&
-    operator=(const reference_wrapper<_Tp>& __inref) noexcept
-    {
-        _M_data = __inref._M_data;
-        return *this;
-    }
-
-    operator _Tp&() const noexcept
-    {   return this->get();}
-
-    _Tp&
-    get() const noexcept
-    {   return *_M_data;}
-
-    template<typename... _Args>
-    typename std::result_of<_Tp&(_Args&&...)>::type
-    operator()(_Args&&... __args) const
-    {
-        return __invoke_(get(), std::forward<_Args>(__args)...);
-    }
-};
-
-/// Denotes a reference should be taken to a variable.
-template<typename _Tp>
-inline reference_wrapper<_Tp> ref(_Tp& __t) noexcept
-{
-    return reference_wrapper<_Tp>(__t);
-}
-
-/// Denotes a const reference should be taken to a variable.
-template<typename _Tp>
-inline reference_wrapper<const _Tp> cref(const _Tp& __t) noexcept
-{
-    return reference_wrapper<const _Tp>(__t);
-}
-
-template<typename _Tp>
-void ref(const _Tp&&) = delete;
-
-template<typename _Tp>
-void cref(const _Tp&&) = delete;
-
-/// Partial specialization.
-template<typename _Tp>
-inline reference_wrapper<_Tp> ref(reference_wrapper<_Tp> __t) noexcept
-{
-    return ref(__t.get());
-}
-
-/// Partial specialization.
-template<typename _Tp>
-inline reference_wrapper<const _Tp> cref(reference_wrapper<_Tp> __t) noexcept
-{
-    return cref(__t.get());
-}
 
 // @} group functors
 
@@ -718,7 +640,7 @@ public:
 
     template<typename _Tp, typename ... _Args,
             typename _Req = _RequireValidArgs3<_Tp, _Args...>>
-    _Res operator()(reference_wrapper<_Tp> __ref, _Args&&... __args) const {
+    _Res operator()(std::reference_wrapper<_Tp> __ref, _Args&&... __args) const {
         return operator()(__ref.get(), std::forward<_Args>(__args)...);
     }
 
@@ -792,7 +714,7 @@ public:
 
     template<typename _Tp, typename ... _Args,
             typename _Req = _RequireValidArgs3<_Tp, _Args...>>
-    _Res operator()(reference_wrapper<_Tp> __ref, _Args&&... __args) const {
+    _Res operator()(std::reference_wrapper<_Tp> __ref, _Args&&... __args) const {
         return operator()(__ref.get(), std::forward<_Args>(__args)...);
     }
 
@@ -866,7 +788,7 @@ public:
 
     template<typename _Tp, typename ... _Args,
             typename _Req = _RequireValidArgs3<_Tp, _Args...>>
-    _Res operator()(reference_wrapper<_Tp> __ref, _Args&&... __args) const {
+    _Res operator()(std::reference_wrapper<_Tp> __ref, _Args&&... __args) const {
         return operator()(__ref.get(), std::forward<_Args>(__args)...);
     }
 
@@ -941,7 +863,7 @@ public:
 
     template<typename _Tp, typename ... _Args,
             typename _Req = _RequireValidArgs3<_Tp, _Args...>>
-    _Res operator()(reference_wrapper<_Tp> __ref, _Args&&... __args) const {
+    _Res operator()(std::reference_wrapper<_Tp> __ref, _Args&&... __args) const {
         return operator()(__ref.get(), std::forward<_Args>(__args)...);
     }
 
@@ -1028,7 +950,7 @@ public:
 
     template<typename _Tp, typename _Req = _Require<std::is_base_of<_Class, _Tp>>>
     auto
-    operator()(reference_wrapper<_Tp> __ref) const
+    operator()(std::reference_wrapper<_Tp> __ref) const
     noexcept(noexcept(std::declval<_Mem_fn&>()(__ref.get())))
     -> decltype((*this)(__ref.get()))
     {   return (*this)(__ref.get());}
