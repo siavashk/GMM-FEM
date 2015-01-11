@@ -61,7 +61,7 @@ int main(int argc, const char* argv[]) {
 
 			if (bpoly->polygon.get() != poly.get()) {
 				printf("What's going on?!?!\n");
-				printf("Polygon: %p\nBPolygon: %p\n", poly.get(), bpoly->polygon.get());
+				printf("Polygon: %p\nBPolygon: %p\n", (void*)(poly.get()), (void*)(bpoly->polygon.get()));
 			}
 			printf("Bounded polygon has %ld verts (%ld)\n", bpoly->polygon->verts.size(), poly->verts.size());
 			fflush(stdout);

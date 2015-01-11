@@ -58,25 +58,13 @@ rolling_barrier::~rolling_barrier() {
     //cv.notify_all();
 }
 
-void void_function_wrapper::operator()() {
-    impl->call();
-}
 
-void_function_wrapper::void_function_wrapper(void_function_wrapper&& f) :
-        impl(std::move(f.impl)) {
-}
-
-void_function_wrapper& void_function_wrapper::operator=(
-        void_function_wrapper&& f) {
-    impl = std::move(f.impl);
-    return *this;
-}
 
 void thread_pool::doWork() {
+	std::unique_ptr<thread_function_wrapper> task;
     while (!done) {
-        void_function_wrapper task;
         if (workQueue.pop(task)) {
-            task();
+        	task->invoke();
         } else {
             std::this_thread::yield();
         }
@@ -84,7 +72,7 @@ void thread_pool::doWork() {
 }
 
 thread_pool::thread_pool(size_t nthreads) :
-        done(false), threadJoiner(threads) {
+		done(false), threads(), threadJoiner(threads) {
     if (nthreads == 0) {
         nthreads = std::thread::hardware_concurrency();
     }
@@ -97,6 +85,7 @@ thread_pool::thread_pool(size_t nthreads) :
         done = true;
         throw;
     }
+
 }
 
 thread_pool::~thread_pool() {
@@ -107,13 +96,17 @@ void thread_pool::terminate() {
     done = true;
 }
 
-void thread_pool::run_pending_task() {
-    void_function_wrapper task;
-    if (workQueue.pop(task)) {
-        task();
-    } else {
-        std::this_thread::yield();
-    }
+bool thread_pool::run_pending_task() {
+	if (!done) {
+		std::unique_ptr<thread_function_wrapper> task;
+		if (workQueue.pop(task)) {
+			task->invoke();
+			return true;
+		} else {
+			std::this_thread::yield();
+			return false;
+		}
+	}
 }
 
 }

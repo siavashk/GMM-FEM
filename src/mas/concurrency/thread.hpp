@@ -1,55 +1,48 @@
 #include "mas/concurrency/bind_simple.hpp"
+#include <future>
 
 namespace mas {
 namespace concurrency {
 
 template<typename Container>
 thread_group<Container>::thread_group(Container& threads) :
-        c(threads) {
+		c(threads) {
 }
 
 template<typename Container>
 thread_group<Container>::~thread_group() {
-    for (auto t = begin(c); t < end(c); t++) {
-        if (t->joinable()) {
-            t->join();
-        }
-    }
+	for (auto t = begin(c); t < end(c); t++) {
+		if (t->joinable()) {
+			t->join();
+		}
+	}
 }
 
-//template<typename F>
-//void_function_wrapper::impl_F<F>::impl_F(F&& f_) :
-//        f(std::move(f_)) {
-//}
+template<typename Fn, typename ... Args>
+std::future<typename std::result_of<Fn(Args...)>::type> thread_pool::submit_back(
+		Fn&& fn, Args&&... args) {
 
-template<typename F>
-void void_function_wrapper::impl_F<F>::call() {
-    f();
+	typedef typename std::result_of<Fn(Args...)>::type result_type;
+
+	auto fw = wrap_future(std::ref(fn), std::forward<Args>(args)...);
+	std::future<result_type> fut = fw.get_future();
+	std::unique_ptr<thread_function_wrapper> fp(new thread_function_wrapper(std::move(fw)));
+
+	workQueue.push_back(std::move(fp));
+	return fut;
 }
 
-template<typename F>
-void_function_wrapper::void_function_wrapper(F&& f) :
-        impl(new impl_F<F>(std::move(f))) {
-}
+template<typename Fn, typename ... Args>
+std::future<typename std::result_of<Fn(Args...)>::type> thread_pool::submit_front(
+		Fn&& fn, Args&&... args) {
+	typedef typename std::result_of<Fn(Args...)>::type result_type;
 
-template<typename FunctionType>
-std::future<typename std::result_of<FunctionType()>::type> thread_pool::submit_back(
-        FunctionType f) {
-    typedef typename std::result_of<FunctionType()>::type result_type;
-    std::packaged_task < result_type() > task(std::move(f));
-    std::future<result_type> res(task.get_future());
-    workQueue.push_back(std::move(task));
-    return res;
-}
+	auto fw = wrap_future(std::ref(fn), std::forward<Args>(args)...);
+	std::future<result_type> fut = fw.get_future();
+	std::unique_ptr<thread_function_wrapper> fp(new thread_function_wrapper(std::move(fw)));
 
-template<typename FunctionType>
-std::future<typename std::result_of<FunctionType()>::type> thread_pool::submit_front(
-        FunctionType f) {
-    typedef typename std::result_of<FunctionType()>::type result_type;
-    std::packaged_task < result_type() > task(std::move(f));
-    std::future<result_type> res(task.get_future());
-    workQueue.push_front(std::move(task));
-    return res;
+	workQueue.push_front(std::move(fp));
+	return fut;
 }
 
 } // concurrency

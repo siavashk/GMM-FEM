@@ -5,68 +5,58 @@
 #include <iostream>
 
 template<typename T>
-struct sorter {
-    mas::concurrency::thread_pool pool;
+std::vector<T> do_copy_sort(const std::vector<T>& chunk_data, mas::concurrency::thread_pool& pool) {
+	if (chunk_data.empty()) {
+		return chunk_data;
+	}
 
-    std::vector<T> do_sort(std::vector<T>&& chunk_data, int& counter) {
-        if (chunk_data.empty()) {
-            return chunk_data;
-        }
+	T middle = chunk_data.front();
 
-        std::vector<T> middle;
-        middle.push_back(std::move(chunk_data.front()));
-        T const& partition_val = *middle.begin();
+	std::vector<T> new_lower_chunk;
+	std::vector<T> new_upper_chunk;
 
-        std::vector<T> new_lower_chunk;
+	// split into an upper and lower chunk
+	int nupper = 0;
+	for (int i=1; i<chunk_data.size(); i++) {
+		if (chunk_data[i] > middle) {
+			new_upper_chunk.push_back(chunk_data[i]);
+		} else {
+			new_lower_chunk.push_back(chunk_data[i]);
+		}
+	}
 
-        // split into an upper and lower chunk
-        int nupper = 0;
-        for (int i=1; i<chunk_data.size(); i++) {
-            if (chunk_data[i] > partition_val) {
-                chunk_data[nupper++] = std::move(chunk_data[i]);
-            } else if (chunk_data[i] == partition_val) {
-                middle.push_back(std::move(chunk_data[i]));
-            } else {
-                new_lower_chunk.push_back(std::move(chunk_data[i]));
-            }
-        }
-        chunk_data.resize(nupper);
 
-        auto f = mas::concurrency::bind_simple(&sorter::do_sort, this, std::move(new_lower_chunk), std::ref(counter));
-        std::future<std::vector<T> > new_lower = pool.submit_back(f);
+	std::future<std::vector<T>> new_lower = pool.submit_back(do_copy_sort<T>, std::ref(new_lower_chunk), std::ref(pool));
+	std::vector<T> new_higher(do_copy_sort<T>(new_upper_chunk, pool));
 
-        std::vector<T> new_higher(do_sort(std::move(chunk_data), counter));
+	while (!(new_lower.wait_for(std::chrono::seconds(0)) == std::future_status::ready)) {
+		pool.run_pending_task();
+	}
 
-        while (!(new_lower.wait_for(std::chrono::seconds(0)) == std::future_status::ready)) {
-            pool.run_pending_task();
-        }
+	std::vector<T> result = new_lower.get();
 
-        std::vector<T> result = std::move(new_lower.get());
-        result.reserve(result.size()+middle.size()+new_higher.size());
-        for (int i=0; i<middle.size(); i++) {
-            result.push_back(std::move(middle[i]));
-        }
-        for (int i=0; i<new_higher.size(); i++) {
-            result.push_back(std::move(new_higher[i]));
-        }
+	result.reserve(result.size()+1+new_higher.size());
+	result.push_back(middle);
+	for (int i=0; i<new_higher.size(); i++) {
+		result.push_back(new_higher[i]);
+	}
 
-        return result;
-    }
-};
+	return result;
+}
 
 template<typename T>
-std::vector<T> parallel_quick_sort(std::vector<T>&& input) {
+std::vector<T> parallel_quick_sort(const std::vector<T>& input) {
     if (input.empty()) {
         return input;
     }
-    sorter<T> s;
-    int counter = 10;
-    return s.do_sort(std::move(input), counter);
+    // copy_sorter<T> s;
+    mas::concurrency::thread_pool pool(std::thread::hardware_concurrency());
+
+    return do_copy_sort(input, pool);
 }
 
-int main(int argc, char **argv) {
-
-    std::vector<double> vals;
+void doSortTest() {
+	std::vector<double> vals;
     int N = 1000000;
     for (int i=0; i<N; i++) {
         vals.push_back(i);
@@ -75,7 +65,8 @@ int main(int argc, char **argv) {
 
     mas::time::Timer timer;
     timer.start();
-    std::vector<double> out = parallel_quick_sort(std::move(vals));
+    std::vector<double> out = parallel_quick_sort(vals);
+
     timer.stop();
     double ms = timer.getMilliseconds();
 
@@ -90,6 +81,44 @@ int main(int argc, char **argv) {
     fflush(stdout);
 
     std::cout << "DONE" << std::endl;
+}
+
+std::unique_ptr<mas::concurrency::thread_pool> ppool;
+std::atomic<int> proccount(0);
+
+double bind_me(int d, double max) {
+
+//	printf("Running task %d\n", d);
+//	fflush(stdout);
+	if (d < max) {
+		std::future<double> f = ppool->submit_back(bind_me, ++proccount, max);
+
+		while (!(f.wait_for(std::chrono::seconds(0)) == std::future_status::ready)) {
+			ppool->run_pending_task();
+		}
+
+		d += f.get();
+	}
+	//printf("Done running task %d\n", d);
+
+	return d;
+}
+
+void doBindTest() {
+	double max = 100;
+
+	ppool = std::unique_ptr<mas::concurrency::thread_pool>(new mas::concurrency::thread_pool(1));
+	//std::future<double> outf = pool.submit_back(bind_me, d, max, std::ref(pool));
+	std::future<double> outf = ppool->submit_back(bind_me, 0, max);
+
+	//double x = f();
+	double out = outf.get();
+}
+
+int main(int argc, char **argv) {
+
+    doSortTest();
+	// doBindTest();
 
 }
 
