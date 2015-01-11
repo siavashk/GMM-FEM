@@ -297,10 +297,9 @@ public:
  */
 template<typename _Functor, typename ... _Args>
 inline typename std::enable_if<
-        (!std::is_member_pointer<_Functor>::value
-                && !std::is_function<_Functor>::value
-                && !std::is_function<
-                        typename std::remove_pointer<_Functor>::type>::value),
+        (		!std::is_member_pointer<_Functor>::value
+        		&& !std::is_function<_Functor>::value
+                && !std::is_function<typename std::remove_pointer<_Functor>::type>::value),
         typename std::result_of<_Functor&(_Args&&...)>::type>::type __invoke_(
         _Functor& __f, _Args&&... __args) {
     return __f(std::forward<_Args>(__args)...);
