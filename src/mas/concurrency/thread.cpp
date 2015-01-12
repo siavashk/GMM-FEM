@@ -71,10 +71,10 @@ void thread_pool::doWork() {
     }
 }
 
-thread_pool::thread_pool(size_t nthreads) :
+thread_pool::thread_pool(int nthreads) :
 		done(false), threads(), threadJoiner(threads) {
-    if (nthreads == 0) {
-        nthreads = std::thread::hardware_concurrency();
+    if (nthreads <= 0) {
+        nthreads = std::max(std::thread::hardware_concurrency(), 2u);
     }
 
     try {

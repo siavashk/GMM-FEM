@@ -2,12 +2,10 @@
 #define MAS_BVTREE_H
 
 #include "mas/core/base.h"
-#include "mas/concurrency/thread.h"
+// #include "mas/concurrency/thread.h"
 #include <vector>
 #include <memory>
 
-// for optimized static casts for handling intersections
-// between volume types
 namespace mas {
 namespace bvtree {
 
