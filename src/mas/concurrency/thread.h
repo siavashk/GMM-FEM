@@ -54,23 +54,27 @@ public:
 	~rolling_barrier(); // force all to stop waiting?
 };
 
+// Can't be copied, only moved, so can hopefully be only
+// run in a single thread
 class thread_function_wrapper {
 private:
+	std::atomic_flag done;
 	struct tfw_base {
 		virtual void invoke() = 0;
 	};
 
 	template<typename Fn, typename ... Args>
 	struct tfw_impl: tfw_base {
-		function_wrapper<Fn(Args...)> f_;
-		std::promise<typename function_wrapper_t<Fn,Args...>::result_type> p_;
+		std::unique_ptr<function_wrapper<Fn(Args...)>> f_;
+		std::promise<typename function_wrapper_t<Fn, Args...>::result_type> p_;
 	public:
-		tfw_impl(function_wrapper<Fn(Args...)>&& f,
-				std::promise<typename function_wrapper_t<Fn,Args...>::result_type>&& p) :
+		tfw_impl(std::unique_ptr<function_wrapper<Fn(Args...)>>&& f,
+				std::promise<
+						typename function_wrapper_t<Fn, Args...>::result_type>&& p) :
 				f_(std::move(f)), p_(std::move(p)) {
 		}
 		void invoke() {
-			p_.set_value(f_.invoke());
+			p_.set_value(f_->invoke());
 		}
 	};
 
@@ -78,13 +82,16 @@ private:
 
 public:
 	template<typename Fn, typename ... Args>
-	thread_function_wrapper(function_wrapper<Fn(Args...)>&& f,
-			std::promise<typename function_wrapper_t<Fn,Args...>::result_type>&& p) :
-			f_(new tfw_impl<Fn,Args...>(std::move(f), std::move(p))) {
+	thread_function_wrapper(std::unique_ptr<function_wrapper<Fn(Args...)>>&& f,
+			std::promise<typename function_wrapper_t<Fn, Args...>::result_type>&& p) :
+			done(ATOMIC_FLAG_INIT), f_(
+					new tfw_impl<Fn, Args...>(std::move(f), std::move(p))) {
 	}
 
 	void invoke() {
-		f_->invoke();
+		if (!done.test_and_set()) {
+			f_->invoke();
+		}
 	}
 
 	thread_function_wrapper(const thread_function_wrapper& f) = delete;
@@ -92,6 +99,75 @@ public:
 
 	thread_function_wrapper(thread_function_wrapper&& f) = default;
 	thread_function_wrapper& operator=(thread_function_wrapper&& f) = default;
+};
+
+class thread_worker {
+	std::atomic<bool> running;
+	std::atomic<bool> terminated;
+	std::mutex wake_mutex;
+	std::condition_variable wake_condition;
+	std::unique_ptr<thread_function_wrapper> f;
+
+public:
+	thread_worker() :
+			running(false), f(nullptr) {
+	}
+
+	template<typename Fn, typename ... Args>
+	bool submit(std::future<typename std::result_of<Fn(Args...)>::type>& fut,
+			Fn&& fn, Args&&... args) {
+		typedef typename std::result_of<Fn(Args...)>::type result_type;
+
+		std::unique_lock<std::mutex> lk(wake_mutex);
+		if (f != nullptr) {
+			return false;
+		}
+
+		// make function, want to do inside lock to prevent multiple unnecessary allocations
+		auto fw = make_unique_wrapper(std::forward<Fn>(fn),
+				std::forward<Args>(args)...);
+		std::promise<result_type> prom;
+		fut = prom.get_future();
+		std::unique_ptr<thread_function_wrapper> fp(
+				new thread_function_wrapper(std::move(fw), std::move(prom)));
+
+		f = std::move(fp);
+		lk.unlock();
+		wake_condition.notify_one();
+
+		return true;
+	}
+
+	bool isBusy() {
+		return running.load();
+	}
+
+	void terminate() {
+		terminated.store(true);
+		wake_condition.notify_all();
+	}
+
+	void run() {
+		while (!terminated.load()) {
+			std::unique_lock<std::mutex> lk(wake_mutex);
+			wake_condition.wait(lk, [&] {
+				return (f != nullptr || terminated.load());
+			});
+			running.store(true);
+			std::unique_ptr<thread_function_wrapper> myf = std::move(f);
+			lk.unlock();
+
+			// run function
+			if (myf != nullptr) {
+				myf->invoke();
+			}
+			running.store(false);
+		}
+	}
+
+	void operator()() {
+		run();
+	}
 };
 
 /**
@@ -112,7 +188,7 @@ public:
 	thread_pool& operator =(const thread_pool&) = delete;
 	thread_pool& operator =(thread_pool&&) = delete;
 
-	thread_pool(size_t nthreads = 0);
+	thread_pool(int nthreads = 0);
 	~thread_pool();
 	void terminate();
 
@@ -128,80 +204,66 @@ public:
 
 };
 
-class simple_thread_pool {
-	std::atomic_bool done;
-	threadsafe_queue<std::unique_ptr<thread_function_wrapper>> work_queue;
+class async_thread_pool {
+	std::vector<std::shared_ptr<thread_worker>> workers;
 	std::vector<std::thread> threads;
 	thread_group<std::vector<std::thread>> joiner;
 
-	void worker_thread() {
-		while (!done) {
-			std::unique_ptr<thread_function_wrapper> task;
-			if (work_queue.pop(task)) {
-				task->invoke();
-			} else {
-				std::this_thread::yield();
-			}
-		}
-	}
-
 public:
-	simple_thread_pool() :
-			done(false), joiner(threads) {
-		unsigned const thread_count = std::thread::hardware_concurrency();
+	async_thread_pool(int nthreads) :
+			joiner(threads) {
+
+		if (nthreads < 0) {
+			nthreads = std::max(std::thread::hardware_concurrency(), 2u);
+		}
+
 		try {
-			for (unsigned i = 0; i < thread_count; ++i) {
-				threads.push_back(
-						std::thread(&simple_thread_pool::worker_thread, this));
+			workers.reserve(nthreads);
+			threads.reserve(nthreads);
+			for (unsigned i = 0; i < nthreads; ++i) {
+				workers.push_back(std::make_shared<thread_worker>());
+				threads.push_back(std::thread(&thread_worker::run, workers.back()));
 			}
 		} catch (...) {
-			done = true;
 			throw;
 		}
 	}
 
-	~simple_thread_pool() {
-		done = true;
+	~async_thread_pool() {
+		for (auto& worker : workers) {
+			worker->terminate();
+		}
 	}
 
 	template<typename Fn, typename ...Args>
-	std::future<typename std::result_of<Fn(Args...)>::type> submit_back(
-			const Fn& f, Args&&... args) {
-		typedef typename std::result_of<Fn(Args...)>::type result_type;
-
-		auto fw = wrap_future(std::ref(f), std::forward<Args>(args)...);
-		std::future<result_type> fut = fw.get_future();
-		std::unique_ptr<thread_function_wrapper> fp(
-				new thread_function_wrapper(std::move(fw)));
-
-		work_queue.push_back(std::move(fp));
-		return fut;
-	}
-
-	template<typename Fn, typename ...Args>
-	std::future<typename std::result_of<Fn(Args...)>::type> submit_back(Fn&& f,
+	std::future<typename std::result_of<Fn(Args...)>::type> async(Fn&& fn,
 			Args&&... args) {
 		typedef typename std::result_of<Fn(Args...)>::type result_type;
 
-		auto fw = wrap_future(std::ref(f), std::forward<Args>(args)...);
-		std::future<result_type> fut = fw.get_future();
-		std::unique_ptr<thread_function_wrapper> fp(
-				new thread_function_wrapper(std::move(fw)));
+		std::future<result_type> fut;
 
-		work_queue.push_back(std::move(fp));
+		bool asynced = false;
+		// find a free worker?
+		for (auto& worker : workers) {
+			if (!worker->isBusy()) {
+				if (worker->submit(fut, std::forward<Fn>(fn),
+						std::forward<Args>(args)...)) {
+					asynced = true;
+					break;
+				}
+			}
+		}
+
+		// otherwise, run now
+		if (!asynced) {
+			std::promise<result_type> prom;
+			fut = prom.get_future();
+			prom.set_value(
+					invoke(std::forward<Fn>(fn), std::forward<Args>(args)...));
+		}
 		return fut;
 	}
 
-	void run_pending_task() {
-		if (!done) {
-			std::unique_ptr<thread_function_wrapper> task;
-			if (work_queue.pop(task)) {
-				task->invoke();
-			} else {
-				std::this_thread::yield();
-			}
-		}
-	}
 };
 
 } // concurrency

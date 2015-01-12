@@ -24,7 +24,7 @@ std::future<typename std::result_of<Fn(Args...)>::type> thread_pool::submit_back
 
 	typedef typename std::result_of<Fn(Args...)>::type result_type;
 
-	auto fw = wrap(std::forward<Fn>(fn), std::forward<Args>(args)...);
+	auto fw = make_unique_wrapper(std::forward<Fn>(fn), std::forward<Args>(args)...);
 	std::promise<result_type> prom;
 	std::future<result_type> fut = prom.get_future();
 	std::unique_ptr<thread_function_wrapper> fp(new thread_function_wrapper(std::move(fw), std::move(prom)));
@@ -38,7 +38,7 @@ std::future<typename std::result_of<Fn(Args...)>::type> thread_pool::submit_fron
 		Fn&& fn, Args&&... args) {
 	typedef typename std::result_of<Fn(Args...)>::type result_type;
 
-	auto fw = wrap(std::forward<Fn>(fn), std::forward<Args>(args)...);
+	auto fw = make_unique_wrapper(std::forward<Fn>(fn), std::forward<Args>(args)...);
 	std::promise<result_type> prom;
 	std::future<result_type> fut = prom.get_future();
 	std::unique_ptr<thread_function_wrapper> fp(new thread_function_wrapper(std::move(fw), std::move(prom)));

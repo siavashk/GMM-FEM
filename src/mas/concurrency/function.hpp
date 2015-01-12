@@ -95,7 +95,7 @@ inline typename std::enable_if<
 
 		typename std::result_of<Functor(Object,Args&&...)>::type>::type invoke(
 		Functor&& functor, Object&& object, Args&&... args) {
-	std::cout << "MEMBER FUNCTION, BY REFERENCE" << std::endl;
+	// std::cout << "MEMBER FUNCTION, BY REFERENCE" << std::endl;
 	return (object.*functor)(std::forward<Args>(args)...);
 }
 
@@ -108,7 +108,7 @@ inline typename std::enable_if<
 
 		typename std::result_of<Functor(Object,Args&&...)>::type>::type invoke(
 		Functor&& functor, Object&& object,	Args&&... args) {
-	std::cout << "MEMBER FUNCTION, BY POINTER" << std::endl;
+	// std::cout << "MEMBER FUNCTION, BY POINTER" << std::endl;
 	return ((*std::forward<Object>(object)).*functor)(	std::forward<Args>(args)...);
 }
 
@@ -120,7 +120,7 @@ inline typename std::enable_if<
 				typename std::decay<Functor>::type>::value,
 		typename std::result_of<Functor(Object)>::type>::type
 		invoke(Functor&& functor, Object&& object) {
-	std::cout << "MEMBER OBJECT, BY REFERENCE" << std::endl;
+	// std::cout << "MEMBER OBJECT, BY REFERENCE" << std::endl;
 	return object.*functor;
 }
 
@@ -132,7 +132,7 @@ inline typename std::enable_if<
 				typename std::decay<Functor>::type>::value,
 		typename std::result_of<Functor(Object)>::type>::type
 		invoke(Functor&& functor, Object&& object) {
-	std::cout << "MEMBER OBJECT, BY POINTER" << std::endl;
+	// std::cout << "MEMBER OBJECT, BY POINTER" << std::endl;
 	return (*std::forward<Object>(object)).*functor;
 }
 
@@ -152,7 +152,7 @@ inline typename std::enable_if<
 		!std::is_member_pointer<typename std::decay<Functor>::type>::value,
 		typename std::result_of<Functor&(Args&&...)>::type>::type
 		invoke(Functor&& functor, Args&&... args) {
-	std::cout << "REGULAR FUNCTION" << std::endl;
+	// std::cout << "REGULAR FUNCTION" << std::endl;
 	return std::forward<Functor>(functor)(std::forward<Args>(args)...);
 }
 

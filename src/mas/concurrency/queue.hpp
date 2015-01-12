@@ -25,6 +25,7 @@ void threadsafe_queue<T>::push_back(const T& t) {
 	bool didfirstlock = false;
 
 	// in case simultaneously trying to push_front and push_back
+	// XXX not sure if this is solved...
 	if (last == first) {
 		while (frontLock.exchange(true)) {
 		}
