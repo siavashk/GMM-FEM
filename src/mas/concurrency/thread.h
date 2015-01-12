@@ -62,21 +62,25 @@ private:
 
 	template<typename Fn, typename ... Args>
 	struct tfw_impl: tfw_base {
-		future_function_wrapper<Fn, Args...> f_;
+		function_wrapper<Fn(Args...)> f_;
+		std::promise<typename function_wrapper_t<Fn,Args...>::result_type> p_;
 	public:
-		tfw_impl(future_function_wrapper<Fn, Args...> && f) :
-				f_(std::move(f)) {
+		tfw_impl(function_wrapper<Fn(Args...)>&& f,
+				std::promise<typename function_wrapper_t<Fn,Args...>::result_type>&& p) :
+				f_(std::move(f)), p_(std::move(p)) {
 		}
 		void invoke() {
-			f_.invoke();
+			p_.set_value(f_.invoke());
 		}
 	};
 
 	std::unique_ptr<tfw_base> f_;
+
 public:
 	template<typename Fn, typename ... Args>
-	thread_function_wrapper(future_function_wrapper<Fn, Args...> && f) :
-			f_(new tfw_impl<Fn,Args...>(std::move(f))) {
+	thread_function_wrapper(function_wrapper<Fn(Args...)>&& f,
+			std::promise<typename function_wrapper_t<Fn,Args...>::result_type>&& p) :
+			f_(new tfw_impl<Fn,Args...>(std::move(f), std::move(p))) {
 	}
 
 	void invoke() {

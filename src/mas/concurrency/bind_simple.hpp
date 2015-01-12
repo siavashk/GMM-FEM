@@ -985,7 +985,22 @@ struct _Bind_simple;
 
 template<typename _Callable, typename ... _Args>
 struct _Bind_simple<_Callable(_Args...)> {
-    typedef typename std::result_of<_Callable(_Args...)>::type result_type;
+public:
+	typedef typename std::result_of<_Callable(_Args...)>::type result_type;
+
+private:
+    std::tuple<_Callable, _Args...> _M_bound;
+
+    template<std::size_t... _Indices>
+    result_type _M_invoke(_Index_tuple<_Indices...>)
+    {
+        // std::bind always forwards bound arguments as lvalues,
+        // but this type can call functions which only accept rvalues.
+        return std::forward<_Callable>(std::get<0>(_M_bound))(
+                std::forward<_Args>(std::get<_Indices+1>(_M_bound))...);
+    }
+
+public:
 
     template<typename ... _Args2, typename = typename std::enable_if<sizeof...(_Args) == sizeof...(_Args2)>::type>
     explicit
@@ -1010,19 +1025,6 @@ struct _Bind_simple<_Callable(_Args...)> {
         return _M_invoke(_Indices());
     }
 
-private:
-
-    template<std::size_t... _Indices>
-    typename std::result_of<_Callable(_Args...)>::type
-    _M_invoke(_Index_tuple<_Indices...>)
-    {
-        // std::bind always forwards bound arguments as lvalues,
-        // but this type can call functions which only accept rvalues.
-        return std::forward<_Callable>(std::get<0>(_M_bound))(
-                std::forward<_Args>(std::get<_Indices+1>(_M_bound))...);
-    }
-
-    std::tuple<_Callable, _Args...> _M_bound;
 };
 
 /**
@@ -1045,19 +1047,19 @@ struct _Maybe_wrap_member_pointer {
     }
 };
 
-/**
- *  Maps member pointers into instances of _Mem_fn but leaves all
- *  other function objects untouched. Used by tr1::bind(). This
- *  partial specialization handles the member pointer case.
- */
-template<typename _Tp, typename _Class>
-struct _Maybe_wrap_member_pointer<_Tp _Class::*> {
-    typedef _Mem_fn<_Tp _Class::*> type;
-
-    static type __do_wrap(_Tp _Class::* __pm) {
-        return type(__pm);
-    }
-};
+///**
+// *  Maps member pointers into instances of _Mem_fn but leaves all
+// *  other function objects untouched. Used by tr1::bind(). This
+// *  partial specialization handles the member pointer case.
+// */
+//template<typename _Tp, typename _Class>
+//struct _Maybe_wrap_member_pointer<_Tp _Class::*> {
+//    typedef _Mem_fn<_Tp _Class::*> type;
+//
+//    static type __do_wrap(_Tp _Class::* __pm) {
+//        return type(__pm);
+//    }
+//};
 
 // Specialization needed to prevent "forming reference to void" errors when
 // bind<void>() is called, because argument deduction instantiates
