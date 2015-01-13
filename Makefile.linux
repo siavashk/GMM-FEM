@@ -118,6 +118,10 @@ deps: $(DEPS) $(MEX_DEPS) $(CMD_DEPS) $(TEST_DEPS)
 tuple: 
 	$(CC) $(CPPFLAGS) -o bin/mas/concurrency/tuple_test test/mas/concurrency/tuple_test.cpp
 	
+parallel_test: build/mas/core/time.o build/mas/concurrency/parallel_sort_test.to
+	@echo Assembling $@ ...
+	@$(LD) -o bin/mas/concurrency/parallel_sort_test $(LDFLAGS) build/mas/core/time.o build/mas/concurrency/parallel_sort_test.to
+	
 # include dependency rules	
 -include $(DEPS)
 -include $(MEX_DEPS)
