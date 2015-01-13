@@ -2,7 +2,7 @@
 #define MAS_BVTREE_H
 
 #include "mas/core/base.h"
-// #include "mas/concurrency/thread.h"
+#include "mas/concurrency/thread.h"
 #include <vector>
 #include <memory>
 
@@ -52,16 +52,13 @@ public:
 
 public:
    BoundablePointSet(size_t idx);
-   BoundablePointSet(const std::vector<Point3d>& pnts, size_t idx);
-   BoundablePointSet(std::vector<Point3d>&& pnts, size_t idx); // move semantics
+   BoundablePointSet(std::vector<Point3d> pnts, size_t idx);
 
    size_t getIndex() const;
    void setIndex(size_t idx);
 
-   void setPoints(const std::vector<Point3d>& pnts);
-   void setPoints(std::vector<Point3d>&& pnts);  // move semantics
-   void addPoint(const Point3d& pnt);
-   void addPoint(Point3d&& pnt);
+   void setPoints(std::vector<Point3d> pnts);
+   void addPoint(Point3d pnt);
 
    template<typename BV>
    bool updateBV(BV& bv) const;
@@ -87,17 +84,14 @@ public:
    std::vector<PointPtr> pnts;
 public:
    BoundablePointPtrSet(size_t idx);
-   BoundablePointPtrSet(const std::vector<PointPtr>& pnts, size_t idx);
-   BoundablePointPtrSet(std::vector<PointPtr>&& pnts, size_t idx); // move semantics
+   BoundablePointPtrSet(std::vector<PointPtr> pnts, size_t idx);
 
    size_t getIndex() const;
    void setIndex(size_t idx);
 
-   void setPoints(const std::vector<PointPtr>& pnts);
-   void setPoints(std::vector<PointPtr>&& pnts);
+   void setPoints(std::vector<PointPtr> pnts);
 
-   void addPoint(const PointPtr& pnt);
-   void addPoint(PointPtr&& pnt);
+   void addPoint(PointPtr pnt);
 
    template<typename BV>
    bool updateBV(BV& bv) const;
@@ -161,12 +155,8 @@ public:
 
    // Split into smaller groups for inserting into a tree
    template<typename BoundablePtr>
-   bool split(const std::vector<BoundablePtr>& b, // copy shared boundables
-         std::vector<std::vector<BoundablePtr>>& out) const;
-
-   template<typename BoundablePtr>
-   bool split(std::vector<BoundablePtr>&& b, // move shared boundables
-         std::vector<std::vector<BoundablePtr>>& out) const;
+   bool split(std::vector<BoundablePtr> b, // move shared boundables
+         std::vector<std::vector<BoundablePtr>> out) const;
 
 };
 
@@ -216,12 +206,8 @@ public:
    void bound(const std::vector<BoundablePtr>& b); // shared boundables
 
    // Split into smaller groups for inserting into a tree
-   // oct-tree style
    template<typename BoundablePtr>
-   bool split(const std::vector<BoundablePtr>& b, // copy shared boundables
-         std::vector<std::vector<BoundablePtr>>& out) const;
-   template<typename BoundablePtr>
-   bool split(std::vector<BoundablePtr>&& b, // move shared boundables
+   bool split(std::vector<BoundablePtr> b, // move shared boundables
          std::vector<std::vector<BoundablePtr>>& out) const;
 
 };
@@ -296,10 +282,7 @@ public:
    // Split into smaller groups for inserting into a tree
    // Split along longest axis
    template<typename BoundablePtr>
-   bool split(const std::vector<BoundablePtr>& b, // copy shared boundables
-         std::vector<std::vector<BoundablePtr>>& out) const;
-   template<typename BoundablePtr>
-   bool split(std::vector<BoundablePtr>&& b, // move shared boundables
+   bool split(std::vector<BoundablePtr> b, // move shared boundables
          std::vector<std::vector<BoundablePtr>>& out) const;
 
 };
@@ -343,10 +326,7 @@ public:
    // Split into smaller groups for inserting into a tree
    // Split along longest axis
    template<typename BoundablePtr>
-   bool split(const std::vector<BoundablePtr>& b, // copy shared boundables
-         std::vector<std::vector<BoundablePtr>>& out) const;
-   template<typename BoundablePtr>
-   bool split(std::vector<BoundablePtr>&& b, // move shared boundables
+   bool split(std::vector<BoundablePtr> b, // move shared boundables
          std::vector<std::vector<BoundablePtr>>& out) const;
 
 private:
@@ -387,11 +367,8 @@ private:
 public:
    BVNode(double margin = 0);
 
-   // copy elements
-   BVNode(const std::vector<BoundablePtr>& elems, double margin = 0);
-
    // move elements
-   BVNode(std::vector<BoundablePtr>&& elems, double margin = 0);
+   BVNode(std::vector<BoundablePtr> elems, double margin = 0);
 
    void setIndex(size_t idx);
    size_t getIndex();
@@ -405,14 +382,12 @@ public:
    const BV& getBoundingVolume() const;
 
    std::vector<BoundablePtr>& getElements() const;
-   void setElements(const std::vector<BoundablePtr>& elems);
-   void setElements(std::vector<BoundablePtr>&& elems);
+   void setElements(std::vector<BoundablePtr> elems);
 
    size_t numElements() const;
    void clearElements();
 
    std::vector<std::shared_ptr<BVNode<BoundablePtr, BV>>>& getChildren();
-   void setChildren(const std::vector<std::shared_ptr<BVNode<BoundablePtr,BV>>>& children);
    void setChildren(std::vector<std::shared_ptr<BVNode<BoundablePtr,BV>>>&& children);
 
    size_t numChildren() const;
@@ -433,7 +408,6 @@ public:
    void updateBoundsUp(const BoundablePtr& b);
 
 protected:
-   BVNode<BoundablePtr,BV>* spawnChild(const std::vector<BoundablePtr>& elems);
    BVNode<BoundablePtr,BV>* spawnChild(std::vector<BoundablePtr>&& elems);
 
 };
@@ -456,8 +430,7 @@ private:
 
 public:
    BVTree(double margin = 0);
-   BVTree(const std::vector<BoundablePtr>& elems, double margin = 0);
-   BVTree(std::vector<BoundablePtr>&& elems, double margin = 0);
+   BVTree(std::vector<BoundablePtr> elems, double margin = 0);
 
    BVNodeType& getRoot() const;
    double getRadius() const;
@@ -466,11 +439,9 @@ public:
    void setMargin(double margin);
    double getMargin() const;
 
-   void build(const std::vector<BoundablePtr>& elems, double margin = 0);
-   void build(std::vector<BoundablePtr>&& elems, double margin = 0);
+   void build(std::vector<BoundablePtr> elems, double margin = 0);
 
-//   void parallel_build(const std::vector<BoundablePtr>& elems, double margin = 0, size_t maxThreads = 0);
-//   void parallel_build(std::vector<BoundablePtr>&& elems, double margin = 0, size_t maxThreads = 0);
+   void parallel_build(std::vector<BoundablePtr> elems, double margin = 0, size_t maxThreads = 0);
 
    // intersection, return number of leaves
    size_t intersectPoint(const Point3d& p,
@@ -524,14 +495,12 @@ public:
 
 protected:
 
-   std::shared_ptr<BVNodeType> bind_test(int& val1, int& val2,
-           std::vector<BoundablePtr>&& elems);
 
    std::shared_ptr<BVNodeType> recursive_build(
            size_t& nextNodeIdx, size_t& nextLeafIdx, std::vector<BoundablePtr>&& elems);
-//   std::shared_ptr<BVNodeType> parallel_recursive_build(
-//              size_t& nextNodeIdx, size_t& nextLeafIdx, std::vector<BoundablePtr>&& elems,
-//              mas::concurrency::thread_pool &pool);
+   std::shared_ptr<BVNodeType> parallel_recursive_build(
+              std::atomic<size_t>& nextNodeIdx, std::atomic<size_t>& nextLeafIdx, std::vector<BoundablePtr>&& elems,
+              mas::concurrency::async_thread_pool &pool);
 
    // intersection, return number of leaves
    void intersectPointRecursively(const Point3d& p,

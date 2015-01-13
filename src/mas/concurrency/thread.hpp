@@ -19,14 +19,14 @@ thread_group<Container>::~thread_group() {
 }
 
 template<typename Fn, typename ... Args>
-std::future<typename std::result_of<Fn(Args...)>::type> thread_pool::submit_back(
+future<typename std::result_of<Fn(Args...)>::type> thread_pool::submit_back(
 		Fn&& fn, Args&&... args) {
 
 	typedef typename std::result_of<Fn(Args...)>::type result_type;
 
 	auto fw = make_unique_wrapper(std::forward<Fn>(fn), std::forward<Args>(args)...);
-	std::promise<result_type> prom;
-	std::future<result_type> fut = prom.get_future();
+	promise<result_type> prom;
+	future<result_type> fut = prom.get_future();
 	std::unique_ptr<thread_function_wrapper> fp(new thread_function_wrapper(std::move(fw), std::move(prom)));
 
 	workQueue.push_back(std::move(fp));
@@ -34,13 +34,13 @@ std::future<typename std::result_of<Fn(Args...)>::type> thread_pool::submit_back
 }
 
 template<typename Fn, typename ... Args>
-std::future<typename std::result_of<Fn(Args...)>::type> thread_pool::submit_front(
+future<typename std::result_of<Fn(Args...)>::type> thread_pool::submit_front(
 		Fn&& fn, Args&&... args) {
 	typedef typename std::result_of<Fn(Args...)>::type result_type;
 
 	auto fw = make_unique_wrapper(std::forward<Fn>(fn), std::forward<Args>(args)...);
-	std::promise<result_type> prom;
-	std::future<result_type> fut = prom.get_future();
+	promise<result_type> prom;
+	future<result_type> fut = prom.get_future();
 	std::unique_ptr<thread_function_wrapper> fp(new thread_function_wrapper(std::move(fw), std::move(prom)));
 
 	workQueue.push_front(std::move(fp));
