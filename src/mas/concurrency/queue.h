@@ -11,9 +11,9 @@
 #define MAS_CONCURRENCY_CACHE_SEPARATE 0
 
 #if MAS_CONCURRENCY_CACHE_SEPARATE > 0
-#define ADD_CACHE_PAD(name,space) char name[MAS_CONCURRENCY_CACHE_LINE_SIZE - (space)]
+#define ADD_CACHE_PAD(name,space) struct { char p[MAS_CONCURRENCY_CACHE_LINE_SIZE - (space)]; } name
 #else
-#define ADD_CACHE_PAD(name,space) char name
+#define ADD_CACHE_PAD(name,space) struct {} name
 #endif
 
 namespace mas {

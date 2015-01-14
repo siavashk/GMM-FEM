@@ -349,28 +349,26 @@ template<typename Result>
 class shared_promise_future_state {
     std::mutex mutex;
     std::condition_variable wait_for_ready_cv;
+    std::atomic<bool> ready;
     std::unique_ptr<std::tuple<Result>> storage;
 
 public:
     shared_promise_future_state() :
-            mutex(), storage(nullptr) {
-    }
+            ready(false), storage() { }
 
     void set_value(Result&& R) {
         std::unique_lock<std::mutex> lk(mutex);
-        storage = std::unique_ptr<std::tuple<Result>>(
-                new std::tuple<Result>(std::forward<Result>(R)));
+        storage = std::unique_ptr<std::tuple<Result>>(new std::tuple<Result>(std::forward<Result>(R)));
+        ready.store(true);
         lk.unlock();
         wait_for_ready_cv.notify_one();
     }
 
     Result get() {
         std::unique_lock<std::mutex> lk(mutex);
-        wait_for_ready_cv.wait(lk, [&] {return !(storage==nullptr);});
+        wait_for_ready_cv.wait(lk, [&] {return ready.load();});
         lk.unlock();
-//		auto out = ;
-//		storage = nullptr;
-        return std::move(std::get<0>(*(storage)));
+        return std::move(std::get<0>(*storage));
     }
 
 };
@@ -424,6 +422,13 @@ public:
                 new promise_future<Result>(state));
         return future<Result>(std::move(base));
     }
+
+    std::unique_ptr<future<Result>> get_unique_future() {
+        auto base = std::unique_ptr<promise_future<Result>>(
+                new promise_future<Result>(state));
+        return std::unique_ptr<future<Result>>(new future<Result>(std::move(base)));
+    }
+
 };
 
 template<typename...>
@@ -497,11 +502,13 @@ public:
 };
 
 template<typename... Signature>
-class async_simple_promise {};
+class simple_promise {};
 
+template<typename ... >
+class simple_future {};
 
 template<typename ... Fn, typename ... Args>
-class async_simple_promise<std::tuple<Fn...>, std::tuple<Args...>> {
+class simple_promise<std::tuple<Fn...>, std::tuple<Args...>> {
 public:
     typedef typename function_wrapper_t<Fn..., Args...>::result_type result_type;
     typedef async_simple_future<std::tuple<Fn...>, std::tuple<Args...>> future_type;
@@ -509,9 +516,9 @@ public:
 private:
     std::shared_ptr<shared_promise_future_state<result_type>> state;
 public:
-    async_simple_promise() {
-        state = std::make_shared<shared_promise_future_state<result_type>>();
-    }
+    simple_promise()  : state(std::make_shared<shared_promise_future_state<result_type>>()) {}
+
+    simple_promise(std::shared_ptr<shared_promise_future_state<result_type>> state) : state(state) {}
 
     void set_value(result_type&& r) {
         state->set_value(std::forward<result_type>(r));
@@ -521,10 +528,10 @@ public:
         return state;
     }
 
+    simple_future<std::tuple<Fn...>, std::tuple<Args...>> get_future() {
+        return simple_future<std::tuple<Fn...>, std::tuple<Args...>>(state);
+    }
 };
-
-template<typename ... >
-class simple_future {};
 
 template<typename ... Fn, typename ... Args>
 class simple_future<std::tuple<Fn...>, std::tuple<Args...>> {
@@ -541,11 +548,10 @@ public:
                     new dsf(std::forward<std::tuple<Fn...>>(fntup), std::forward<std::tuple<Args...>>(argtup)));
     };
 
-    simple_future(async_simple_promise<std::tuple<Fn...>, std::tuple<Args...>>& promise) {
+    simple_future(std::shared_ptr<shared_promise_future_state<result_type>> state) {
 
         using asf = async_simple_future<std::tuple<Fn...>, std::tuple<Args...>>;
-        base = std::unique_ptr<typename asf::base_type> (
-                    new asf(promise.get_state()) );
+        base = std::unique_ptr<typename asf::base_type> (new asf(state));
     };
 
     result_type get() {
