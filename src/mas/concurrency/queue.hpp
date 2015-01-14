@@ -22,23 +22,8 @@ void threadsafe_queue<T>::push_back(const T& t) {
 	node* tmp = new node(new T(t));
 	while (backLock.exchange(true)) {
 	}
-	bool didfirstlock = false;
-
-	// in case simultaneously trying to push_front and push_back
-	// XXX not sure if this is solved...
-	if (last == first) {
-		while (frontLock.exchange(true)) {
-		}
-		// now own both locks, so can't push front and push back simultaneously,
-		// over-writing first->next == back->next
-		didfirstlock = true;
-	}
 	last->next = tmp;
 	last = tmp;
-
-	if (didfirstlock) {
-		frontLock = false;
-	}
 
 	backLock = false;
 }
@@ -46,11 +31,16 @@ void threadsafe_queue<T>::push_back(const T& t) {
 template<typename T>
 void threadsafe_queue<T>::push_front(const T& t) {
 	node* tmp = new node(new T(t));
-	while (frontLock.exchange(true)) {
-	}
+
+	// lock back to prevent simultaneous push_front && push_back
+    while (backLock.exchange(true)) {}
+    // lock front to prevent simultaneous push_front && pop
+	while (frontLock.exchange(true)) {}
+
 	tmp->next = first->next;
 	first->next = tmp;
 	frontLock = false;
+	backLock = false;
 }
 
 template<typename T>

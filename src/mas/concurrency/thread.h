@@ -114,7 +114,7 @@ class async_thread_worker {
 
 public:
     async_thread_worker() :
-            reserve_flag(ATOMIC_FLAG_INIT), f(nullptr) {
+            reserve_flag(ATOMIC_FLAG_INIT), terminated(false), f(nullptr) {
     }
 
     template<typename Fn, typename ... Args>
@@ -136,7 +136,7 @@ public:
 
         // only want to actually set if f is nullptr
         std::unique_lock<std::mutex> lk(wake_mutex);
-        while (f != nullptr) {
+        if (f != nullptr) {
             // run pending task now
             f->invoke();
             f = nullptr;
@@ -152,6 +152,10 @@ public:
     // separated so we can test rather than forward arguments and have it fail
     bool reserve_worker() {
         return (!reserve_flag.test_and_set());
+    }
+
+    void free_worker() {
+        reserve_flag.clear();
     }
 
     void terminate() {
@@ -189,20 +193,20 @@ template<typename ... Fn, typename ... Args>
 class simple_async_thread_worker<std::tuple<Fn...>, std::tuple<Args...>> {
 
     typedef typename function_wrapper_t<Fn..., Args...>::result_type result_type;
-    typedef async_simple_promise<std::tuple<Fn...>, std::tuple<Args...>> promise_type;
+    typedef simple_promise<std::tuple<Fn...>, std::tuple<Args...>> promise_type;
     typedef typename build_index_tuple<sizeof...(Fn)>::type IndicesFn;
     typedef typename build_index_tuple<sizeof...(Args)>::type IndicesArgs;
+
+    // bare-bones: function is fixed (fixed args only),
+    std::tuple<Fn...> fixed;
+    std::unique_ptr<std::tuple<Args...>> vargs;
+    std::unique_ptr<promise_type> prom;
 
     std::atomic_flag reserve_flag;
     std::atomic<bool> terminated;
     std::mutex wake_mutex;
     std::condition_variable wake_condition;
 
-    // bare-bones: function is fixed (fixed args only),
-    std::tuple<Fn...> fixed;
-    std::tuple<Args...> vargs;
-    std::unique_ptr<promise_type> prom;
-    // promise, Args
 
 private:
 
@@ -215,13 +219,13 @@ private:
                     std::forward<Args>(std::get<IndicesArgs>(args))...);
         }
 
-    void invoke(std::unique_ptr<promise_type>& prom, std::tuple<Args...>&& args) {
-        prom->set_value( invoke(std::forward<std::tuple<Args...>>(args), IndicesFn(), IndicesArgs()));
+    void invoke(std::unique_ptr<promise_type>&& prom, std::unique_ptr<std::tuple<Args...>>&& args) {
+        prom->set_value( invoke(std::forward<std::tuple<Args...>>(*args), IndicesFn(), IndicesArgs()));
     }
 
 public:
     simple_async_thread_worker(std::tuple<Fn...> fixed) :
-    reserve_flag(ATOMIC_FLAG_INIT), fixed(std::move(fixed)), vargs(), prom(nullptr) {
+        fixed(std::move(fixed)), vargs(nullptr), prom(nullptr), reserve_flag(ATOMIC_FLAG_INIT), terminated(false) {
     }
 
     simple_future<std::tuple<Fn...>, std::tuple<Args...>> submit(Args&&... args) {
@@ -234,18 +238,26 @@ public:
         std::unique_lock<std::mutex> lk(wake_mutex);
         if(prom != nullptr) {
             // run pending task now
-            invoke(prom, std::move(vargs));
+            invoke(std::move(prom), std::move(vargs));
         }
         prom = std::unique_ptr<promise_type>(new promise_type());
-        lk.unlock();
+        vargs = std::unique_ptr<std::tuple<Args...>>(new std::tuple<Args...>(std::forward<Args>(args)...));
+        auto fut = prom->get_future();
+        lk.unlock(); // promise might now get gobbled up, which is why we needed it first
 
         wake_condition.notify_one();
+
+        return fut;
 
     }
 
     // separated so we can test rather than forward arguments and have it fail
     bool reserve_worker() {
         return (!reserve_flag.test_and_set());
+    }
+
+    void free_worker() {
+        reserve_flag.clear();
     }
 
     void terminate() {
@@ -259,7 +271,11 @@ public:
             wake_condition.wait(lk, [&] {
                         return (prom != nullptr || terminated.load());
                     });
-            invoke(prom, std::move(vargs));
+
+            if (prom != nullptr) {
+                invoke(std::move(prom), std::move(vargs));
+                prom = nullptr;        // signal that it has been used
+            }
             lk.unlock();
             reserve_flag.clear();  // available to reserve again
         }
@@ -343,12 +359,38 @@ public:
                 std::forward<Fn>(fn), std::forward<Args>(args)...);
     }
 
+    /**
+     * nullptr if none available
+     * @return
+     */
+    async_thread_worker* reserve_thread() {
+        for (auto& worker : workers) {
+            if (worker->reserve_worker()) {
+                return worker.get();
+            }
+        }
+        return nullptr;
+    }
+
+    // nullptr if can't schedule asynchronously
+    template<typename Fn, typename ...Args>
+    std::unique_ptr<future<typename std::result_of<Fn(Args...)>::type>> maybe_async(
+                Fn&& fn, Args&&... args) {
+        // find a free worker
+        for (auto& worker : workers) {
+            if (worker->reserve_worker()) {
+                auto fut = worker->submit(std::forward<Fn>(fn),
+                        std::forward<Args>(args)...);
+                return fut;
+            }
+        }
+        return nullptr;
+    }
+
     template<typename Fn, typename ...Args>
     future<typename std::result_of<Fn(Args...)>::type> async(std::launch launch,
             Fn&& fn, Args&&... args) {
         typedef typename std::result_of<Fn(Args...)>::type result_type;
-
-        bool asynced = false;
 
         if (launch == (std::launch::deferred | std::launch::async)) {
             // find a free worker?
@@ -361,7 +403,6 @@ public:
             }
         } else if (launch == std::launch::async) {
             // spin off new thread
-            asynced = true;
             auto fw = make_unique_wrapper(std::forward<Fn>(fn),
                     std::forward<Args>(args)...);
             promise<result_type> prom;
@@ -484,11 +525,11 @@ public:
             }
         } else if (launch == std::launch::async) {
 
-            async_simple_promise<std::tuple<Fn...>, std::tuple<Args...>> prom;
-            simple_future<std::tuple<Fn...>, std::tuple<Args...>> fut(prom);
+            simple_promise<std::tuple<Fn...>, std::tuple<Args...>> prom;
+            auto fut = prom.get_future();
 
             // spin off new thread
-            auto fun = [&](async_simple_promise<std::tuple<Fn...>, std::tuple<Args...>>&& prom,
+            auto fun = [&](simple_promise<std::tuple<Fn...>, std::tuple<Args...>>&& prom,
                     std::tuple<Fn...> fixed, std::tuple<Args...>&& args) {
                 typedef typename build_index_tuple<sizeof...(Fn)>::type IndicesFn;
                 typedef typename build_index_tuple<sizeof...(Args)>::type IndicesArgs;
@@ -501,13 +542,13 @@ public:
                         );
             };
 
-            std::thread async_thread(fun, std::move(prom), fixed, std::forward_as_tuple(args...));
+            std::thread async_thread(fun, std::move(prom), fixed, std::forward_as_tuple(std::forward<Args>(args)...));
             async_thread.detach();
             return fut;
         }
 
         // otherwise, run now
-        return simple_future<std::tuple<Fn...>, std::tuple<Args...>>(fixed, std::forward_as_tuple(args...));
+        return simple_future<std::tuple<Fn...>, std::tuple<Args...>>(fixed, std::forward_as_tuple(std::forward<Args>(args)...));
 
     }
 

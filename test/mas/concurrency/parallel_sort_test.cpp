@@ -281,20 +281,29 @@ tracked_vector<T> do_parallel_async_copy_sort(tracked_vector<T> chunk_data,
 //	}
 //	tracked_vector<T> low_cpy = new_lower_chunk;
 
-    future<tracked_vector<T>> new_lower = pool.async(
-            do_parallel_async_copy_sort<T>, std::move(new_lower_chunk),
-            std::ref(pool)); // , startidx, startidx+nlower-1, true);
+    auto worker = pool.reserve_thread();
+    if (worker != nullptr) {
+        // spin off async
+        future<tracked_vector<T>> new_lower = worker->submit(do_parallel_async_copy_sort<T>, std::move(new_lower_chunk),
+                std::ref(pool));
+
+        tracked_vector<T> new_higher = do_parallel_async_copy_sort<T>(
+                std::move(new_upper_chunk), pool); //, startidx+nlower+1, startidx+nlower+nupper, false);
+
+        tracked_vector<T> result = new_lower.get();
+        result.reserve(result.size() + 1 + new_higher.size());
+        result.push_back(middle);
+        for (int i = 0; i < new_higher.size(); i++) {
+            result.push_back(new_higher[i]);
+        }
+        return result;
+    }
+
+    // run sequentially
+    tracked_vector<T> result = do_parallel_async_copy_sort<T>(
+            std::move(new_lower_chunk), pool);
     tracked_vector<T> new_higher = do_parallel_async_copy_sort<T>(
-            std::move(new_upper_chunk), pool); //, startidx+nlower+1, startidx+nlower+nupper, false);
-
-    tracked_vector<T> result = new_lower.get();
-
-//	if (result.size() != nlower) {
-//		std::lock_guard<std::mutex> lk(mut);
-//		print_vec(low_cpy);
-//		print_vec(result);
-//		std::cout << "BROKEN" << std::endl;
-//	}
+            std::move(new_upper_chunk), pool);
 
     result.reserve(result.size() + 1 + new_higher.size());
     result.push_back(middle);
@@ -302,10 +311,6 @@ tracked_vector<T> do_parallel_async_copy_sort(tracked_vector<T> chunk_data,
         result.push_back(new_higher[i]);
     }
 
-//	{
-//	std::lock_guard<std::mutex> lk(mut);
-//	std::cout << "returning (" << startidx <<  ", " << endidx << ")" << std::endl;
-//	}
     return result;
 }
 
@@ -328,7 +333,8 @@ struct simple_async_sorter {
 
 public:
 
-    tracked_vector<int> do_sort(tracked_vector<int> chunk_data) {
+    tracked_vector<int> do_sort(tracked_vector<int> chunk_data, bool lower) {
+
         if (chunk_data.size() < 2) {
             return chunk_data;
         }
@@ -349,12 +355,9 @@ public:
         }
         new_lower_chunk.resize(nlower);
 
-        int nupper = new_upper_chunk.size();
+        auto new_lower = pool.async(std::move(new_lower_chunk), true);
 
-        auto new_lower = pool.async(std::move(new_lower_chunk));
-
-        tracked_vector<int> new_higher = do_sort(std::move(new_upper_chunk));
-
+        tracked_vector<int> new_higher = do_sort(std::move(new_upper_chunk), false);
         tracked_vector<int> result = new_lower.get();
 
         result.reserve(result.size() + 1 + new_higher.size());
@@ -369,7 +372,7 @@ public:
     typedef tracked_vector<int> vec_type;
     typedef std::tuple<decltype(&simple_async_sorter::do_sort),
             simple_async_sorter*> fn_type;
-    typedef std::tuple<vec_type> args_type;
+    typedef std::tuple<vec_type, bool> args_type;
     simple_async_thread_pool<fn_type, args_type> pool;
 
     simple_async_sorter(int threads) :
@@ -390,7 +393,7 @@ tracked_vector<T> parallel_simple_async_quick_sort(tracked_vector<T> input,
 
     simple_async_sorter sorter(nthreads);
 
-    return sorter.do_sort(std::move(input));
+    return sorter.do_sort(std::move(input), false);
 }
 
 template<typename T>
@@ -474,7 +477,7 @@ bool check_equal(const tracked_vector<T>& v1, const tracked_vector<T>& v2) {
 
 void doSortTest() {
     tracked_vector<int> vals;
-    int N = 10000000;
+    int N = 20000000;
     for (int i = 0; i < N; i++) {
         vals.push_back(i);
     }
@@ -496,7 +499,7 @@ void doSortTest() {
 
     timer.start();
     tracked_vector<int> out2 = parallel_async_quick_sort(
-            std::move(vals2));
+            std::move(vals2), 3);
     timer.stop();
     double pms = timer.getMilliseconds();
 
