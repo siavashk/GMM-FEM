@@ -26,7 +26,7 @@ void print_it(RA start, RA end) {
     std::cout << std::endl;
 }
 
-void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
+bool check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
     bool equal = true;
     for (int i = 0; i < v1.size(); i++) {
         if (v1[i] != v2[i]) {
@@ -45,6 +45,8 @@ void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
         }
 
     }
+
+    return equal;
 }
 
 int main(int argc, char **argv) {
@@ -52,7 +54,7 @@ int main(int argc, char **argv) {
     auto cmp = [](int a, int b) {return (a > b);};
     auto mv = [](int& v, const size_t& a, const size_t& b) {  };
 
-    int len = 100000000;
+    int len = 10;//100000000;
     std::vector<int> v1(len);
     for (int i = 0; i < v1.size(); i++) {
         v1[i] = i;
@@ -143,7 +145,21 @@ int main(int argc, char **argv) {
     std::make_heap(v1.begin(), v1.end(), cmp);
     mas::heap::make_heap(v2.begin(), v2.end(), cmp, mv);
 
-    check_equal(v1, v2);
+    bool equal = check_equal(v1, v2);
+    if (!equal) {
+        // check if at least valid
+        bool valid1 = std::is_heap(v1.begin(), v1.end(), cmp);
+        bool valid2 = std::is_heap(v2.begin(), v2.end(), cmp);
+        if (!valid1) {
+            std::cout << "std NOT valid" << std::endl;
+        }
+        if (!valid2) {
+            std::cout << "mas NOT valid" << std::endl;
+        }
+        if (valid1 && valid2) {
+            std::cout << "although different, both are valid" << std::endl;
+        }
+    }
 
     // sort heap
     timer.start();
@@ -158,7 +174,21 @@ int main(int argc, char **argv) {
     mas_ms = timer.getMilliseconds();
     std::cout << "mas sort took " << mas_ms << "ms" << std::endl;
 
-    check_equal(v1, v2);
+    equal = check_equal(v1, v2);
+    if (!equal) {
+        // check sorted
+        for (int i=0; i<v1.size()-1; i++) {
+            if (!cmp(v1[i], v1[i+1])) {
+                std::cout << "std NOT sorted at " << (i+1) << std::endl;
+            }
+        }
+
+        for (int i=0; i<v2.size()-1; i++) {
+            if (!cmp(v2[i], v2[i+1])) {
+                std::cout << "mas NOT sorted at " << (i+1) << std::endl;
+            }
+        }
+    }
 
     // update heap
     timer.start();
