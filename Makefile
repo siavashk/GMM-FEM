@@ -1,5 +1,6 @@
 CC=g++
 LD=g++
+MM=g++
 
 # DEBUG = 0
 # PROFILE = 0
@@ -11,14 +12,16 @@ TESTDIR = ./test
 MEXDIR = ./mex
 BINDIR = ./bin
 
-CPPFLAGS=-I$(INCLUDEDIR) --std=c++11
+CPPFLAGS=-I$(INCLUDEDIR) -fPIC --std=c++11 -pedantic
 ifdef DEBUG
 CPPFLAGS:=$(CPPFLAGS) -g -O0 -DMAS_DEBUG
 else
 CPPFLAGS:=$(CPPFLAGS) -O3
 endif
 
-LDFLAGS=
+MMFLAGS:=$(CPPFLAGS) -MM
+
+LDFLAGS= -pthread
 ifdef PROFILE
 CPPFLAGS:=$(CPPFLAGS) -pg
 LDFLAGS:=$(LDFLAGS) -pg
@@ -45,39 +48,44 @@ endif
 
 MEX_CPPFLAGS:=$(CPPFLAGS) -I$(MEXDIR) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I"$(MATLAB_INCLUDEDIR)" -Wall
 MEX_LDFLAGS:= $(LDFLAGS) -shared -L"$(MATLAB_BINDIR)" -lstdc++ -lmex -lmx -lmat
+MEX_MMFLAGS:=$(MEX_CPPFLAGS) -MM
 
 MEX_SOURCES = $(shell find $(MEXDIR)/ -type f -name '*_mex.cpp')
 MEX_OBJECTS = $(patsubst $(MEXDIR)/%.cpp, $(BUILDDIR)/%.mexo, $(MEX_SOURCES))
+MEX_DEPS = $(patsubst $(MEXDIR)/%.cpp, $(BUILDDIR)/%.mexd, $(MEX_SOURCES))
 MEX = $(patsubst $(MEXDIR)/%_mex.cpp, $(BINDIR)/%.$(MEX_EXT), $(MEX_SOURCES))
 
 CMD_SOURCES = $(shell find $(SRCDIR)/ -type f -name '*_cmd.cpp')
-CMD_OBJECTS =  $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(CMD_SOURCES))
+CMD_OBJECTS =  $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.cmdo, $(CMD_SOURCES))
+CMD_DEPS =  $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.cmdd, $(CMD_SOURCES))
 CMD =  $(patsubst $(SRCDIR)/%_cmd.cpp, $(BINDIR)/%, $(CMD_SOURCES))
 
 SOURCES := $(shell find $(SRCDIR)/ -type f -name '*.cpp')
 SOURCES := $(filter-out $(MEX_SOURCES) $(CMD_SOURCES),$(SOURCES))
 OBJECTS := $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(SOURCES))
+DEPS := $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.d, $(SOURCES))
 LIB := $(BINDIR)/maslib.$(LIB_EXT)
 
 TEST_SOURCES := $(shell find $(TESTDIR)/ -type f -name '*.cpp')
 TEST_OBJECTS := $(patsubst $(TESTDIR)/%.cpp, $(BUILDDIR)/%.to, $(TEST_SOURCES))
+TEST_DEPS := $(patsubst $(TESTDIR)/%.cpp, $(BUILDDIR)/%.td, $(TEST_SOURCES))
 TEST_CMD := $(patsubst $(TESTDIR)/%.cpp, $(BINDIR)/%, $(TEST_SOURCES))
 
 M_FILES := $(shell find $(MEXDIR)/ -type f -name '*.m')
 M_FILES_OUT := $(patsubst $(MEXDIR)/%.m, $(BINDIR)/%.m, $(M_FILES))
 
-HEADERS := $(shell find $(INCLUDEDIR)/ -type f -name '*.h')
 # $(notdir $(MEX_SOURCES:.cpp=.$(MEX_EXT))))
 
 MKDIR_CMD=mkdir -p $(@D)
+RM_CMD=rm -rf
 
 default: all
 
 cleanup:
-	rm -rf $(OBJECTS) $(MEX_OBJECTS) $(CMD_OBJECTS) $(TEST_OBJECTS)
+	$(RM_CMD) $(OBJECTS) $(DEPS) $(MEX_OBJECTS) $(MEX_DEPS)	$(CMD_OBJECTS) $(CMD_DEPS) $(TEST_OBJECTS) $(TEST_DEPS)
 
 clean: cleanup
-	rm -rf $(CMD) $(MEX) $(LIB) $(TEST_CMD) $(M_FILES_OUT)
+	$(RM) $(CMD) $(MEX) $(LIB) $(TEST_CMD) $(M_FILES_OUT)
 
 # do not delete intermediates
 .SECONDARY:
@@ -92,6 +100,7 @@ vars:
 	@echo "MEX: $(MEX)"
 	@echo "TEST_OBJECTS: $(TEST_OBJECTS)"
 	@echo "TEST_CMD: $(TEST_CMD)"
+	@echo "TEST_DEPS: $(TEST_DEPS)"
 	
 
 all: cmd lib mex test
@@ -107,20 +116,61 @@ lib: $(LIB)
 
 test: $(TEST_CMD)
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
+deps: $(DEPS) $(MEX_DEPS) $(CMD_DEPS) $(TEST_DEPS)
+	
+tuple: 
+	$(CC) $(CPPFLAGS) -o bin/mas/concurrency/tuple_test test/mas/concurrency/tuple_test.cpp
+	
+parallel_test: build/mas/core/time.o build/mas/concurrency/parallel_sort_test.to
+	@echo Assembling $@ ...
+	@$(LD) -o bin/mas/concurrency/parallel_sort_test $(LDFLAGS) build/mas/core/time.o build/mas/concurrency/parallel_sort_test.to
+	
+# include dependency rules	
+-include $(DEPS)
+-include $(MEX_DEPS)
+-include $(CMD_DEPS)
+-include $(TEST_DEPS)
+	
+# DEPENDENCIES
+$(BUILDDIR)/%.d: $(SRCDIR)/%.cpp
 	@$(MKDIR_CMD)
+	@echo Updating dependencies $@...
+	@$(MM) $(MMFLAGS) -MT $(@:.d=.o) $< >> $@
+
+$(BUILDDIR)/%.mexd: $(MEXDIR)/%.cpp
+	@$(MKDIR_CMD)
+	@echo Updating dependencies $@...
+	@$(MM) $(MEX_MMFLAGS) -MT $(@:.mexd=.mexo) $< >> $@
+
+$(BUILDDIR)/%.cmdd: $(SRCDIR)/%.cpp
+	@$(MKDIR_CMD)
+	@echo Updating dependencies $@...
+	@$(MM) $(MMFLAGS) -MT $(@:.cmdd=.cmdo) $< >> $@
+	
+$(BUILDDIR)/%.td: $(TESTDIR)/%.cpp
+	@$(MKDIR_CMD)
+	@echo Updating dependencies $@...
+	@$(MM) $(MMFLAGS) -MT $(@:.td=.to) $< >> $@
+
+# OBJECTS
+
+$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
 	@echo Compiling $@...
 	@$(CC) $(CPPFLAGS) -o $@ -c $<
 
 $(BUILDDIR)/%.mexo: $(MEXDIR)/%.cpp
-	@$(MKDIR_CMD)
 	@echo Compiling $@...
 	@$(CC) $(MEX_CPPFLAGS) -o $@ -c $<
-	
-$(BUILDDIR)/%.to: $(TESTDIR)/%.cpp
-	@$(MKDIR_CMD)
+
+$(BUILDDIR)/%.cmdo: $(SRCDIR)/%.cpp
 	@echo Compiling $@...
 	@$(CC) $(CPPFLAGS) -o $@ -c $<
+	
+$(BUILDDIR)/%.to: $(TESTDIR)/%.cpp
+	@echo Compiling $@...
+	@$(CC) $(CPPFLAGS) -o $@ -c $<
+
+# Matlab
 
 $(BINDIR)/%.$(MEX_EXT): $(BUILDDIR)/%_mex.mexo $(OBJECTS)
 	@$(MKDIR_CMD)
@@ -133,13 +183,13 @@ $(BINDIR)/%.m: $(MEXDIR)/%.m
 	@cp $< $@
 
 # Command-line programs
-$(BINDIR)/%: $(BUILDDIR)/%.to $(OBJECTS)
+		
+$(BINDIR)/%: $(BUILDDIR)/%_cmd.cmdo $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
 	@$(LD) -o $@ $(LDFLAGS) $(OBJECTS) $<
-		
-# Command-line programs
-$(BINDIR)/%: $(BUILDDIR)/%_cmd.o $(OBJECTS)
+	
+$(BINDIR)/%: $(BUILDDIR)/%.to $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
 	@$(LD) -o $@ $(LDFLAGS) $(OBJECTS) $<
@@ -147,6 +197,4 @@ $(BINDIR)/%: $(BUILDDIR)/%_cmd.o $(OBJECTS)
 $(LIB) : $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	# @ar rcs $@ $(OBJECTS)
-	# @ranlib $@
 	@$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(OBJECTS)

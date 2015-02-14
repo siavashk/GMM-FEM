@@ -10,34 +10,10 @@
 #define DIM 3
 
 using namespace mas::bvtree;
-
-void updateNode(BVNode& node, double *pnts) {
-
-    // If leaf, update all elements
-    if (node.isLeaf()) {
-
-        for (SharedBoundable& elem : node.getElements()) {
-
-            std::shared_ptr<IndexedBoundablePointSet> bps =
-                    std::static_pointer_cast<IndexedBoundablePointSet>(elem);
-
-            for (std::shared_ptr<mas::IndexedPoint3d>& bip : bps->pnts) {
-                int i = bip->getIndex();
-                bip->set(pnts[3 * i], pnts[3 * i + 1], pnts[3 * i + 2]);
-            }
-
-            // update bounds up
-            node.updateBoundsUp(*bps);
-
-        }
-
-    } else {
-        for (SharedBVNode& child : node.getChildren()) {
-            updateNode(*child, pnts);
-        }
-    }
-
-}
+using SharedPoint = std::shared_ptr<mas::IndexedPoint3d>;
+using BoundablePoints = mas::bvtree::BoundablePointPtrSet<SharedPoint>;
+using SharedBoundablePoints = std::shared_ptr<BoundablePoints>;
+using AABBTree = mas::bvtree::BVTree<SharedBoundablePoints, AABB>;
 
 // Main entry function
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -52,16 +28,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     // Get tree
-    mex::class_handle<BVTree> *tree = NULL;
+    mex::class_handle<AABBTree> *tree = nullptr;
     if (nrhs > TREE_IDX) {
-        tree = mex::get_class_handle<BVTree>(POINTSET_TREE_SIGNATURE,
+        tree = mex::get_class_handle<AABBTree>(POINTSET_TREE_SIGNATURE,
                 prhs[TREE_IDX]);
 
-        if (tree == NULL) {
+        if (tree == nullptr) {
             mexPrintf("Unable to recover tree");
         }
 
-        if (tree == NULL) {
+        if (tree == nullptr) {
             mexErrMsgIdAndTxt("MATLAB:bvtree_update:invalidInput",
                     "Cannot find BVTree with supplied id.");
         }
@@ -89,7 +65,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     // recursively update points
     if (pnts != nullptr) {
-    	updateNode(*(tree->getRoot()), pnts);
+
+    	// Update all elements in leaves
+    	for (size_t i = 0; i<tree->numLeaves(); i++) {
+    		auto& node = tree->getLeaf(i);
+    		for (SharedBoundablePoints& bps : node.elems) {
+    			for (SharedPoint& bip : bps->pnts) {
+    				int i = bip->getIndex();
+    				bip->set(pnts[3 * i], pnts[3 * i + 1], pnts[3 * i + 2]);
+    			}
+    		}
+    	}
+
+    	tree->parallel_update();
+
     }
 
 }

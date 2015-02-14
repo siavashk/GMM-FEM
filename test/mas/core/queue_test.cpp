@@ -41,7 +41,7 @@ void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
 
 void do_pop_test() {
 
-    int len = 12000000;
+    int len = 10;//12000000;
     std::vector<int> v1(len);
     for (int i = 0; i < v1.size(); i++) {
         v1[i] = i;
@@ -82,7 +82,7 @@ void do_pop_test() {
 
 void do_random_pop_test() {
 
-    int len = 1200000;
+    int len = 10;//1200000;
     std::vector<int> v1(len);
     for (int i = 0; i < v1.size(); i++) {
         v1[i] = i;
@@ -129,7 +129,7 @@ void do_random_pop_test() {
 
 void do_random_update_test() {
 
-    int len = 100000000;
+    int len = 10;//100000000;
 
     struct widget {
         double priority;

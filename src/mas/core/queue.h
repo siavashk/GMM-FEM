@@ -92,6 +92,7 @@ public:
    // NON-STANDARD pop and retrieve top element in queue
 
    value_type pop_top();
+   void pop_top(reference top);
    value_type pop(size_type loc);
 
    const_reference peek() const;

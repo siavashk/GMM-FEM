@@ -93,15 +93,19 @@ private:
     // vectors for storing transformed triangle vertices
     Point3d myP0, myP1, myP2;
 private:
+    template<typename BV1, typename BV2>
 	void intersectBoundingVolumeTriangles (
       std::vector<TriangleTriangleIntersection>& intersections,
-      const BVNode& node1, const BVNode& node2) const;
+      const BVNode<SharedBoundablePolygon,BV1>& node1,
+      const BVNode<SharedBoundablePolygon,BV2>& node2) const;
+    template<typename BV>
 	void intersectBoundingVolumeTriangleLines (
       std::vector<TriangleLineIntersection>& intersections,
-      const BVNode& node, const Line& l) const;
+      const BVNode<SharedBoundablePolygon,BV>& node, const Line& l) const;
+    template<typename BV>
 	void intersectBoundingVolumeTrianglePlanes (
       std::vector<TrianglePlaneIntersection>& intersections,
-      const BVNode& node, const Plane& p) const;
+      const BVNode<SharedBoundablePolygon,BV>& node, const Plane& p) const;
 
 public:
 	BVIntersector();
@@ -110,24 +114,35 @@ public:
 	void setEpsilon(double eps);
 	double getEpsilon();
 
+	template<typename BV = OBB>
 	std::vector<TriangleTriangleIntersection> intersectMeshMesh (
       const PolygonMesh& mesh1, const PolygonMesh& mesh2) const;
-	std::vector<TriangleTriangleIntersection> intersectMeshMesh (
-      const BVTree& bvh1, const BVTree& bvh2) const;
 
+	template<typename BV1, typename BV2>
+	std::vector<TriangleTriangleIntersection> intersectMeshMesh (
+      const BVTree<SharedBoundablePolygon,BV1>& bvh1,
+      const BVTree<SharedBoundablePolygon,BV2>& bvh2) const;
+
+	template<typename BV = OBB>
     std::vector<TrianglePlaneIntersection> intersectMeshPlane (
       const PolygonMesh& mesh, const Plane& plane) const;
+	template<typename BV>
     std::vector<TrianglePlaneIntersection> intersectMeshPlane (
-      const BVTree& bvh, const Plane& plane) const;
+      const BVTree<SharedBoundablePolygon,BV>& bvh, const Plane& plane) const;
 
+	template<typename BV = OBB>
 	std::vector<TriangleLineIntersection> intersectMeshLine (
-    	const BVTree& bvh, const Line& line) const;
+	      const PolygonMesh& mesh, const Line& line) const;
+	template<typename BV>
 	std::vector<TriangleLineIntersection> intersectMeshLine (
-      const PolygonMesh& mesh, const Line& line) const;
+    	const BVTree<SharedBoundablePolygon,BV>& bvh, const Line& line) const;
+
 	
 };
 
 }
 }
+
+#include "mas/mesh/meshbv_intersector.hpp"
 
 #endif

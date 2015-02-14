@@ -14,34 +14,6 @@
 
 using namespace mas::bvtree;
 
-void printNode(const BVNode& node, int depth) {
-
-    OBB* obb = static_cast<OBB*>(node.bv.get());
-
-    const mas::Point3d &c = obb->c;
-    const mas::Vector3d &hw = obb->halfWidths;
-
-    for (int i = 0; i < depth; i++) {
-        printf("----");
-    }
-    printf("c: %.3lf %.3lf %.3lf\n", c.x, c.y, c.z);
-    for (int i = 0; i < depth; i++) {
-        printf("    ");
-    }
-    printf("hw: %.3lf %.3lf %.3lf\n", hw.x, hw.y, hw.z);
-
-    for (const SharedBVNode& child : node.children) {
-        printNode(*child, depth + 1);
-    }
-
-}
-
-void printTree(BVTree& obbt) {
-    const SharedBVNode& root = obbt.getRoot();
-    printNode(*root, 0);
-
-}
-
 // Main entry function
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
@@ -54,11 +26,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 "Too many output arguments.");
     }
 
+    using SharedPoint = std::shared_ptr<mas::IndexedPoint3d>;
+    using BoundablePoints = mas::bvtree::BoundablePointPtrSet<SharedPoint>;
+    using SharedBoundablePoints = std::shared_ptr<BoundablePoints>;
+    using AABBTree = mas::bvtree::BVTree<SharedBoundablePoints, AABB>;
+
     // Get tree
-    mex::class_handle<BVTree> *tree = nullptr;
+    mex::class_handle<AABBTree> *tree = nullptr;
     if (nrhs > TREE_IDX) {
-        tree = mex::get_class_handle<BVTree>(POINTSET_TREE_SIGNATURE,
-                prhs[TREE_IDX]);
+        tree = mex::get_class_handle<AABBTree>(POINTSET_TREE_SIGNATURE, prhs[TREE_IDX]);
 
         if (tree == nullptr) {
             mexPrintf("Unable to recover tree");
@@ -109,14 +85,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // #pragma omp parallel for
     for (int i = 0; i < nPoints; i++) {
         mas::Point3d pnt(pnts[3 * i], pnts[3 * i + 1], pnts[3 * i + 2]);
-        std::vector<BVNode*> bvnodes;
+        std::vector<BVNode<SharedBoundablePoints,AABB>*> bvnodes;
         tree->intersectSphere(pnt, rad, bvnodes);
 
         // mexPrintf(" Found %i nodes that intersect point (%lf, %lf, %lf)\n", bvnodes.size(), pnt.x, pnt.y, pnt.z);
 
         // count elems
         int nelems = 0;
-        for (BVNode* node : bvnodes) {
+        for (BVNode<SharedBoundablePoints,AABB>* node : bvnodes) {
             nelems += node->numElements();
         }
 
@@ -126,15 +102,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int eidx = 0;
 
         //   		mexPrintf("Point:  (%.2lf, %.2lf, %.2lf)\n", pnt.x, pnt.y, pnt.z);
-        for (BVNode* node : bvnodes) {
-            for (SharedBoundable& elem : node->elems) {
+        for (BVNode<SharedBoundablePoints,AABB>* node : bvnodes) {
+            for (SharedBoundablePoints& elem : node->elems) {
                 elemIdxs[eidx++] = (elem->idx + 1); // add one for matlab indexing
-
-                //   				mexPrintf("BoundedPoints[%i] (%i): \n", bps->idx, bps->pnts.size());
-                //   				for (mas::Point3d pnt : bps->pnts) {
-                //   					mexPrintf("  (%.2lf, %.2lf, %.2lf) ", pnt.x, pnt.y, pnt.z);
-                //   				}
-                //   				mexPrintf("\n");
             }
         }
 
