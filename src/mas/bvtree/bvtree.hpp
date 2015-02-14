@@ -748,8 +748,8 @@ BVTree<BoundablePtr, BV>::BVTree(double margin) :
 template<typename BoundablePtr, typename BV>
 BVTree<BoundablePtr, BV>::BVTree(std::vector<BoundablePtr> elems, double margin) :
 		margin(margin), nodes(), leavesIdx(0), nleaves(0) {
-	parallel_build(std::move(elems), margin);
-	//build(std::move(elems), margin);
+	//parallel_build(std::move(elems), margin);
+	build(std::move(elems), margin);
 }
 
 template<typename BoundablePtr, typename BV>
@@ -1110,8 +1110,25 @@ BVNode<BoundablePtr, BV>& BVTree<BoundablePtr, BV>::getLeaf(size_t leafIdx) {
 }
 
 template<typename BoundablePtr, typename BV>
+size_t BVTree<BoundablePtr, BV>::numNodes() {
+	return nodes.size();
+}
+
+template<typename BoundablePtr, typename BV>
+BVNode<BoundablePtr, BV>& BVTree<BoundablePtr, BV>::getNode(size_t nodeIdx) {
+	return *(nodes[nodeIdx]);
+}
+
+template<typename BoundablePtr, typename BV>
 void BVTree<BoundablePtr, BV>::update() {
-	nodes.front()->updateBounds();
+	// nodes.front()->updateBounds();
+	BVTreeUpdater<BoundablePtr,BV>::update(this);
+}
+
+template<typename BoundablePtr, typename BV>
+void BVTree<BoundablePtr, BV>::parallel_update() {
+	// nodes.front()->updateBounds();
+	BVTreeUpdater<BoundablePtr,BV>::parallel_update(this);
 }
 
 template<typename BoundablePtr, typename BV>
@@ -1420,6 +1437,89 @@ void BVTree<BoundablePtr, BV>::getLeavesRecursively(
 	}
 }
 
+template<typename BoundablePtr, typename BV>
+void BVTreeUpdater<BoundablePtr,BV>::update(BVTree<BoundablePtr,BV> *tree) {
+	tree->nodes.front()->update();
+}
+
+// Partial specialization for AABB trees
+template<typename BoundablePtr, typename BV>
+void BVTreeUpdater<BoundablePtr,BV>::parallel_update(BVTree<BoundablePtr,BV> *tree) {
+	update(tree);
+}
+
+// AABB specialization
+template <typename BoundablePtr>
+class BVTreeUpdater<BoundablePtr,AABB> {
+public:
+	static void update(BVTree<BoundablePtr,AABB>* tree);
+	static void parallel_update(BVTree<BoundablePtr,AABB>* tree);
+};
+
+template<typename BoundablePtr>
+void BVTreeUpdater<BoundablePtr,AABB>::update(BVTree<BoundablePtr,AABB> *tree) {
+
+	printf("Using specialized updater!\n");
+	fflush(stdout);
+	size_t lidx = tree->numNodes();
+	while (lidx > 0) {
+		lidx--;
+		BVNode<BoundablePtr,AABB>& node = tree->getNode(lidx);
+		AABB bv = node.getBoundingVolume();
+
+		// update node based on elements
+		if (node.isLeaf()) {
+			bv.bound(node.elems);
+		}
+		// update node based on children
+		else {
+			Vector3d min, max;
+			min.set(math::DOUBLE_INFINITY, math::DOUBLE_INFINITY, math::DOUBLE_INFINITY);
+			max.set(-math::DOUBLE_INFINITY, -math::DOUBLE_INFINITY, -math::DOUBLE_INFINITY);
+			for (const auto& child : node.getChildren()) {
+				const AABB& cbv = child->getBoundingVolume();
+				Vector3d cmax = cbv.c;
+				cmax.add(cbv.halfWidths);
+				Vector3d cmin = cbv.c;
+				cmin.subtract(cbv.halfWidths);
+				if (cmax.x > max.x) {
+					max.x = cmax.x;
+				}
+				if (cmax.y > max.y) {
+					max.y = cmax.y;
+				}
+				if (cmax.z > max.z) {
+					max.z = cmax.z;
+				}
+				if (cmin.x < min.x) {
+					min.x = cmin.x;
+				}
+				if (cmin.y < min.y) {
+					min.y = cmin.y;
+				}
+				if (cmin.z < min.z) {
+					min.z = cmin.z;
+				}
+			} // done looping through all children
+
+			// find midpoint and extent of box
+			bv.c.interpolate(min, 0.5, max);
+			bv.halfWidths.set(max);
+			bv.halfWidths.subtract(min);
+			bv.halfWidths.scale(0.5);
+			double margin = node.getMargin();
+			bv.halfWidths.add(margin,margin,margin);
+		}
+	}
+
+}
+
+template<typename BoundablePtr>
+void BVTreeUpdater<BoundablePtr,AABB>::parallel_update(BVTree<BoundablePtr,AABB> *tree) {
+	update(tree);
+}
+
+
 // nearest boundable stuff
 template<typename BoundablePtr, typename BV>
 double nearest_boundable_recursive(const Point3d& pnt,
@@ -1561,6 +1661,8 @@ BoundablePtr nearest_boundable(const BVTree<BoundablePtr, BV>& bvh,
 	return nearest_ref.get();
 
 }
+
+
 
 }
 }

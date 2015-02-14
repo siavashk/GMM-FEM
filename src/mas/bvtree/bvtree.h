@@ -490,6 +490,9 @@ public:
    size_t numLeaves();
    BVNodeType& getLeaf(size_t leafIdx);
 
+   size_t numNodes();
+   BVNodeType& getNode(size_t nodeIdx);
+
    void update();
    void parallel_update();
 
@@ -549,6 +552,13 @@ protected:
    void getLeavesRecursively(std::vector<BVNodeType*>& leaves,
    BVNodeType* node) const;
 
+};
+
+template <typename BoundablePtr, typename BV>
+class BVTreeUpdater {
+public:
+	static void update(BVTree<BoundablePtr,BV>* tree);
+	static void parallel_update(BVTree<BoundablePtr,BV>* tree);
 };
 
 // static routines
