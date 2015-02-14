@@ -147,6 +147,6 @@ $(BINDIR)/%: $(BUILDDIR)/%_cmd.o $(OBJECTS)
 $(LIB) : $(OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	@ar rcs $@ $(OBJECTS)
-	@ranlib $@
+	# @ar rcs $@ $(OBJECTS)
+	# @ranlib $@
 	@$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(OBJECTS)
