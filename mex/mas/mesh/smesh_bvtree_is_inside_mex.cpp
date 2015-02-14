@@ -35,10 +35,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     // Get data
     // Get data
-    mex::class_handle<BVTree> *tree = nullptr;
+    mex::class_handle<BVTreeType> *tree = nullptr;
     if (nrhs > TREE_IDX) {
-        tree = mex::get_class_handle<BVTree>(MESH_TREE_SIGNATURE,
-                prhs[TREE_IDX]);
+        tree = mex::get_class_handle<BVTreeType>(MESH_TREE_SIGNATURE, prhs[TREE_IDX]);
 
         if (tree == nullptr) {
             mexPrintf("Unable to recover tree");

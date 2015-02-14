@@ -26,7 +26,7 @@ int main(int argc, const char* argv[]) {
 	int nFaces = 8;
 
 	std::vector<SharedVertex3d> vtxs;
-	std::vector<SharedBoundable> boundableGroups;
+	std::vector<SharedBoundablePolygon> boundableGroups;
 
 	if (nPoints > 0) {
 		vtxs.reserve(nPoints);
@@ -57,11 +57,11 @@ int main(int argc, const char* argv[]) {
 			SharedPolygon poly = std::make_shared<Polygon>(std::move(polyvtxs));
 			printf("Poly created, %ld verts\n", poly->verts.size());
 			SharedBoundablePolygon bpoly = std::make_shared<BoundablePolygon>(std::move(poly));
-			bpoly->setIndex(idx++);
+			bpoly->polygon->setIndex(idx++);
 
 			if (bpoly->polygon.get() != poly.get()) {
 				printf("What's going on?!?!\n");
-				printf("Polygon: %p\nBPolygon: %p\n", poly.get(), bpoly->polygon.get());
+				printf("Polygon: %p\nBPolygon: %p\n", (void*)(poly.get()), (void*)(bpoly->polygon.get()));
 			}
 			printf("Bounded polygon has %ld verts (%ld)\n", bpoly->polygon->verts.size(), poly->verts.size());
 			fflush(stdout);
@@ -70,14 +70,14 @@ int main(int argc, const char* argv[]) {
 	}
 
 	int pidx = 1;
-	for (SharedBoundable& b : boundableGroups) {
+	for (SharedBoundablePolygon& b : boundableGroups) {
 		SharedBoundablePolygon bpoly = std::static_pointer_cast<BoundablePolygon>(b);
 		printf("Polygon %d, %ld verts\n", pidx++, bpoly->polygon->verts.size());
 		fflush(stdout);
 	}
 
 	// construct the actual BVTree using an OBB as a base
-	std::unique_ptr<BVTree> tree = std::unique_ptr<BVTree>(BVTreeFactory::createTree<OBB>(boundableGroups, 1e-15));
+	auto tree = std::unique_ptr<BVTree<SharedBoundablePolygon,OBB>>(new BVTree<SharedBoundablePolygon,OBB>(boundableGroups, 1e-15));
 
 	return 0;
 }

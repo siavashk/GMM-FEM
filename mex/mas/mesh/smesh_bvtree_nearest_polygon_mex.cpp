@@ -29,9 +29,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     // Get tree
-    mex::class_handle<BVTree> *tree = nullptr;
+    mex::class_handle<BVTreeType> *tree = nullptr;
     if (nrhs > TREE_IDX) {
-        tree = mex::get_class_handle<BVTree>(MESH_TREE_SIGNATURE,
+        tree = mex::get_class_handle<BVTreeType>(MESH_TREE_SIGNATURE,
                 prhs[TREE_IDX]);
 
         if (tree == nullptr) {
@@ -87,7 +87,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
    		nearest[3*i] = np.x;
    		nearest[3*i+1] = np.y;
    		nearest[3*i+2] = np.z;
-   		idxs[i] = bpoly->getIndex();
+   		idxs[i] = bpoly->polygon->getIndex();
     }
 
     if (nlhs > IDXS_OUT) {

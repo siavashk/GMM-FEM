@@ -1,14 +1,3 @@
-/*=================================================================
- * csg_dice_mex.cpp - matlab interface to csg for computing dice
- *
- * Inputs:  vertices #1, faces #1, vertices #2, faces #2, [epsilon]
- * Outputs: dice, intersection volume, vol #1, vol #2
- *
- * Copyright 2013 C. Antonio Sanchez <antonios@ece.ubc.ca>
- * $Revision: 0.0.0.1 $ 
- *  
- *=================================================================*/
-
 #include "mas/bvtree/bvtree.h"
 #include "mas/bvtree/bvtree_mex.h"
 #include "mex.h"
@@ -41,6 +30,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     // Create shared indexed points
     using SharedPoint = std::shared_ptr<mas::IndexedPoint3d>;
+    using BoundablePoints = mas::bvtree::BoundablePointPtrSet<SharedPoint>;
+    using SharedBoundablePoints = std::shared_ptr<BoundablePoints>;
+    using AABBTree = mas::bvtree::BVTree<SharedBoundablePoints, AABB>;
+
     std::vector<SharedPoint> points;
 
     // Get point data
@@ -66,7 +59,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 "Point array must be of type double.");
     }
 
-    std::vector<std::shared_ptr<Boundable>> boundableGroups;
+    std::vector<SharedBoundablePoints> boundableGroups;
     if (nrhs > GROUP_IDX) {
 
         if (mxIsCell(prhs[GROUP_IDX])) {
@@ -88,8 +81,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
                 // move unique boundable into vector
                 boundableGroups.push_back(
-                        std::make_shared<IndexedBoundablePointSet>(
-                                std::move(pointset), idx++));
+                        std::make_shared<BoundablePoints>(std::move(pointset), idx++));
             }
 
         } else if (mxIsDouble(prhs[GROUP_IDX])) {
@@ -109,8 +101,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
                 // movie unique boundable into vector
                 boundableGroups.push_back(
-                        std::make_shared<IndexedBoundablePointSet>(
-                                std::move(pointset), idx++));
+                        std::make_shared<BoundablePoints>(std::move(pointset), idx++));
             }
         } else {
             mexErrMsgIdAndTxt("MATLAB:bvtree_build:invalidInputType",
@@ -143,14 +134,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     // construct the actual BVTree using an AABB as a base
-    UniqueBV bv(new OBB());
-    mex::class_handle<BVTree> *tree = new mex::class_handle<BVTree>(
-            POINTSET_TREE_SIGNATURE, std::move(bv), std::move(boundableGroups),
-            tol);
+    mex::class_handle<AABBTree> *tree = new mex::class_handle<AABBTree>(
+            POINTSET_TREE_SIGNATURE, std::move(boundableGroups), tol);
 
     // return tree
     if (nlhs > TREE_IDX) {
-        plhs[TREE_IDX] = mex::get_mex_handle<BVTree>(tree);
+        plhs[TREE_IDX] = mex::get_mex_handle<AABBTree>(tree);
     }
 
 }

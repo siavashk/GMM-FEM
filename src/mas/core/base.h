@@ -373,7 +373,9 @@ public:
    void getRow(int row, Vector2d& v) const;
 
    void add(const Matrix2d& mat);
+   void add(const Matrix2d& mat1, const Matrix2d& mat2);
    void subtract(const Matrix2d& mat);
+   void subtract(const Matrix2d& mat1, const Matrix2d& mat2);
    void scaledAdd(double s, const Matrix2d& mat);
 
    void scale(double s);
@@ -387,6 +389,7 @@ public:
 
    void outerProduct(const Vector2d& v1, const Vector2d& v2);
    void addOuterProduct(const Vector2d& v1, const Vector2d& v2);
+   void addScaledOuterProduct(double s, const Vector2d& v1, const Vector2d& v2);
 
    double determinant() const;
    double condition() const;
@@ -435,7 +438,9 @@ public:
    void getRow(int row, Vector3d& v) const;
 
    void add(const Matrix3d& mat);
+   void add(const Matrix3d& mat1, const Matrix3d& mat2);
    void subtract(const Matrix3d& mat);
+   void subtract(const Matrix3d& mat1, const Matrix3d& mat2);
    void scaledAdd(double s, const Matrix3d& mat);
 
    void scale(double s);
@@ -469,6 +474,7 @@ public:
 
    void outerProduct(const Vector3d& v1, const Vector3d& v2);
    void addOuterProduct(const Vector3d& v1, const Vector3d& v2);
+   void addScaledOuterProduct(double s, const Vector3d& v1, const Vector3d& v2);
 
    double determinant() const;
    double condition() const;
@@ -520,7 +526,9 @@ public:
    void getRow(int row, Vector4d& v) const;
 
    void add(const Matrix4d& mat);
+   void add(const Matrix4d& mat1, const Matrix4d& mat2);
    void subtract(const Matrix4d& mat);
+   void subtract(const Matrix4d& mat1, const Matrix4d& mat2);
    void scaledAdd(double s, const Matrix4d& mat);
 
    void scale(double s);
@@ -534,6 +542,7 @@ public:
 
    void outerProduct(const Vector4d& v1, const Vector4d& v2);
    void addOuterProduct(const Vector4d& v1, const Vector4d& v2);
+   void addScaledOuterProduct(double s, const Vector4d& v1, const Vector4d& v2);
 
    double determinant() const;
 
@@ -589,7 +598,9 @@ public:
    void getRow(int row, VectorNd& v) const;
 
    void add(const MatrixNd& mat);
+   void add(const MatrixNd& mat1, const MatrixNd& mat2);
    void subtract(const MatrixNd& mat);
+   void subtract(const MatrixNd& mat1, const MatrixNd& mat2);
    void scaledAdd(double s, const MatrixNd& mat);
 
    void scale(double s);

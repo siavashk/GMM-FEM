@@ -16,7 +16,7 @@ typedef std::shared_ptr<BoundablePolygon> SharedBoundablePolygon;
 using namespace bvtree;
 
 // wrapper for polygon
-class BoundablePolygon: public Boundable {
+class BoundablePolygon {
 public:
 	SharedPolygon polygon;
 	std::vector<SharedPolygon> tris; // triangulation of polygon if necessary
@@ -30,29 +30,34 @@ private:
 public:
 	BoundablePolygon(const SharedPolygon& poly);
 
-	bool updateBV(BoundingVolume& bv) const;
+	template<typename BV>
+	bool updateBV(BV& bv) const;
+
 	void getCentroid(Point3d& c) const;
 	void getCovariance(const Point3d& centre, Matrix3d& cov) const;
 
 	void setPolygon(const SharedPolygon& poly);
 
-	virtual double distanceToPoint(const Point3d& pnt, Point3d& nearest) const;
-	virtual double distanceToPoint(const Point3d& pnt, const Vector3d& dir,
+	double distanceToPoint(const Point3d& pnt, Point3d& nearest) const;
+	double distanceToPoint(const Point3d& pnt, const Vector3d& dir,
 			Point3d& nearest) const;
 
-	virtual double distanceToPoint(const Point3d& pnt, Point3d& nearest,
+	double distanceToPoint(const Point3d& pnt, Point3d& nearest,
 			Vector3d& bary, SharedPolygon& tri) const;
 
-	virtual double distanceToPoint(const Point3d& pnt, const Vector3d& dir,
+	double distanceToPoint(const Point3d& pnt, const Vector3d& dir,
 			Point3d& nearest, Vector3d& bary, SharedPolygon& tri) const;
 
-	virtual const std::vector<SharedPolygon>& getTriangulation() const;
+	const std::vector<SharedPolygon>& getTriangulation() const;
 
 	// stored for faster access later
 	void computeCentroid();
 	void update();
 
 };
+
+bool poly_contains_coordinate(Point3d& pnt, const BoundablePolygon& bpoly,
+        Vector3d& bary, SharedPolygon& tri);
 
 struct InsideMeshQueryData {
 public:
@@ -70,15 +75,12 @@ public:
 
 // get generic tree
 template<typename BV>
-BVTree* get_bv_tree(const PolygonMesh& mesh, double margin = 0);
-
-template<typename BV>
-BVTreeT<BV>* get_bv_tree_T(const PolygonMesh& mesh, double margin = 0);
+BVTree<SharedBoundablePolygon,BV>* get_bv_tree(const PolygonMesh& mesh, double margin = 0);
 
 // specifics
-BSTree* get_bs_tree(const PolygonMesh& mesh, double margin = 0);
-AABBTree* get_aabb_tree(const PolygonMesh& mesh, double margin = 0);
-OBBTree* get_obb_tree(const PolygonMesh& mesh, double margin = 0);
+BVTree<SharedBoundablePolygon,BoundingSphere>* get_bs_tree(const PolygonMesh& mesh, double margin = 0);
+BVTree<SharedBoundablePolygon,AABB>* get_aabb_tree(const PolygonMesh& mesh, double margin = 0);
+BVTree<SharedBoundablePolygon,OBB>* get_obb_tree(const PolygonMesh& mesh, double margin = 0);
 
 struct NearestPolygonData {
 	Point3d nearestPoint;
@@ -87,25 +89,34 @@ struct NearestPolygonData {
 };
 
 // static methods
+template<typename BV = OBB>
 SharedPolygon nearest_polygon(const Point3d& pnt, const PolygonMesh& mesh,
 		Point3d& nearestPoint);
+template<typename BV = OBB>
 SharedPolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
 		const PolygonMesh& mesh, Point3d& nearestPoint);
-SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const BVTree& bvt,
-		Point3d& nearestPoint);
-SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
-		const BVTree& bvt, Point3d& nearestPoint);
-SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
-		const BVTree& bvt, double tol, NearestPolygonData& data);
 
+template<typename BV>
+SharedBoundablePolygon nearest_polygon(const Point3d& pnt,
+        const BVTree<SharedBoundablePolygon,BV>& bvt,
+		Point3d& nearestPoint);
+template<typename BV>
+SharedBoundablePolygon nearest_polygon(const Point3d& pnt, const Vector3d& dir,
+		const BVTree<SharedBoundablePolygon,BV>& bvt, Point3d& nearestPoint);
+
+template<typename BV = OBB>
 bool is_inside(const Point3d& pnt, const PolygonMesh& mesh, double tol = -1,
 		int maxRetries = 10);
+template<typename BV = OBB>
 bool is_inside(const Point3d& pnt, const PolygonMesh& mesh,
 		InsideMeshQueryData& data, double tol = -1, int maxRetries = 10);
-bool is_inside(const Point3d& pnt, const BVTree& bvt, double tol = -1,
-		int maxRetries = 10);
-bool is_inside(const Point3d& pnt, const BVTree& bvt, InsideMeshQueryData& data,
-		double tol = -1, int maxRetries = 10);
+
+template<typename BV>
+bool is_inside(const Point3d& pnt, const BVTree<SharedBoundablePolygon,BV>& bvt,
+        double tol = -1, int maxRetries = 10);
+template<typename BV>
+bool is_inside(const Point3d& pnt, const BVTree<SharedBoundablePolygon,BV>& bvt,
+        InsideMeshQueryData& data, double tol = -1, int maxRetries = 10);
 
 }
 }
