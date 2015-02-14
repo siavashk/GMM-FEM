@@ -29,12 +29,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     using SharedPoint = std::shared_ptr<mas::IndexedPoint3d>;
     using BoundablePoints = mas::bvtree::BoundablePointPtrSet<SharedPoint>;
     using SharedBoundablePoints = std::shared_ptr<BoundablePoints>;
-    using OBBTree = mas::bvtree::BVTree<SharedBoundablePoints, OBB>;
+    using AABBTree = mas::bvtree::BVTree<SharedBoundablePoints, AABB>;
 
     // Get tree
-    mex::class_handle<OBBTree> *tree = nullptr;
+    mex::class_handle<AABBTree> *tree = nullptr;
     if (nrhs > TREE_IDX) {
-        tree = mex::get_class_handle<OBBTree>(POINTSET_TREE_SIGNATURE, prhs[TREE_IDX]);
+        tree = mex::get_class_handle<AABBTree>(POINTSET_TREE_SIGNATURE, prhs[TREE_IDX]);
 
         if (tree == nullptr) {
             mexPrintf("Unable to recover tree");
@@ -85,14 +85,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // #pragma omp parallel for
     for (int i = 0; i < nPoints; i++) {
         mas::Point3d pnt(pnts[3 * i], pnts[3 * i + 1], pnts[3 * i + 2]);
-        std::vector<BVNode<SharedBoundablePoints,OBB>*> bvnodes;
+        std::vector<BVNode<SharedBoundablePoints,AABB>*> bvnodes;
         tree->intersectSphere(pnt, rad, bvnodes);
 
         // mexPrintf(" Found %i nodes that intersect point (%lf, %lf, %lf)\n", bvnodes.size(), pnt.x, pnt.y, pnt.z);
 
         // count elems
         int nelems = 0;
-        for (BVNode<SharedBoundablePoints,OBB>* node : bvnodes) {
+        for (BVNode<SharedBoundablePoints,AABB>* node : bvnodes) {
             nelems += node->numElements();
         }
 
@@ -102,7 +102,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int eidx = 0;
 
         //   		mexPrintf("Point:  (%.2lf, %.2lf, %.2lf)\n", pnt.x, pnt.y, pnt.z);
-        for (BVNode<SharedBoundablePoints,OBB>* node : bvnodes) {
+        for (BVNode<SharedBoundablePoints,AABB>* node : bvnodes) {
             for (SharedBoundablePoints& elem : node->elems) {
                 elemIdxs[eidx++] = (elem->idx + 1); // add one for matlab indexing
             }

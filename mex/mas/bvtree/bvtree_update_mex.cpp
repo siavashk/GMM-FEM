@@ -13,32 +13,7 @@ using namespace mas::bvtree;
 using SharedPoint = std::shared_ptr<mas::IndexedPoint3d>;
 using BoundablePoints = mas::bvtree::BoundablePointPtrSet<SharedPoint>;
 using SharedBoundablePoints = std::shared_ptr<BoundablePoints>;
-using OBBTree = mas::bvtree::BVTree<SharedBoundablePoints, OBB>;
-
-void updateNode(BVNode<SharedBoundablePoints,OBB>& node, double *pnts) {
-
-    // If leaf, update all elements
-    if (node.isLeaf()) {
-
-        for (SharedBoundablePoints& bps : node.elems) {
-
-            for (SharedPoint& bip : bps->pnts) {
-                int i = bip->getIndex();
-                bip->set(pnts[3 * i], pnts[3 * i + 1], pnts[3 * i + 2]);
-            }
-
-            // update bounds up
-            node.updateBoundsUp(bps);
-
-        }
-
-    } else {
-        for (auto& child : node.getChildren()) {
-            updateNode(*child, pnts);
-        }
-    }
-
-}
+using AABBTree = mas::bvtree::BVTree<SharedBoundablePoints, AABB>;
 
 // Main entry function
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -53,9 +28,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     // Get tree
-    mex::class_handle<OBBTree> *tree = nullptr;
+    mex::class_handle<AABBTree> *tree = nullptr;
     if (nrhs > TREE_IDX) {
-        tree = mex::get_class_handle<OBBTree>(POINTSET_TREE_SIGNATURE,
+        tree = mex::get_class_handle<AABBTree>(POINTSET_TREE_SIGNATURE,
                 prhs[TREE_IDX]);
 
         if (tree == nullptr) {
@@ -90,7 +65,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     // recursively update points
     if (pnts != nullptr) {
-    	updateNode(tree->getRoot(), pnts);
+
+    	// Update all elements in leaves
+    	for (size_t i = 0; i<tree->numLeaves(); i++) {
+    		auto& node = tree->getLeaf(i);
+    		for (SharedBoundablePoints& bps : node.elems) {
+    			for (SharedPoint& bip : bps->pnts) {
+    				int i = bip->getIndex();
+    				bip->set(pnts[3 * i], pnts[3 * i + 1], pnts[3 * i + 2]);
+    			}
+    		}
+    	}
+
+    	tree->parallel_update();
+
     }
 
 }

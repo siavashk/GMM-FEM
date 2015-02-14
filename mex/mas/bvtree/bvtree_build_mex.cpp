@@ -1,14 +1,3 @@
-/*=================================================================
- * csg_dice_mex.cpp - matlab interface to csg for computing dice
- *
- * Inputs:  vertices #1, faces #1, vertices #2, faces #2, [epsilon]
- * Outputs: dice, intersection volume, vol #1, vol #2
- *
- * Copyright 2013 C. Antonio Sanchez <antonios@ece.ubc.ca>
- * $Revision: 0.0.0.1 $ 
- *  
- *=================================================================*/
-
 #include "mas/bvtree/bvtree.h"
 #include "mas/bvtree/bvtree_mex.h"
 #include "mex.h"
@@ -43,7 +32,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     using SharedPoint = std::shared_ptr<mas::IndexedPoint3d>;
     using BoundablePoints = mas::bvtree::BoundablePointPtrSet<SharedPoint>;
     using SharedBoundablePoints = std::shared_ptr<BoundablePoints>;
-    using OBBTree = mas::bvtree::BVTree<SharedBoundablePoints, OBB>;
+    using AABBTree = mas::bvtree::BVTree<SharedBoundablePoints, AABB>;
 
     std::vector<SharedPoint> points;
 
@@ -145,12 +134,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     // construct the actual BVTree using an AABB as a base
-    mex::class_handle<OBBTree> *tree = new mex::class_handle<OBBTree>(
+    mex::class_handle<AABBTree> *tree = new mex::class_handle<AABBTree>(
             POINTSET_TREE_SIGNATURE, std::move(boundableGroups), tol);
 
     // return tree
     if (nlhs > TREE_IDX) {
-        plhs[TREE_IDX] = mex::get_mex_handle<OBBTree>(tree);
+        plhs[TREE_IDX] = mex::get_mex_handle<AABBTree>(tree);
     }
 
 }

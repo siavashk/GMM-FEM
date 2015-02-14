@@ -3,6 +3,7 @@
 // #include <future>
 #include <memory>
 #include <iostream>
+#include <atomic>
 #include <condition_variable>
 
 namespace mas {
@@ -555,8 +556,8 @@ public:
     };
 
     result_type get() {
-        typedef typename build_index_tuple<sizeof...(Fn)>::type IndicesFn;
-        typedef typename build_index_tuple<sizeof...(Args)>::type IndicesArgs;
+    	//        typedef typename build_index_tuple<sizeof...(Fn)>::type IndicesFn;
+    	//        typedef typename build_index_tuple<sizeof...(Args)>::type IndicesArgs;
         return base->get(); //return invoke(IndicesFn(), IndicesArgs());
     }
 };

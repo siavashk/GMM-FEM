@@ -24,12 +24,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     using SharedPoint = std::shared_ptr<mas::IndexedPoint3d>;
     using BoundablePoints = mas::bvtree::BoundablePointPtrSet<SharedPoint>;
     using SharedBoundablePoints = std::shared_ptr<BoundablePoints>;
-    using OBBTree = mas::bvtree::BVTree<SharedBoundablePoints, OBB>;
+    using AABBTree = mas::bvtree::BVTree<SharedBoundablePoints, AABB>;
 
     // Get data
     if (nrhs > TREE_IDX) {
         // mexPrintf("Finding tree to cut down... \n");
-        mex::class_handle<OBBTree> *tree = mex::get_class_handle<OBBTree>(
+        mex::class_handle<AABBTree> *tree = mex::get_class_handle<AABBTree>(
                 POINTSET_TREE_SIGNATURE, prhs[TREE_IDX]);
         // mexPrintf("Destroying tree\n");
         if (tree->isValid(POINTSET_TREE_SIGNATURE)) {
