@@ -1031,6 +1031,23 @@ size_t IndexedPoint3d::getIndex() const {
    return idx;
 }
 
+void IndexedPoint3d::set(const Vector3d& vec) {
+	this->x = vec.x;
+	this->y = vec.y;
+	this->z = vec.z;
+}
+
+void IndexedPoint3d::set(double x, double y, double z) {
+	this->x = x;
+	this->y = y;
+	this->z = z;
+}
+
+void IndexedPoint3d::set(double x, double y, double z, size_t index) {
+	set(x,y,z);
+	setIndex(index);
+}
+
 // Matrix implementation
 
 const Matrix2d Matrix2d::IDENTITY = Matrix2d(1, 0, 0, 1);

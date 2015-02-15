@@ -1459,8 +1459,6 @@ public:
 template<typename BoundablePtr>
 void BVTreeUpdater<BoundablePtr,AABB>::update(BVTree<BoundablePtr,AABB> *tree) {
 
-	printf("Using specialized updater!\n");
-	fflush(stdout);
 	size_t lidx = tree->numNodes();
 	while (lidx > 0) {
 		lidx--;
