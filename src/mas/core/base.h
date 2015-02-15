@@ -337,6 +337,10 @@ public:
 
    size_t getIndex() const;
    void setIndex(size_t index);
+
+   void set(const Vector3d& pnt);
+   void set(double x, double y, double z);
+   void set(double x, double y, double z, size_t index);
 };
 
 // Generic 2D matrix
