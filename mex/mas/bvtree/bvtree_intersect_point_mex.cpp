@@ -26,7 +26,7 @@ using SharedBoundablePoints = std::shared_ptr<BoundablePoints>;
 using AABBTree = mas::bvtree::BVTree<SharedBoundablePoints, AABB>;
 
 void __block_intersect(size_t start, size_t len, AABBTree* tree, double* pnts,
-		double rad, std::vector<std::vector<size_t>>& out) {
+		double rad, mxArray* cells, std::mutex& cellmutex) {
 
 	for (size_t i = start; i < start + len; ++i) {
 		mas::Point3d pnt(pnts[3 * i], pnts[3 * i + 1], pnts[3 * i + 2]);
@@ -42,17 +42,34 @@ void __block_intersect(size_t start, size_t len, AABBTree* tree, double* pnts,
 		}
 
 		//		printf(" [start, len, i] = [%lu, %lu, %lu]\n", start, len, i);
+		//		printf("  nelems = %i", nelems);
 		//		fflush(stdout);
 
-		std::vector<size_t>& elemIdxs = out[i];
-		elemIdxs.reserve(nelems);
+		mxArray *elemIdxsArray = nullptr;
+		{
+			// prevent segfault from Matlab memory management
+			std::lock_guard<std::mutex> lock(cellmutex);
+			elemIdxsArray = mxCreateDoubleMatrix(nelems, 1, mxREAL);
+		}
+		double *elemIdxs = mxGetPr(elemIdxsArray);
 
-		// int eidx = 0;
+		//		std::vector<size_t>& elemIdxs = out[i];
+		//		elemIdxs.reserve(nelems);
+
+		 int eidx = 0;
 		//   		mexPrintf("Point:  (%.2lf, %.2lf, %.2lf)\n", pnt.x, pnt.y, pnt.z);
 		for (BVNode<SharedBoundablePoints, AABB>* node : bvnodes) {
 			for (SharedBoundablePoints& elem : node->elems) {
-				elemIdxs.push_back(elem->idx);
+				// elemIdxs.push_back(elem->idx);
+				elemIdxs[eidx] = elem->idx+1; // +1 for matlab indexing
+				eidx++;
 			}
+		}
+
+		{
+			// prevent segfault from Matlab memory management
+			std::lock_guard<std::mutex> lock(cellmutex);
+			mxSetCell(cells, i, elemIdxsArray);
 		}
 	}
 }
@@ -60,7 +77,7 @@ void __block_intersect(size_t start, size_t len, AABBTree* tree, double* pnts,
 void __thread_worker(std::atomic<size_t>& blocksRemaining, size_t nthreads,
 		size_t threadIdx,
 		size_t blockSize, AABBTree* tree, double* pnts, double rad,
-		std::vector<std::vector<size_t>>& out) {
+		mxArray* cells, std::mutex& cellmutex) {
 
 	bool complete = false;
 	while (!complete) {
@@ -75,7 +92,7 @@ void __thread_worker(std::atomic<size_t>& blocksRemaining, size_t nthreads,
 		}
 
 		size_t blockFront = processBlock * blockSize;
-		__block_intersect(blockFront, blockSize, tree, pnts, rad, out);
+		__block_intersect(blockFront, blockSize, tree, pnts, rad, cells, cellmutex);
 
 	}
 	//	printf(" closing worker %lu\n", threadIdx);
@@ -162,7 +179,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 	// build output
 	// initialize with a set number of points
-	std::vector<std::vector<size_t>> out(nPoints);
+	// std::vector<std::vector<size_t>> out(nPoints);
+	mxArray *cells = mxCreateCellMatrix(1, nPoints);
+	std::mutex cellmutex;
 
 	// parallel intersect
 	size_t nblocks = nPoints / blockSize;
@@ -197,17 +216,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		for (size_t i = 0; i < nthreads - 1; i++) {
 			threads.push_back(
 					std::thread(__thread_worker, std::ref(blocksRemaining),
-							nthreads, i, blockSize, tree, pnts, rad, std::ref(out)));
+							nthreads, i, blockSize, tree, pnts, rad, cells, std::ref(cellmutex)));
 		}
 		mas::concurrency::thread_group<std::vector<std::thread>> threadGroup(
 				threads); // for closing off threads
 
 		// process current block
-		__block_intersect(blockFront, blockLength, tree, pnts, rad, std::ref(out));
+		__block_intersect(blockFront, blockLength, tree, pnts, rad, cells, cellmutex);
 
 		// continue processing other blocks
 		__thread_worker(std::ref(blocksRemaining), nthreads, threadIdx, blockSize, tree,
-				pnts, rad, std::ref(out));
+				pnts, rad, cells, std::ref(cellmutex));
 	}
 
 	// Separately copy results into mxArray
@@ -216,17 +235,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	//           SEGFAULT... it looks like it tries
 	//           to rebalance an internal tree, moving
 	//           memory around
-	mxArray *cells = mxCreateCellMatrix(1, nPoints);
-	for (size_t i=0; i<out.size(); ++i) {
-		size_t rsize = out[i].size();
-
-		mxArray *elemIdxsArray = mxCreateDoubleMatrix(rsize, 1, mxREAL);
-		double *elemIdxs = mxGetPr(elemIdxsArray);
-		for (size_t j=0; j<rsize; j++) {
-			elemIdxs[j] = out[i][j] + 1; // add one for matlab indexing
-		}
-		mxSetCell(cells, i, elemIdxsArray);
-	}
+//	mxArray *cells = mxCreateCellMatrix(1, nPoints);
+//	std::mutex mxarraym;
+//
+//	for (size_t i=0; i<out.size(); ++i) {
+//		size_t rsize = out[i].size();
+//
+//		mxArray *elemIdxsArray = mxCreateDoubleMatrix(rsize, 1, mxREAL);
+//		double *elemIdxs = mxGetPr(elemIdxsArray);
+//		for (size_t j=0; j<rsize; j++) {
+//			elemIdxs[j] = out[i][j] + 1; // add one for matlab indexing
+//		}
+//		mxSetCell(cells, i, elemIdxsArray);
+//	}
 
 	if (nlhs > IDXS_OUT) {
 		plhs[0] = cells;
