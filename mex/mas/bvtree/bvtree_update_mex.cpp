@@ -19,12 +19,12 @@ void printTree(AABBTree& tree) {
 
 	for (size_t i=0; i<tree.numNodes(); i++) {
 		auto& node = tree.getNode(i);
-		auto& aabb = node.getBoundingVolume();
+		auto aabb = node.getBoundingVolume();
 		printf("Node %lu: c = [%.2f %.2f %.2f] hw = [%.2f %.2f %.2f]\n",
 				i, aabb.c.x, aabb.c.y, aabb.c.z,
 				aabb.halfWidths.x, aabb.halfWidths.y, aabb.halfWidths.z);
 
-		if (!node.isLeaf()) {
+		if (node.isLeaf()) {
 			for (const auto& elem : node.elems) {
 				for (const auto& pnt : elem->pnts) {
 					printf("    p%lu: (%.2f, %.2f, %.2f)\n",
@@ -88,10 +88,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // Update points and tree
     if (pnts != nullptr) {
 
-#ifdef MAS_DEBUG
-    	printf("Before: \n");
-    	printTree(*tree);
-#endif
+//#ifdef MAS_DEBUG
+//    	printf("Before: \n");
+//    	printTree(*tree);
+//    	printf("\n");
+//#endif
 
     	// Update all elements in leaves
     	for (size_t i = 0; i<tree->numLeaves(); i++) {
@@ -106,10 +107,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     	tree->parallel_update();
 
-#ifdef MAS_DEBUG
-    	printf("After: \n");
-    	printTree(*tree);
-#endif
+//#ifdef MAS_DEBUG
+//    	printf("After: \n");
+//    	printTree(*tree);
+//#endif
 
     }
 
