@@ -582,7 +582,7 @@ double BVNode<BoundablePtr, BV>::getBoundingSphere(Point3d& centre) const {
 }
 
 template<typename BoundablePtr, typename BV>
-const BV& BVNode<BoundablePtr, BV>::getBoundingVolume() const {
+BV& BVNode<BoundablePtr, BV>::getBoundingVolume() {
 	return *bv;
 }
 
@@ -1463,7 +1463,7 @@ void BVTreeUpdater<BoundablePtr,AABB>::update(BVTree<BoundablePtr,AABB> *tree) {
 	while (lidx > 0) {
 		lidx--;
 		BVNode<BoundablePtr,AABB>& node = tree->getNode(lidx);
-		AABB bv = node.getBoundingVolume();
+		AABB& bv = node.getBoundingVolume();
 
 		// update node based on elements
 		if (node.isLeaf()) {
