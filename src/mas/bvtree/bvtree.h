@@ -379,7 +379,7 @@ public:
    BoundingSphere getBoundingSphere() const;
    double getBoundingSphere(Point3d& centre) const;
 
-   const BV& getBoundingVolume() const;
+   BV& getBoundingVolume();
 
    std::vector<BoundablePtr>& getElements() const;
    void setElements(std::vector<BoundablePtr> elems);
