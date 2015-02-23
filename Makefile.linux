@@ -22,7 +22,7 @@ endif
 
 MMFLAGS:=$(CPPFLAGS) -MM
 
-LDFLAGS= -pthread
+LDFLAGS:= -pthread
 ifdef PROFILE
 CPPFLAGS:=$(CPPFLAGS) -pg
 LDFLAGS:=$(LDFLAGS) -pg
@@ -106,7 +106,7 @@ cleanup:
 	$(RM_CMD) $(OBJECTS) $(DEPS) $(MEX_OBJECTS) $(MEX_DEPS)	$(CMD_OBJECTS) $(CMD_DEPS) $(TEST_OBJECTS) $(TEST_DEPS)
 
 clean: cleanup
-	$(RM) $(CMD) $(MEX) $(LIB) $(TEST_CMD) $(M_FILES_OUT)
+	$(RM_CMD) $(CMD) $(MEX) $(LIB) $(TEST_CMD) $(M_FILES_OUT)
 
 # do not delete intermediates
 .SECONDARY:
