@@ -2737,6 +2737,11 @@ Plane::Plane(const Plane& other) :
       normal(other.normal), d(other.d) {
 }
 
+Plane::Plane(double a, double b, double c, double d) :
+      normal(a,b,c), d(d) {
+   this->normal.normalize();
+}
+
 Plane::Plane(const Vector3d& normal, double d) :
       normal(normal), d(d) {
    this->normal.normalize();
@@ -2759,6 +2764,12 @@ Plane& Plane::operator=(const Plane& assignMe) {
 
 void Plane::set(const Vector3d& normal, double d) {
    this->normal.set(normal);
+   this->d = d;
+   this->normal.normalize();
+}
+
+void Plane::set(double a, double b, double c, double d) {
+   this->normal.set(a,b,c);
    this->d = d;
    this->normal.normalize();
 }

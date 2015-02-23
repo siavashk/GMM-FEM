@@ -704,11 +704,13 @@ public:
 public:
    Plane();
    Plane(const Plane& other);
+   Plane(double a, double b, double c, double d);
    Plane(const Vector3d& normal, double d);
    Plane(const Vector3d& normal, const Point3d& pnt);
    Plane(const Point3d& p0, const Point3d& p1, const Point3d& p2);
    virtual Plane& operator=(const Plane& assignMe);
 
+   void set(double a, double b, double c, double d);
    void set(const Vector3d& normal, double d);
    bool set(const Point3d& p0, const Point3d& p1, const Point3d& p2);
    void flip();
