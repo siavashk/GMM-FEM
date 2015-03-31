@@ -1,10 +1,9 @@
 clear; clc; close all;
-root = 'C:/devel/CPD/trunk';
 add_bcpd_paths;
 
 %% Read in the label maps
-[X,fX] = read_ply([root '/data/prostate/US_affine_model.ply']);
-[Y,fY] = read_ply([root '/data/prostate/MR_model.ply']);
+[X,fX] = read_ply([root 'Data\US_model.ply']);
+[Y,fY] = read_ply([root 'Data\MR_model.ply']);
 
 % The Slicer model has too many vertices and faces. I need to downsample
 % it to use it.

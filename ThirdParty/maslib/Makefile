@@ -31,7 +31,7 @@ endif
 
 # Matlab folders
 ifndef MATLAB_ROOT
-MATLAB_ROOT:="C:/Program Files/MATLAB/R2014b"
+MATLAB_ROOT:="C:/Program Files/MATLAB/R2013a"
 endif
 ifndef MATLAB_BINDIR
 MATLAB_BINDIR:="$(MATLAB_ROOT)/bin/win64"

@@ -30,7 +30,7 @@ endif
 
 # Matlab folders
 ifndef MATLAB_ROOT
-MATLAB_ROOT:="C:/Program Files/MATLAB/R2013b"
+MATLAB_ROOT:="C:/Program Files/MATLAB/R2013a"
 # MATLAB_ROOT:="/Applications/MATLAB_R2013b.app"
 endif
 ifndef MATLAB_BINDIR
