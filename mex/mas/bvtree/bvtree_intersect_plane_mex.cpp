@@ -57,7 +57,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			&& mxIsDouble(prhs[PLANE_IDX])) {
 		double *vals = mxGetPr(prhs[PLANE_IDX]);
 		int nvals = mxGetNumberOfElements(prhs[PLANE_IDX]);
-		if (nval != 4) {
+		if (nvals != 4) {
 			mexErrMsgIdAndTxt("MATLAB:bvtree_intersect_plane:invalidInput",
 			"Plane input must consist of 4 values: [a,b,c,d] for a*x+b*y+c*z+d=0.");
 		}
