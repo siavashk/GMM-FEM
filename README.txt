@@ -15,7 +15,7 @@ registration is based on the work presented Khallaghi et al. [2] and Fedorov
 et al. [3].
 
 If this code contributes to a project that leads to a scientific publication, 
-please acknowledge this fact by citing the relevant papers:
+please acknowledge this fact by citing the relevant papers [2,3].
 
 [1] Myronenko and Song., "Point set registration: Coherent point drift." 
 Pattern Analysis and Machine Intelligence, IEEE Transactions on 32.12 (2010):
