@@ -34,7 +34,7 @@ classdef bvtree < handle
             % disp(['Used bvtree with handle: ' num2str(this.cpp_handle_)]);
         end
         function [eIdxs] = intersect_plane(this, plane)
-            eIdxs = bvtree_intersect_point(this.cpp_handle_, plane);
+            eIdxs = bvtree_intersect_plane(this.cpp_handle_, plane);
             % disp(['Used bvtree with handle: ' num2str(this.cpp_handle_)]);
         end
         function update(this, pnts)
