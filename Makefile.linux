@@ -4,16 +4,16 @@ MM=g++
 
 # DEBUG = 0
 # PROFILE = 0
-# OCTAVE = 0
 
+BINDIR = ./bin
 BUILDDIR = ./build
 SRCDIR = ./src
-INCLUDEDIR = ./src
-TESTDIR = ./test
-MEXDIR = ./mex
-BINDIR = ./bin
+COMMONDIR = $(SRCDIR)/common
+TESTDIR = $(SRCDIR)/test
+MEXDIR = $(SRCDIR)/mex
+CMDDIR = $(SRCDIR)/cmd
 
-CXXFLAGS=-I$(INCLUDEDIR) -fPIC --std=c++11 -pedantic #-D_GLIBCXX_DEBUG 
+CXXFLAGS=-I$(SRCDIR)/common -fPIC --std=c++11 -pedantic
 ifdef DEBUG
 CXXFLAGS:=$(CXXFLAGS) -g -O0 -DMAS_DEBUG
 else
@@ -21,8 +21,8 @@ CXXFLAGS:=$(CXXFLAGS) -O3
 endif
 
 MMFLAGS:=$(CXXFLAGS) -MM
-
 LDFLAGS:= -pthread
+
 ifdef PROFILE
 CXXFLAGS:=$(CXXFLAGS) -pg
 LDFLAGS:=$(LDFLAGS) -pg
@@ -33,96 +33,98 @@ ifndef LIB_EXT
 LIB_EXT:=so
 endif
 
-ifdef OCTAVE
-# Octave
-# Octave folders
-ifndef MEX_EXT
-MEX_EXT:=mex
-endif
-ifndef OCTAVE_INCLUDEDIR
-OCTAVE_INCLUDEDIR:="/opt/octavedev/include/octave-4.1.0+/octave"
-endif
-ifndef OCTAVE_LIBDIR
-OCTAVE_LIBDIR:="/opt/octavedev/lib/octave/4.1.0+"
-endif
-
-MEX_CXXFLAGS:=$(CXXFLAGS) -I$(MEXDIR) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I"$(OCTAVE_INCLUDEDIR)" -Wall
-MEX_LDFLAGS:= $(LDFLAGS) -shared -L"$(OCTAVE_LIBDIR)" -lstdc++ -loctinterp
-
-else
 # Matlab
 # Matlab folders
 ifndef MATLAB_ROOT
-MATLAB_ROOT:="/opt/matlab/R2014b"
+
+# Guess where matlab root is
+MATLAB_GUESS:=$(lastword $(wildcard /usr/local/MATLAB/*))
+ifeq (,$(MATLAB_GUESS))
+	MATLAB_GUESS:=$(lastword $(wildcard /usr/local/matlab/*))
 endif
+ifeq (,$(MATLAB_GUESS))
+	MATLAB_GUESS:=$(lastword $(wildcard /opt/matlab/*))
+endif
+ifeq (,$(MATLAB_GUESS))
+	MATLAB_GUESS:=$(lastword $(wildcard /opt/MATLAB/*))
+endif
+ifeq (,$(MATLAB_GUESS))
+$(error Cannot find MATLAB, re-run make by passing a MATLAB root folder: make -f Makefile.windows MATLAB_ROOT=<pathname>)
+endif
+MATLAB_ROOT:=$(MATLAB_GUESS)
+
+endif
+
 ifndef MATLAB_BINDIR
 MATLAB_BINDIR:="$(MATLAB_ROOT)/bin/glnxa64"
 endif
+
 ifndef MEX_EXT
 MEX_EXT:=mexa64
 endif
+
 ifndef MATLAB_INCLUDEDIR
 MATLAB_INCLUDEDIR:="$(MATLAB_ROOT)/extern/include"
 endif
 
 MEX_CXXFLAGS:=$(CXXFLAGS) -I$(MEXDIR) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I"$(MATLAB_INCLUDEDIR)" -Wall
 MEX_LDFLAGS:= $(LDFLAGS) -shared -L"$(MATLAB_BINDIR)" -lstdc++ -lmex -lmx -lmat
-endif
-
 MEX_MMFLAGS:=$(MEX_CXXFLAGS) -MM
 
-MEX_SOURCES = $(shell find $(MEXDIR)/ -type f -name '*_mex.cxx')
-MEX_OBJECTS = $(patsubst $(MEXDIR)/%.cxx, $(BUILDDIR)/%.mexo, $(MEX_SOURCES))
+# source file definitions
+-include Makefile.sources
+
+COMMON_DEPS := $(patsubst $(COMMONDIR)/%.cxx, $(BUILDDIR)/%.d, $(COMMON_SOURCES))
+COMMON_OBJECTS := $(patsubst $(COMMONDIR)/%.cxx, $(BUILDDIR)/%.o, $(COMMON_SOURCES))
+
 MEX_DEPS = $(patsubst $(MEXDIR)/%.cxx, $(BUILDDIR)/%.mexd, $(MEX_SOURCES))
-MEX = $(patsubst $(MEXDIR)/%_mex.cxx, $(BINDIR)/%.$(MEX_EXT), $(MEX_SOURCES))
+MEX_OBJECTS = $(patsubst $(MEXDIR)/%.cxx, $(BUILDDIR)/%.mexo, $(MEX_SOURCES))
 
-CMD_SOURCES = $(shell find $(SRCDIR)/ -type f -name '*_cmd.cxx')
-CMD_OBJECTS =  $(patsubst $(SRCDIR)/%.cxx, $(BUILDDIR)/%.cmdo, $(CMD_SOURCES))
-CMD_DEPS =  $(patsubst $(SRCDIR)/%.cxx, $(BUILDDIR)/%.cmdd, $(CMD_SOURCES))
-CMD =  $(patsubst $(SRCDIR)/%_cmd.cxx, $(BINDIR)/%, $(CMD_SOURCES))
+CMD_DEPS =  $(patsubst $(CMDDIR)/%.cxx, $(BUILDDIR)/%.cmdd, $(CMD_SOURCES))
+CMD_OBJECTS =  $(patsubst $(CMDDIR)/%.cxx, $(BUILDDIR)/%.cmdo, $(CMD_SOURCES))
 
-SOURCES := $(shell find $(SRCDIR)/ -type f -name '*.cxx')
-SOURCES := $(filter-out $(MEX_SOURCES) $(CMD_SOURCES),$(SOURCES))
-OBJECTS := $(patsubst $(SRCDIR)/%.cxx, $(BUILDDIR)/%.o, $(SOURCES))
-DEPS := $(patsubst $(SRCDIR)/%.cxx, $(BUILDDIR)/%.d, $(SOURCES))
-LIB := $(BINDIR)/maslib.$(LIB_EXT)
-
-TEST_SOURCES := $(shell find $(TESTDIR)/ -type f -name '*.cxx')
-TEST_OBJECTS := $(patsubst $(TESTDIR)/%.cxx, $(BUILDDIR)/%.to, $(TEST_SOURCES))
 TEST_DEPS := $(patsubst $(TESTDIR)/%.cxx, $(BUILDDIR)/%.td, $(TEST_SOURCES))
-TEST_CMD := $(patsubst $(TESTDIR)/%.cxx, $(BINDIR)/%, $(TEST_SOURCES))
+TEST_OBJECTS := $(patsubst $(TESTDIR)/%.cxx, $(BUILDDIR)/%.to, $(TEST_SOURCES))
 
-M_FILES := $(shell find $(MEXDIR)/ -type f -name '*.m')
+# Generated outputs, remove _mex and _cmd from filenames
+MEX = $(patsubst $(MEXDIR)/%_mex.cxx, $(BINDIR)/%.$(MEX_EXT), $(MEX_SOURCES))
+CMD =  $(patsubst $(SRCDIR)/%_cmd.cxx, $(BINDIR)/%, $(CMD_SOURCES))
+TEST_CMD := $(patsubst $(TESTDIR)/%.cxx, $(BINDIR)/%, $(TEST_SOURCES))
 M_FILES_OUT := $(patsubst $(MEXDIR)/%.m, $(BINDIR)/%.m, $(M_FILES))
 
-# $(notdir $(MEX_SOURCES:.cxx=.$(MEX_EXT))))
+# Common library
+COMMON_LIB := $(BINDIR)/maslib.$(LIB_EXT)
 
+# Commands
 MKDIR_CMD=mkdir -p $(@D)
 RM_CMD=rm -rf
 
-default: all
+default: mex
 
 cleanup:
-	$(RM_CMD) $(OBJECTS) $(DEPS) $(MEX_OBJECTS) $(MEX_DEPS)	$(CMD_OBJECTS) $(CMD_DEPS) $(TEST_OBJECTS) $(TEST_DEPS)
+	$(RM_CMD) $(COMMON_OBJECTS) $(COMMON_DEPS) $(MEX_OBJECTS) $(MEX_DEPS) $(CMD_OBJECTS) $(CMD_DEPS) $(TEST_OBJECTS) $(TEST_DEPS)
 
 clean: cleanup
-	$(RM_CMD) $(CMD) $(MEX) $(LIB) $(TEST_CMD) $(M_FILES_OUT)
+	$(RM_CMD) $(MEX) $(CMD) $(TEST_CMD) $(M_FILES_OUT) $(COMMON_LIB)
 
 # do not delete intermediates
 .SECONDARY:
 
 vars:
-	@echo "CMD_SOURCES: $(CMD_SOURCES)"
-	@echo "CMD_OBJECTS: $(CMD_OBJECTS)"
-	@echo "CMD: $(CMD)"
+	@echo "MATLAB_ROOT: $(MATLAB_ROOT)"
+	@echo "CXXFLAGS: $(CXXFLAGS)"
+	@echo "COMMON_SOURCES: $(COMMON_SOURCES)"
+	@echo "COMMON_OBJECTS: $(COMMON_OBJECTS)"
 	@echo "MEX_OBJECTS: $(MEX_OBJECTS)"
 	@echo "MEX_CXXFLAGS: $(MEX_CXXFLAGS)"
 	@echo "MEX_LDFLAGS: $(MEX_LDFLAGS)"
 	@echo "MEX: $(MEX)"
+	@echo "CMD: $(CMD)"
+	@echo "CMD_SOURCES: $(CMD_SOURCES)"
+	@echo "CMD_OBJECTS: $(CMD_OBJECTS)"
+	@echo "CMD: $(CMD)"
 	@echo "TEST_OBJECTS: $(TEST_OBJECTS)"
-	@echo "TEST_CMD: $(TEST_CMD)"
-	@echo "TEST_DEPS: $(TEST_DEPS)"
-	
+	@echo "TEST_CMD: $(TEST_CMD)"	
 
 all: cmd lib mex test
 
@@ -133,27 +135,20 @@ mex: $(MEX) $(M_FILES_OUT)
 
 cmd: $(CMD)
 
-lib: $(LIB)
+lib: $(COMMON_LIB)
 
 test: $(TEST_CMD)
 
-deps: $(DEPS) $(MEX_DEPS) $(CMD_DEPS) $(TEST_DEPS)
-	
-tuple: 
-	$(CC) $(CXXFLAGS) -o bin/mas/concurrency/tuple_test test/mas/concurrency/tuple_test.cxx
-	
-parallel_test: build/mas/core/time.o build/mas/concurrency/parallel_sort_test.to
-	@echo Assembling $@ ...
-	@$(LD) -o bin/mas/concurrency/parallel_sort_test $(LDFLAGS) build/mas/core/time.o build/mas/concurrency/parallel_sort_test.to
-	
+deps: $(COMMON_DEPS) $(MEX_DEPS) $(CMD_DEPS) $(TEST_DEPS)
+
 # include dependency rules	
--include $(DEPS)
+-include $(COMMON_DEPS)
 -include $(MEX_DEPS)
 -include $(CMD_DEPS)
 -include $(TEST_DEPS)
 	
 # DEPENDENCIES
-$(BUILDDIR)/%.d: $(SRCDIR)/%.cxx
+$(BUILDDIR)/%.d: $(COMMONDIR)/%.cxx
 	@$(MKDIR_CMD)
 	@echo Updating dependencies $@...
 	@$(MM) $(MMFLAGS) -MT $(@:.d=.o) $< >> $@
@@ -163,7 +158,7 @@ $(BUILDDIR)/%.mexd: $(MEXDIR)/%.cxx
 	@echo Updating dependencies $@...
 	@$(MM) $(MEX_MMFLAGS) -MT $(@:.mexd=.mexo) $< >> $@
 
-$(BUILDDIR)/%.cmdd: $(SRCDIR)/%.cxx
+$(BUILDDIR)/%.cmdd: $(CMDDIR)/%.cxx
 	@$(MKDIR_CMD)
 	@echo Updating dependencies $@...
 	@$(MM) $(MMFLAGS) -MT $(@:.cmdd=.cmdo) $< >> $@
@@ -175,7 +170,7 @@ $(BUILDDIR)/%.td: $(TESTDIR)/%.cxx
 
 # OBJECTS
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.cxx
+$(BUILDDIR)/%.o: $(COMMONDIR)/%.cxx
 	@echo Compiling $@...
 	@$(CC) $(CXXFLAGS) -o $@ -c $<
 
@@ -183,7 +178,7 @@ $(BUILDDIR)/%.mexo: $(MEXDIR)/%.cxx
 	@echo Compiling $@...
 	@$(CC) $(MEX_CXXFLAGS) -o $@ -c $<
 
-$(BUILDDIR)/%.cmdo: $(SRCDIR)/%.cxx
+$(BUILDDIR)/%.cmdo: $(CMDDIR)/%.cxx
 	@echo Compiling $@...
 	@$(CC) $(CXXFLAGS) -o $@ -c $<
 	
@@ -192,11 +187,10 @@ $(BUILDDIR)/%.to: $(TESTDIR)/%.cxx
 	@$(CC) $(CXXFLAGS) -o $@ -c $<
 
 # Matlab
-
-$(BINDIR)/%.$(MEX_EXT): $(BUILDDIR)/%_mex.mexo $(OBJECTS)
+$(BINDIR)/%.$(MEX_EXT): $(BUILDDIR)/%_mex.mexo $(COMMON_OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	@$(LD) -o $@ $(MEX_LDFLAGS) $(OBJECTS) $<
+	@$(LD) -o $@ $(MEX_LDFLAGS) $(COMMON_OBJECTS) $<
 	
 $(BINDIR)/%.m: $(MEXDIR)/%.m
 	@$(MKDIR_CMD)
@@ -205,17 +199,17 @@ $(BINDIR)/%.m: $(MEXDIR)/%.m
 
 # Command-line programs
 		
-$(BINDIR)/%: $(BUILDDIR)/%_cmd.cmdo $(OBJECTS)
+$(BINDIR)/%: $(BUILDDIR)/%_cmd.cmdo $(COMMON_OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	@$(LD) -o $@ $(LDFLAGS) $(OBJECTS) $<
+	@$(LD) -o $@ $(LDFLAGS) $(COMMON_OBJECTS) $<
 	
-$(BINDIR)/%: $(BUILDDIR)/%.to $(OBJECTS)
+$(BINDIR)/%: $(BUILDDIR)/%.to $(COMMON_OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	@$(LD) -o $@ $(LDFLAGS) $(OBJECTS) $<
+	@$(LD) -o $@ $(LDFLAGS) $(COMMON_OBJECTS) $<
 	
-$(LIB) : $(OBJECTS)
+$(LIB) : $(COMMON_OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
-	@$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(OBJECTS)
+	@$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(COMMON_OBJECTS)

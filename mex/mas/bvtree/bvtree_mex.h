@@ -1,6 +1,0 @@
-#ifndef BVTREE_MEX_H
-#define BVTREE_MEX_H
-
-#define POINTSET_TREE_SIGNATURE 0x85856A6A
-
-#endif
