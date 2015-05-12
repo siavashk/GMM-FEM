@@ -56,7 +56,7 @@ MATLAB_ROOT:=$(MATLAB_GUESS)
 endif
 
 ifndef MATLAB_BINDIR
-MATLAB_BINDIR:="$(MATLAB_ROOT)/bin/glnxa64"
+MATLAB_BINDIR:="$(subst $\",,$(MATLAB_ROOT))/bin/glnxa64"
 endif
 
 ifndef MEX_EXT
@@ -64,11 +64,11 @@ MEX_EXT:=mexa64
 endif
 
 ifndef MATLAB_INCLUDEDIR
-MATLAB_INCLUDEDIR:="$(MATLAB_ROOT)/extern/include"
+MATLAB_INCLUDEDIR:="$(subst $\",,$(MATLAB_ROOT))/extern/include"
 endif
 
-MEX_CXXFLAGS:=$(CXXFLAGS) -I$(MEXDIR) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I"$(MATLAB_INCLUDEDIR)" -Wall
-MEX_LDFLAGS:= $(LDFLAGS) -shared -L"$(MATLAB_BINDIR)" -lstdc++ -lmex -lmx -lmat
+MEX_CXXFLAGS:=$(CXXFLAGS) -I$(MEXDIR) -DMX_COMPAT_32 -DMATLAB_MEX_FILE -I$(MATLAB_INCLUDEDIR) -Wall
+MEX_LDFLAGS:= $(LDFLAGS) -shared -L$(MATLAB_BINDIR) -lstdc++ -lmex -lmx -lmat
 MEX_MMFLAGS:=$(MEX_CXXFLAGS) -MM
 
 # source file definitions
@@ -88,7 +88,7 @@ TEST_OBJECTS := $(patsubst $(TESTDIR)/%.cxx, $(BUILDDIR)/%.to, $(TEST_SOURCES))
 
 # Generated outputs, remove _mex and _cmd from filenames
 MEX = $(patsubst $(MEXDIR)/%_mex.cxx, $(BINDIR)/%.$(MEX_EXT), $(MEX_SOURCES))
-CMD =  $(patsubst $(SRCDIR)/%_cmd.cxx, $(BINDIR)/%, $(CMD_SOURCES))
+CMD =  $(patsubst $(CMDDIR)/%_cmd.cxx, $(BINDIR)/%, $(CMD_SOURCES))
 TEST_CMD := $(patsubst $(TESTDIR)/%.cxx, $(BINDIR)/%, $(TEST_SOURCES))
 M_FILES_OUT := $(patsubst $(MEXDIR)/%.m, $(BINDIR)/%.m, $(M_FILES))
 
@@ -111,20 +111,22 @@ clean: cleanup
 .SECONDARY:
 
 vars:
-	@echo "MATLAB_ROOT: $(MATLAB_ROOT)"
-	@echo "CXXFLAGS: $(CXXFLAGS)"
-	@echo "COMMON_SOURCES: $(COMMON_SOURCES)"
-	@echo "COMMON_OBJECTS: $(COMMON_OBJECTS)"
-	@echo "MEX_OBJECTS: $(MEX_OBJECTS)"
-	@echo "MEX_CXXFLAGS: $(MEX_CXXFLAGS)"
-	@echo "MEX_LDFLAGS: $(MEX_LDFLAGS)"
-	@echo "MEX: $(MEX)"
-	@echo "CMD: $(CMD)"
-	@echo "CMD_SOURCES: $(CMD_SOURCES)"
-	@echo "CMD_OBJECTS: $(CMD_OBJECTS)"
-	@echo "CMD: $(CMD)"
-	@echo "TEST_OBJECTS: $(TEST_OBJECTS)"
-	@echo "TEST_CMD: $(TEST_CMD)"	
+	@echo MATLAB_ROOT: $(MATLAB_ROOT)
+	@echo MATLAB_INCLUDEDIR: $(MATLAB_INCLUDEDIR)
+	@echo MATLAB_BINDIR: $(MATLAB_BINDIR)
+	@echo CXXFLAGS: $(CXXFLAGS)
+	@echo COMMON_SOURCES: $(COMMON_SOURCES)
+	@echo COMMON_OBJECTS: $(COMMON_OBJECTS)
+	@echo MEX_OBJECTS: $(MEX_OBJECTS)
+	@echo MEX_CXXFLAGS: $(MEX_CXXFLAGS)
+	@echo MEX_LDFLAGS: $(MEX_LDFLAGS)
+	@echo MEX: $(MEX)
+	@echo CMD: $(CMD)
+	@echo CMD_SOURCES: $(CMD_SOURCES)
+	@echo CMD_OBJECTS: $(CMD_OBJECTS)
+	@echo CMD: $(CMD)
+	@echo TEST_OBJECTS: $(TEST_OBJECTS)
+	@echo TEST_CMD: $(TEST_CMD)	
 
 all: cmd lib mex test
 
@@ -209,7 +211,7 @@ $(BINDIR)/%: $(BUILDDIR)/%.to $(COMMON_OBJECTS)
 	@echo Assembling $@ ...
 	@$(LD) -o $@ $(LDFLAGS) $(COMMON_OBJECTS) $<
 	
-$(LIB) : $(COMMON_OBJECTS)
+$(COMMON_LIB) : $(COMMON_OBJECTS)
 	@$(MKDIR_CMD)
 	@echo Assembling $@ ...
 	@$(LD) -o $@ $(LDFLAGS) -fPIC -shared $(COMMON_OBJECTS)
