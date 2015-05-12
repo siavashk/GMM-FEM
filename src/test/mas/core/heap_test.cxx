@@ -130,6 +130,8 @@ bool move_test() {
             std::cout << "FAIL!!" << std::endl;
         }
     }
+
+    return true;
 }
 
 bool basic_heap_test() {
@@ -411,6 +413,8 @@ bool basic_heap_test() {
             print_vec(v2);
         }
     }
+
+    return true;
 }
 
 bool parallel_heap_test() {
@@ -444,6 +448,7 @@ bool parallel_heap_test() {
 
     check_equal(v1, v2);
 
+    return true;
 }
 
 int main(int argc, char **argv) {
@@ -453,5 +458,6 @@ int main(int argc, char **argv) {
     //for (int i=0; i<2; i++) {
         parallel_heap_test();
     //}
+    return 0;
 }
 
