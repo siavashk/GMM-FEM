@@ -28,7 +28,7 @@ endif
 
 # Library extension
 ifndef LIB_EXT
-LIB_EXT:=so
+LIB_EXT:=dylib
 endif
 
 # Matlab
@@ -36,16 +36,7 @@ endif
 ifndef MATLAB_ROOT
 
 # Guess where matlab root is
-MATLAB_GUESS:=$(lastword $(wildcard /usr/local/MATLAB/*))
-ifeq (,$(MATLAB_GUESS))
-	MATLAB_GUESS:=$(lastword $(wildcard /usr/local/matlab/*))
-endif
-ifeq (,$(MATLAB_GUESS))
-	MATLAB_GUESS:=$(lastword $(wildcard /opt/matlab/*))
-endif
-ifeq (,$(MATLAB_GUESS))
-	MATLAB_GUESS:=$(lastword $(wildcard /opt/MATLAB/*))
-endif
+MATLAB_GUESS:=$(lastword $(wildcard /Applications/MATLAB_*.app))
 ifeq (,$(MATLAB_GUESS))
 $(error Cannot find MATLAB, re-run make by passing a MATLAB root folder: make -f Makefile.windows MATLAB_ROOT=<pathname>)
 endif
@@ -54,11 +45,11 @@ MATLAB_ROOT:=$(MATLAB_GUESS)
 endif
 
 ifndef MATLAB_BINDIR
-MATLAB_BINDIR:="$(MATLAB_ROOT)/bin/glnxa64"
+MATLAB_BINDIR:="$(MATLAB_ROOT)/bin/maci64"
 endif
 
 ifndef MEX_EXT
-MEX_EXT:=mexa64
+MEX_EXT:=mexmaci64
 endif
 
 ifndef MATLAB_INCLUDEDIR

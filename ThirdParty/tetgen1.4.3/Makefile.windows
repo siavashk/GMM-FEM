@@ -28,7 +28,7 @@ endif
 
 # Library extension
 ifndef LIB_EXT
-LIB_EXT:=so
+LIB_EXT:=dll
 endif
 
 # Matlab
@@ -36,15 +36,9 @@ endif
 ifndef MATLAB_ROOT
 
 # Guess where matlab root is
-MATLAB_GUESS:=$(lastword $(wildcard /usr/local/MATLAB/*))
+MATLAB_GUESS:=$(lastword $(wildcard "C:/Program Files/MATLAB/*"))
 ifeq (,$(MATLAB_GUESS))
-	MATLAB_GUESS:=$(lastword $(wildcard /usr/local/matlab/*))
-endif
-ifeq (,$(MATLAB_GUESS))
-	MATLAB_GUESS:=$(lastword $(wildcard /opt/matlab/*))
-endif
-ifeq (,$(MATLAB_GUESS))
-	MATLAB_GUESS:=$(lastword $(wildcard /opt/MATLAB/*))
+	MATLAB_GUESS:=$(lastword $(wildcard "C:/Program Files/matlab/*"))
 endif
 ifeq (,$(MATLAB_GUESS))
 $(error Cannot find MATLAB, re-run make by passing a MATLAB root folder: make -f Makefile.windows MATLAB_ROOT=<pathname>)
