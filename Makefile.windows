@@ -199,7 +199,7 @@ $(BINDIR)/%.$(MEX_EXT): $(BUILDDIR)/%_mex.mexo $(COMMON_OBJECTS)
 $(BINDIR)/%.m: $(MEXDIR)/%.m
 	@$(MKDIR_CMD)
 	@echo Copying $@ ...
-	@copy "$(subst /,\,$<)" "$(subst /,\,$@)" > null
+	@copy "$(subst /,\,$<)" "$(subst /,\,$@)" > nul
 
 # Command-line programs
 		
