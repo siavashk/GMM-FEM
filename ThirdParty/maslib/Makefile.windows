@@ -85,7 +85,7 @@ TEST_OBJECTS := $(patsubst $(TESTDIR)/%.cxx, $(BUILDDIR)/%.to, $(TEST_SOURCES))
 MEX = $(patsubst $(MEXDIR)/%_mex.cxx, $(BINDIR)/%.$(MEX_EXT), $(MEX_SOURCES))
 CMD =  $(patsubst $(CMDDIR)/%_cmd.cxx, $(BINDIR)/%, $(CMD_SOURCES))
 TEST_CMD := $(patsubst $(TESTDIR)/%.cxx, $(BINDIR)/%, $(TEST_SOURCES))
-M_FILES_OUT := $(patsubst $(MEXDIR)/%.m, $(BINDIR)/%.m, $(M_FILES))
+M_FILES := $(patsubst $(MEXDIR)/%.m, $(BINDIR)/%.m, $(M_SOURCES))
 
 # Common library
 COMMON_LIB := $(BINDIR)/maslib.$(LIB_EXT)
@@ -99,7 +99,7 @@ default: mex
 WIN_TEMP := $(COMMON_OBJECTS) $(COMMON_DEPS) $(MEX_OBJECTS) $(MEX_DEPS) $(CMD_OBJECTS) $(CMD_DEPS) $(TEST_OBJECTS) $(TEST_DEPS)
 WIN_TEMP := $(subst /,\,$(WIN_TEMP))
 
-WIN_OUT := $(MEX) $(CMD) $(TEST_CMD) $(M_FILES_OUT) $(COMMON_LIB)
+WIN_OUT := $(MEX) $(CMD) $(TEST_CMD) $(M_FILES) $(COMMON_LIB)
 WIN_OUT := $(subst /,\,$(WIN_OUT))
 
 cleanup:
@@ -122,6 +122,7 @@ vars:
 	@echo MEX_CXXFLAGS: $(MEX_CXXFLAGS)
 	@echo MEX_LDFLAGS: $(MEX_LDFLAGS)
 	@echo MEX: $(MEX)
+	@echo M_FILES: $(M_FILES)
 	@echo CMD: $(CMD)
 	@echo CMD_SOURCES: $(CMD_SOURCES)
 	@echo CMD_OBJECTS: $(CMD_OBJECTS)
@@ -134,7 +135,7 @@ all: cmd lib mex test
 doc:
 	@doxygen doc/maslib.doxyfile
 
-mex: $(MEX) $(M_FILES_OUT)
+mex: $(MEX) $(M_FILES)
 
 cmd: $(CMD)
 
@@ -198,7 +199,7 @@ $(BINDIR)/%.$(MEX_EXT): $(BUILDDIR)/%_mex.mexo $(COMMON_OBJECTS)
 $(BINDIR)/%.m: $(MEXDIR)/%.m
 	@$(MKDIR_CMD)
 	@echo Copying $@ ...
-	@cp $< $@
+	@copy "$(subst /,\,$<)" "$(subst /,\,$@)" > nul
 
 # Command-line programs
 		
