@@ -176,7 +176,6 @@ typename priority_queue<ValueType, Sequence, Compare, MoveCallback>::value_type 
 }
 
 /**
- * /**
  * @brief Removes the first element, filling the provided element, top.  This is potentially
  * safer in the case where no move assignment operator is defined, and if the copy-constructor
  * might fail.

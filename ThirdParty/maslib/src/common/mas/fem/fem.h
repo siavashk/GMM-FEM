@@ -1,5 +1,5 @@
 #ifndef MAS_FEM_FEM_H
-#define FAM_FEM_FEM_H
+#define MAS_FEM_FEM_H
 
 #include "mas/core/base.h"
 #include <vector>

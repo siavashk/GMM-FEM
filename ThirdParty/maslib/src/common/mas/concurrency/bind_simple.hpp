@@ -167,7 +167,7 @@ struct _Weak_result_type_impl<_Res(_ArgTypes...)> {
 };
 
 template<typename _Res, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res(_ArgTypes......)>
+struct _Weak_result_type_impl<_Res(_ArgTypes...,...)>
 {   typedef _Res result_type;};
 
 template<typename _Res, typename ... _ArgTypes>
@@ -176,7 +176,7 @@ struct _Weak_result_type_impl<_Res(_ArgTypes...) const> {
 };
 
 template<typename _Res, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res(_ArgTypes......) const>
+struct _Weak_result_type_impl<_Res(_ArgTypes...,...) const>
 {   typedef _Res result_type;};
 
 template<typename _Res, typename ... _ArgTypes>
@@ -185,7 +185,7 @@ struct _Weak_result_type_impl<_Res(_ArgTypes...) volatile> {
 };
 
 template<typename _Res, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res(_ArgTypes......) volatile>
+struct _Weak_result_type_impl<_Res(_ArgTypes...,...) volatile>
 {   typedef _Res result_type;};
 
 template<typename _Res, typename ... _ArgTypes>
@@ -194,7 +194,7 @@ struct _Weak_result_type_impl<_Res(_ArgTypes...) const volatile> {
 };
 
 template<typename _Res, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res(_ArgTypes......) const volatile>
+struct _Weak_result_type_impl<_Res(_ArgTypes...,...) const volatile>
 {   typedef _Res result_type;};
 
 /// Retrieve the result type for a function reference.
@@ -204,7 +204,7 @@ struct _Weak_result_type_impl<_Res (&)(_ArgTypes...)> {
 };
 
 template<typename _Res, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res (&)(_ArgTypes......)>
+struct _Weak_result_type_impl<_Res (&)(_ArgTypes...,...)>
 {   typedef _Res result_type;};
 
 /// Retrieve the result type for a function pointer.
@@ -214,7 +214,7 @@ struct _Weak_result_type_impl<_Res (*)(_ArgTypes...)> {
 };
 
 template<typename _Res, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res (*)(_ArgTypes......)>
+struct _Weak_result_type_impl<_Res (*)(_ArgTypes...,...)>
 {   typedef _Res result_type;};
 
 /// Retrieve result type for a member function pointer.
@@ -224,7 +224,7 @@ struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes...)> {
 };
 
 template<typename _Res, typename _Class, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes......)>
+struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes...,...)>
 {   typedef _Res result_type;};
 
 /// Retrieve result type for a const member function pointer.
@@ -234,7 +234,7 @@ struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes...) const> {
 };
 
 template<typename _Res, typename _Class, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes......) const>
+struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes...,...) const>
 {   typedef _Res result_type;};
 
 /// Retrieve result type for a volatile member function pointer.
@@ -244,7 +244,7 @@ struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes...) volatile> {
 };
 
 template<typename _Res, typename _Class, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes......) volatile>
+struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes...,...) volatile>
 {   typedef _Res result_type;};
 
 /// Retrieve result type for a const volatile member function pointer.
@@ -254,7 +254,7 @@ struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes...) const volatile> {
 };
 
 template<typename _Res, typename _Class, typename ... _ArgTypes>
-struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes......)
+struct _Weak_result_type_impl<_Res (_Class::*)(_ArgTypes...,...)
 const volatile>
 {   typedef _Res result_type;};
 

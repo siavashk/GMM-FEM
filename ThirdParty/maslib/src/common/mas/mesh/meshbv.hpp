@@ -166,8 +166,9 @@ bool is_inside(const Point3d& pnt, const BVTree<SharedBoundablePolygon,BV>& bvt,
     dir.subtract(pnt);
 
     // uniform random distribution for direction generation
-    std::uniform_real_distribution<double> uniform(-1, 1);
-    std::default_random_engine randomengine;
+    // Apparently doesn't work in vanilla OSX, c++11 not fully implemented
+    // std::uniform_real_distribution<double> uniform(-1, 1);
+    // std::default_random_engine randomengine;
 
     Polygon* prevPoly = tri.get();
 
@@ -236,9 +237,12 @@ bool is_inside(const Point3d& pnt, const BVTree<SharedBoundablePolygon,BV>& bvt,
         if (nextPoly.get() == prevPoly) {
             // randomize direction
             do {
-                dir.x = uniform(randomengine);
-                dir.y = uniform(randomengine);
-                dir.z = uniform(randomengine);
+                // dir.x = uniform(randomengine);
+                // dir.y = uniform(randomengine);
+                // dir.z = uniform(randomengine);
+                dir.x = 2.0*((double) rand() / (RAND_MAX))-1.0;
+                dir.y = 2.0*((double) rand() / (RAND_MAX))-1.0;
+                dir.z = 2.0*((double) rand() / (RAND_MAX))-1.0;
             } while (dir.norm() == 0);
             dir.normalize();
 
