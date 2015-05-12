@@ -41,6 +41,7 @@ bool doNearestTest(const char filename[], double pnt[]) {
       printf("Inside: unsure\n");
    }
 
+   return true;
 
 }
 
