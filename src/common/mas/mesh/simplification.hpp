@@ -369,7 +369,7 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
 
         // replace he0 if need be
         if (edge->face->he0 == edge) {
-            edge->face->he0 == edge->next;
+            edge->face->he0 = edge->next;
         }
 
         prev->next = next; // skip edge
@@ -449,7 +449,7 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
 
         // replace he0 if need be
         if (oedge->face->he0 == oedge) {
-            oedge->face->he0 == oedge->next;
+            oedge->face->he0 = oedge->next;
         }
 
         prev->next = next; // skip edge

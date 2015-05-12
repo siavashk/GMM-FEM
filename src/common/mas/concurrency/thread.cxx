@@ -107,6 +107,7 @@ bool thread_pool::run_pending_task() {
 			return false;
 		}
 	}
+	return false; // no task run
 }
 
 }
