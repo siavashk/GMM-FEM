@@ -13,9 +13,11 @@
 size_t safeprintd(std::vector<char>& cbuff, size_t pos, const char* fmt,
       double d) {
    int len = snprintf(cbuff.data() + pos, cbuff.size() - pos, fmt, d);
-   if (len >= cbuff.size()) {
-      cbuff.resize(pos + len + 1);
-      len = snprintf(cbuff.data() + pos, cbuff.size() - pos, fmt, d);
+   if (len >= 0) {
+      if ((unsigned)len >= cbuff.size()) {
+         cbuff.resize(pos + len + 1);
+         len = snprintf(cbuff.data() + pos, cbuff.size() - pos, fmt, d);
+      }
    }
    return pos + len;
 }
@@ -29,8 +31,8 @@ std::string safeprintd(const char* fmt, double d) {
 template<typename Matrix>
 void printmat(const Matrix& m, const char* fmt) {
 
-   for (int i = 0; i < m.rows(); i++) {
-      for (int j = 0; j < m.cols(); j++) {
+   for (size_t i = 0; i < m.rows(); i++) {
+      for (size_t j = 0; j < m.cols(); j++) {
          std::cout << safeprintd(fmt, m(i, j)) << " ";
       }
       std::cout << std::endl;
@@ -45,7 +47,7 @@ void printmat(const Matrix& m) {
 template<typename Vector>
 void printvec(const Vector& v) {
 
-   for (int i = 0; i < v.size(); i++) {
+   for (size_t i = 0; i < v.size(); i++) {
       std::cout << v[i] << " ";
    }
    std::cout << std::endl;
@@ -70,8 +72,8 @@ void doBasicQRTest() {
 
    mas::MatrixNd A(5, 3);
    int idx = 1;
-   for (int i = 0; i < A.rows(); i++) {
-      for (int j = 0; j < A.cols(); j++) {
+   for (size_t i = 0; i < A.rows(); i++) {
+      for (size_t j = 0; j < A.cols(); j++) {
          A(i, j) = idx++;
       }
    }

@@ -15,7 +15,7 @@ namespace str {
 // trim from start
 std::string ltrim(const std::string& s, const std::string& chars = "\n\r ") {
 
-	for (int i = 0; i < s.length(); i++) {
+	for (size_t i = 0; i < s.length(); i++) {
 		size_t idx = chars.find(s[i]);
 		if (idx == std::string::npos) {
 			return s.substr(i);

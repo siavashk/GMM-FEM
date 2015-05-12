@@ -15,7 +15,7 @@ public:
     int idx;
 
     data() {
-        for (int i = 0; i < strs.size(); i++) {
+        for (size_t i = 0; i < strs.size(); i++) {
             strs[i] = "hello world";
         }
         idx = num++;
@@ -57,7 +57,7 @@ void doQueueTest() {
                         int nidx = next->idx;
                         queue.push_back(std::move(next));
                         // std::cout << "Thread " << threadIdx << " produced item " << next.idx << std::endl;
-                        if (nidx >= maxIdx) {
+                        if ((unsigned)nidx >= maxIdx) {
                             done = true;
                         }
                     }
@@ -71,7 +71,7 @@ void doQueueTest() {
                         bool success = queue.pop(next);
                         if (success) {
                             // std::cout << "Thread " << threadIdx << " consumed item " << next.idx << std::endl;
-                            if (next->idx >= maxIdx) {
+                            if ((unsigned)(next->idx) >= maxIdx) {
                                 done = true;
                             }
                         }

@@ -83,7 +83,6 @@ public:
 
 int doInvokeTest() {
 
-	int i = 10;
 	std::vector<int> v { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 	class_b b { 2 };
 	std::unique_ptr<class_b> bp(new class_b { 5 });
@@ -91,6 +90,11 @@ int doInvokeTest() {
 	using mas::concurrency::invoke;
 
 	int outa, outb, outc, outd, oute;
+	(void)outa;
+	(void)outb;
+	(void)outc;
+	(void)outd;
+	(void)oute;
 	outa = invoke<int (&)(int, int)>(overloaded_function, 1, 16);
 	outa = invoke<int(int, int)>(overloaded_function, 1, 16);
 	outa = invoke<int(int)>(overloaded_function, 1);
@@ -134,7 +138,6 @@ void doWrapTest() {
 	// auto f = function_wrapper<decltype(&class_b::member_function_move),class_b*,std::vector<int>&&>(&class_b::member_function_move, &b, std::move(member_object));
 	// auto f = wrap(&brr::member_function_move, std::move(b), std::move(member_object));
 
-	int i = 10;
 	std::vector<int> v { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 	class_b b { 2 };
 	std::unique_ptr<class_b> bp(new class_b { 5 });

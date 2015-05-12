@@ -16,9 +16,11 @@ namespace mas {
 size_t safeprintd(std::vector<char>& cbuff, size_t pos, const char* fmt,
       double d) {
    int len = snprintf(cbuff.data() + pos, cbuff.size() - pos, fmt, d);
-   if (len >= cbuff.size()) {
-      cbuff.resize(pos + len + 1);
-      len = snprintf(cbuff.data() + pos, cbuff.size() - pos, fmt, d);
+   if (len >= 0) {
+      if ((unsigned)len >= cbuff.size()) {
+         cbuff.resize(pos + len + 1);
+         len = snprintf(cbuff.data() + pos, cbuff.size() - pos, fmt, d);
+      }
    }
    return pos + len;
 }
@@ -805,7 +807,7 @@ void VectorNd::set(const VectorNd& v) {
 }
 
 void VectorNd::setZero() {
-   for (int i = 0; i < v.size(); i++) {
+   for (size_t i = 0; i < v.size(); i++) {
       v[i] = 0;
    }
 }
@@ -827,19 +829,19 @@ double& VectorNd::operator[](size_t idx) {
 }
 
 void VectorNd::add(const VectorNd& v) {
-   for (int i = 0; i < this->v.size(); i++) {
+   for (size_t i = 0; i < this->v.size(); i++) {
       this->v[i] += v(i);
    }
 }
 
 void VectorNd::add(const VectorNd& v1, const VectorNd& v2) {
-   for (int i = 0; i < v.size(); i++) {
+   for (size_t i = 0; i < v.size(); i++) {
       v[i] = v1(i) + v2(i);
    }
 }
 
 void VectorNd::subtract(const VectorNd& v) {
-   for (int i = 0; i < this->v.size(); i++) {
+   for (size_t i = 0; i < this->v.size(); i++) {
       this->v[i] -= v(i);
    }
 }
@@ -853,14 +855,14 @@ void VectorNd::subtract(const VectorNd& v) {
  * @param v2
  */
 void VectorNd::subtract(const VectorNd& v1, const VectorNd& v2) {
-   for (int i = 0; i < v.size(); i++) {
+   for (size_t i = 0; i < v.size(); i++) {
       v[i] = v1(i) - v2(i);
    }
 }
 
 // v1 + s*v2
 void VectorNd::scaledAdd(const VectorNd& v1, double s, const VectorNd& v2) {
-   for (int i = 0; i < v.size(); i++) {
+   for (size_t i = 0; i < v.size(); i++) {
       v[i] = v1(i) + s * v2(i);
    }
 }
@@ -870,26 +872,26 @@ void VectorNd::scaledAdd(double s, const VectorNd& v) {
 }
 
 void VectorNd::scale(double s) {
-   for (int i = 0; i < v.size(); i++) {
+   for (size_t i = 0; i < v.size(); i++) {
       v[i] = s * v[i];
    }
 }
 
 void VectorNd::scale(double s, const VectorNd& v) {
-   for (int i = 0; i < this->v.size(); i++) {
+   for (size_t i = 0; i < this->v.size(); i++) {
       this->v[i] = s * v(i);
    }
 }
 
 void VectorNd::negate() {
-   for (int i = 0; i < v.size(); i++) {
+   for (size_t i = 0; i < v.size(); i++) {
       v[i] = -v[i];
    }
 }
 
 double VectorNd::dot(const VectorNd& v) const {
    double d = 0;
-   for (int i = 0; i < this->v.size(); i++) {
+   for (size_t i = 0; i < this->v.size(); i++) {
       d += this->v[i] * v(i);
    }
    return d;
@@ -901,7 +903,7 @@ double VectorNd::norm() const {
 
 double VectorNd::normSquared() const {
    double d = 0;
-   for (int i = 0; i < v.size(); i++) {
+   for (size_t i = 0; i < v.size(); i++) {
       d += v[i] * v[i];
    }
    return d;
@@ -918,7 +920,7 @@ bool VectorNd::normalize() {
 }
 
 void VectorNd::interpolate(const VectorNd& p1, double t, const VectorNd& p2) {
-   for (int i = 0; i < v.size(); i++) {
+   for (size_t i = 0; i < v.size(); i++) {
       v[i] = (1 - t) * p1(i) + t * p2(i);
    }
 }
@@ -1878,73 +1880,73 @@ void MatrixNd::set(size_t rows, size_t cols, const double* vals) {
 }
 
 void MatrixNd::setColumn(int col, const VectorNd& v) {
-   for (int i = 0; i < nr; i++) {
+   for (size_t i = 0; i < nr; i++) {
       m[IDXND(i, col, nr, nc)] = v[i];
    }
 }
 
 void MatrixNd::getColumn(int col, VectorNd& v) const {
-   for (int i = 0; i < nr; i++) {
+   for (size_t i = 0; i < nr; i++) {
       v[i] = m[IDXND(i, col, nr, nc)];
    }
 }
 
 void MatrixNd::setRow(int row, const VectorNd& v) {
-   for (int j = 0; j < nc; j++) {
+   for (size_t j = 0; j < nc; j++) {
       m[IDXND(row, j, nr, nc)] = v[j];
    }
 }
 
 void MatrixNd::getRow(int row, VectorNd& v) const {
-   for (int j = 0; j < nc; j++) {
+   for (size_t j = 0; j < nc; j++) {
       v[j] = m[IDXND(row, j, nr, nc)];
    }
 }
 
 void MatrixNd::add(const MatrixNd& mat) {
-   for (int i = 0; i < nr * nc; i++) {
+   for (size_t i = 0; i < nr * nc; i++) {
       m[i] += mat.m[i];
    }
 }
 
 void MatrixNd::add(const MatrixNd& mat1, const MatrixNd& mat2) {
-   for (int i = 0; i < nr*nc; i++) {
+   for (size_t i = 0; i < nr*nc; i++) {
       m[i] = mat1.m[i]+mat2.m[i];
    }
 }
 
 void MatrixNd::subtract(const MatrixNd& mat) {
-   for (int i = 0; i < nr * nc; i++) {
+   for (size_t i = 0; i < nr * nc; i++) {
       m[i] -= mat.m[i];
    }
 }
 
 void MatrixNd::subtract(const MatrixNd& mat1, const MatrixNd& mat2) {
-   for (int i = 0; i < nr*nc; i++) {
+   for (size_t i = 0; i < nr*nc; i++) {
       m[i] = mat1.m[i]-mat2.m[i];
    }
 }
 
 void MatrixNd::scaledAdd(double s, const MatrixNd& mat) {
-   for (int i = 0; i < nr * nc; i++) {
+   for (size_t i = 0; i < nr * nc; i++) {
       m[i] += s * mat.m[i];
    }
 }
 
 void MatrixNd::scale(double s) {
-   for (int i = 0; i < nr * nc; i++) {
+   for (size_t i = 0; i < nr * nc; i++) {
       m[i] = s * m[i];
    }
 }
 
 void MatrixNd::scaleColumn(int col, double s) {
-   for (int i = 0; i < nr; i++) {
+   for (size_t i = 0; i < nr; i++) {
       m[IDXND(i, col, nr, nc)] = s * m[IDXND(i, col, nr, nc)];
    }
 }
 
 void MatrixNd::scaleRow(int row, double s) {
-   for (int j = 0; j < nc; j++) {
+   for (size_t j = 0; j < nc; j++) {
       m[IDXND(row, j, nr, nc)] = s * m[IDXND(row, j, nr, nc)];
    }
 }
@@ -1960,11 +1962,11 @@ void MatrixNd::multiply(const MatrixNd& left, const MatrixNd& right) {
    size_t nnc = right.nc;
    std::vector<double> nm(nnr * nnc);
 
-   for (int i = 0; i < nnr; i++) {
-      for (int j = 0; j < nnc; j++) {
+   for (size_t i = 0; i < nnr; i++) {
+      for (size_t j = 0; j < nnc; j++) {
          size_t idx = IDXND(i, j, nnr, nnc);
          nm[idx] = 0;
-         for (int k = 0; k < left.nc; k++) {
+         for (size_t k = 0; j < left.nc; k++) {
             nm[idx] += left.m[IDXND(i, k, left.nr, left.nc)]
                   * right.m[IDXND(k, j, right.nr, right.nc)];
          }
@@ -1980,9 +1982,9 @@ void MatrixNd::multiply(const MatrixNd& left, const MatrixNd& right) {
 void MatrixNd::multiply(const VectorNd& pnt, VectorNd& out) const {
 
    const VectorNd tmp = pnt;
-   for (int i = 0; i < nr; i++) {
+   for (size_t i = 0; i < nr; i++) {
       out[i] = 0;
-      for (int j = 0; j < nc; j++) {
+      for (size_t j = 0; j < nc; j++) {
          out[i] += m[IDXND(i, j, nr, nc)] * tmp[j];
       }
    }
@@ -1991,9 +1993,9 @@ void MatrixNd::multiply(const VectorNd& pnt, VectorNd& out) const {
 void MatrixNd::multiplyLeft(const VectorNd& pnt, VectorNd& out) const {
 
    const VectorNd tmp = pnt;
-   for (int j = 0; j < nc; j++) {
+   for (size_t j = 0; j < nc; j++) {
       out[j] = 0;
-      for (int i = 0; i < nr; i++) {
+      for (size_t i = 0; i < nr; i++) {
          out[j] += m[IDXND(i, j, nr, nc)] * tmp[i];
       }
    }
@@ -2001,8 +2003,8 @@ void MatrixNd::multiplyLeft(const VectorNd& pnt, VectorNd& out) const {
 
 void MatrixNd::transpose() {
    if (nr == nc) {
-      for (int i=0; i<nr; i++) {
-         for (int j=i+1; j<nc; j++) {
+      for (size_t i=0; i<nr; i++) {
+         for (size_t j=i+1; j<nc; j++) {
             std::swap( m[IDXND(i,j,nr,nr)], m[IDXND(j,i,nr,nr)] );
          }
       }
@@ -2012,9 +2014,9 @@ void MatrixNd::transpose() {
 
       int idx1=0;
       int idx2 = 0;
-      for (int i=0; i<nr; i++) {
+      for (size_t i=0; i<nr; i++) {
          idx2 = i;
-         for (int j=0; j<nc; j++) {
+         for (size_t j=0; j<nc; j++) {
             nm[idx1++] = m[idx2];
             idx2+=nr;
          }

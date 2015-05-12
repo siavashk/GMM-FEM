@@ -21,7 +21,7 @@ void rolling_barrier::set(size_t idx, size_t val) {
 }
 
 bool rolling_barrier::poll(size_t idx, size_t val) {
-    for (int i = 0; i < vals.size(); i++) {
+    for (size_t i = 0; i < vals.size(); i++) {
         if (i != idx && vals[i] <= val) {
             return false;
         }
@@ -78,7 +78,7 @@ thread_pool::thread_pool(int nthreads) :
     }
 
     try {
-        for (size_t i = 0; i < nthreads; i++) {
+        for (int i = 0; i < nthreads; i++) {
             threads.push_back(std::thread(&thread_pool::doWork, this));
         }
     } catch (...) {

@@ -29,7 +29,7 @@ bool doNearestTest(const char filename[], double pnt[]) {
    SharedPolygon nearest = mas::mesh::nearest_polygon(p, *mesh, nearestPoint);
    bool inside = mas::mesh::is_inside(p, *mesh);
 
-   printf("Polygon: %ld %ld %ld, Point: (%lf, %lf, %lf), ",
+   printf("Polygon: %llu %llu %llu, Point: (%lf, %lf, %lf), ",
          nearest->verts[0]->idx, nearest->verts[1]->idx, nearest->verts[2]->idx,
          nearestPoint.x, nearestPoint.y, nearestPoint.z);
 
@@ -91,6 +91,8 @@ bool doInsideTest(const char filename[], double pnt[], double dx[], int nx[]) {
    timer.start();
    auto obbn(get_bv_node<OBB>(*mesh));
    timer.stop();
+   // prevent unused warning
+   (void)obbn;
    double ms2 = timer.getMilliseconds();
 
    printf("Build time: %g ms\n", ms);

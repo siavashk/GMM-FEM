@@ -13,7 +13,7 @@ TESTDIR = $(SRCDIR)/test
 MEXDIR = $(SRCDIR)/mex
 CMDDIR = $(SRCDIR)/cmd
 
-CXXFLAGS=-I$(SRCDIR)/common -fPIC --std=c++11 -pedantic
+CXXFLAGS=-I$(SRCDIR)/common -fPIC --std=c++11 -pedantic -Wall
 ifdef DEBUG
 CXXFLAGS:=$(CXXFLAGS) -g -O0 -DMAS_DEBUG
 else
@@ -84,7 +84,7 @@ TEST_CMD := $(patsubst $(TESTDIR)/%.cxx, $(BINDIR)/%, $(TEST_SOURCES))
 M_FILES := $(patsubst $(MEXDIR)/%.m, $(BINDIR)/%.m, $(M_SOURCES))
 
 # Common library
-COMMON_LIB := $(BINDIR)/maslib.$(LIB_EXT)
+COMMON_LIB := $(BINDIR)/libmaslib.$(LIB_EXT)
 
 # Commands
 MKDIR_CMD=mkdir -p $(@D)

@@ -59,8 +59,8 @@ public:
 class Polygon {
 
 public:
-	std::vector<SharedVertex3d> verts;
 	Plane plane;
+	std::vector<SharedVertex3d> verts;
 	SharedHalfEdge he0;
 	size_t idx;
 
@@ -114,24 +114,26 @@ public:
 
 class HalfEdge {
 public:
+
+    SharedVertex3d head;
+    SharedVertex3d tail;
+    Polygon* face;
+
+    // set when connected
+    HalfEdge* opposite;
+    SharedHalfEdge next;
+    
     size_t idx;
     bool primary;  // one primary per pair
-	SharedVertex3d head;
-	SharedVertex3d tail;
-	Polygon* face;
-
-	// set when connected
-	SharedHalfEdge next;
-	HalfEdge* opposite;
 
 private:
-	HalfEdge(const HalfEdge& copyMe);
-	HalfEdge& operator=(const HalfEdge& assignMe);
+    HalfEdge(const HalfEdge& copyMe);
+    HalfEdge& operator=(const HalfEdge& assignMe);
 
 public:
-	HalfEdge(const SharedVertex3d& tail, const SharedVertex3d& head,
-			Polygon* face);
-	virtual ~HalfEdge();   // needed to disconnect shared pointers
+    HalfEdge(const SharedVertex3d& tail, const SharedVertex3d& head,
+              Polygon* face);
+    virtual ~HalfEdge();   // needed to disconnect shared pointers
 	double getLength() const;
 
 	bool isConnected() const;

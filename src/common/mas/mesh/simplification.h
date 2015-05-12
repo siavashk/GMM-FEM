@@ -66,9 +66,9 @@ template<typename CostFunc, typename CollapseCallback>
 class EdgeCollapser {
 private:
 
+    PolygonMesh& mesh;
     CostFunc& cost;
     CollapseCallback& collapsed;
-    PolygonMesh& mesh;
 
     std::vector<std::unique_ptr<EdgeInfo>> edgeinfo;
     //    mas::queue::priority_queue<size_t, std::vector<size_t>,
