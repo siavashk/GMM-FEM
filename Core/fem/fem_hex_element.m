@@ -99,6 +99,48 @@ classdef fem_hex_element < fem_element
        
     %% Implemented abstract methods
     methods
+        
+        function edgeIdxs = getEdgeIdxs(this)
+            nodeIdxs = getNodeIdxs(this);
+            edgeIdxs = nodeIdxs([1 2 3 4 5 6 7 8 1 2 3 4;
+                                 2 3 4 1 6 7 8 5 5 6 7 8]);
+        end
+        
+        function xem = getEdgeNaturalCoords(~, edgeIdx, t)
+            xem = zeros(numel(edgeIdx), 3);
+            
+            % loop faster than vectorized for small number of inputs
+            for i=1:numel(edgeIdx)
+                switch (edgeIdx(i))
+                    case 1
+                        xem(i,:) = [2*t(i)-1, -1, -1];
+                    case 2
+                        xem(i,:) = [1, 2*t(i)-1, -1];
+                    case 3
+                        xem(i,:) = [1-2*t(i), 1, -1];
+                    case 4
+                        xem(i,:) = [-1, 1-2*t(i), -1];
+                    case 5
+                        xem(i,:) = [2*t(i)-1, -1, 1];
+                    case 6
+                        xem(i,:) = [1, 2*t(i)-1, 1];
+                    case 7
+                        xem(i,:) = [1-2*t(i), 1, 1];
+                    case 8
+                        xem(i,:) = [-1, 1-2*t(i), 1];
+                    case 9
+                        xem(i,:) = [-1, -1, 2*t(i)-1];
+                    case 10
+                        xem(i,:) = [1, -1, 2*t(i)-1];
+                    case 11
+                        xem(i,:) = [1, 1, 2*t(i)-1];
+                    case 12
+                        xem(i,:) = [-1, 1, 2*t(i)-1];
+                end
+            end
+            
+        end
+        
         function n = getNumNodes(~)
             n = fem_hex_element.HEX_NUM_NODES;
         end
@@ -115,7 +157,7 @@ classdef fem_hex_element < fem_element
                  xm.*em.*mp, xp.*em.*mp, xp.*ep.*mp, xm.*ep.*mp]/8;
         end
         
-        function dN = getdN(~,xi,eta,mu)
+        function dN = getdNds(~,xi,eta,mu)
             xm = 1-xi;
             xp = 1+xi;
             em = 1-eta;

@@ -65,7 +65,7 @@ classdef fem_material_linear < fem_material
                 
             % linear material
             for i=1:length(w)
-                dNds = getdN(elem, ipnts(i,1),ipnts(i,2),ipnts(i,3));
+                dNds = getdNds(elem, ipnts(i,1),ipnts(i,2),ipnts(i,3));
                 J = getJ(elem,dNds,X);
                 detJ = det(J);
                 if (detJ < minJ)

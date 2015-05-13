@@ -16,8 +16,24 @@ classdef fem_element < handle
         
         function N = getNumNodes(this)
         % Returns number of nodes belonging to the element
-            N = numel(nodeIdxs);
+            N = numel(this.nodeIdxs);
         end
+        
+%         function [M, y] = getShapeMoment(this, X, x)
+%         % Computes and returns the moment matrix for computing shape
+%         % functions
+%         %
+%         %  [M, y] = getShapeMoment(elem, X, x)
+%         %       Returns the matrix M and vector of inputs y such that
+%         %       the shape functions can be computed via
+%         %       N = y/M;
+%         % 
+%         %       X: Nx3 matrix of node positions for this element
+%         %       x: Kx3 matrix of points to evaluate (optional)
+%         %       y: Nx3 matrix of inputs to shape function
+%         
+%         
+%         end
         
         function N = getN(this,xi,eta,mu)
         % Returns the shape function evaluated at natural coords
@@ -29,16 +45,26 @@ classdef fem_element < handle
             N = [];
         end
         
-        function dNds = getdN(this,xi,eta,mu)
+        function dNds = getdNds(this,xi,eta,mu)
         % Returns the shape function gradient in natural coords
         %
-        % dNds = getdN(elem, xi, eta, mu)
+        % dNds = getdNds(elem, xi, eta, mu)
         %      Returns the 3xN shape function gradient in/at natural
         %      coordinates [xi, eta, mu].  The ith column of dN
         %      corresponds to the ith shape function gradient.
         %      This often needs to be transformed into spatial
         %      coordinates.
             dNds = [];
+        end
+        
+        function dNdu = getdNdu(~,N,dNds,J)
+        % Returns the shape function gradient in terms of node positions
+        %
+        % dNdu = getdNdu(elem, N, dNds, Jinv)
+        %      Returns the 3NxN shape function gradient in terms of node
+        %      positions
+            phi = kron(N', eye(3));
+            dNdu = -phi*(J\dNds);
         end
         
         function out = isNaturalInside(this, xem, tol)
@@ -134,6 +160,16 @@ classdef fem_element < handle
             nodeIdxs = this.nodeIdxs;
         end
         
+        function edgeIdxs = getEdgeIdxs(this)
+            % Returns the node indices that define all edges, Mx2
+            
+        end
+        
+        function xem = getEdgeNaturalCoords(this, edgeIdx, t)
+            % given a point p = (1-t)*e0 + t*e1, return natural coords
+            % within the element
+        end
+        
         function J = getJ(~,dNds,X)
             %  Computes the spatial->natural Jacobian matrix
             %
@@ -190,7 +226,7 @@ classdef fem_element < handle
             %        default=1e-12)
             
             if (nargin < 4 || isempty(xem))
-                xem = [0 0 0];
+                xem = zeros(size(x,1),3);
             end
             if (nargin < 5 || isempty(maxiters))
                 maxiters = 20;
@@ -199,89 +235,32 @@ classdef fem_element < handle
                 tol = 1e-12;
             end
             
-            for i=1:maxiters
-                dNds = getdN(this, xem(1), xem(2), xem(3));
-                N = getN(this, xem(1), xem(2), xem(3));
-                J = getJ(this, dNds, X);
-          
-                dxds = zeros(3,3);
-                for k=1:numel(N)
-                    dxds = dxds + dNds(:, k)*X(k,:);
+            for k=1:size(x,1)
+                for i=1:maxiters
+                    dNds = getdNds(this, xem(k,1), xem(k,2), xem(k,3));
+                    N = getN(this, xem(k,1), xem(k,2), xem(k,3));
+                    J = getJ(this, dNds, X);
+
+                    dxds = zeros(3,3);
+                    for j=1:numel(N)
+                        dxds = dxds + dNds(:, j)*X(j,:);
+                    end
+
+                    % residual
+                    pos = (N*X);
+                    res = pos-x;
+
+                    % update
+                    del = res/(J);
+                    if (norm(del) < tol)
+                        break;
+                    end
+
+                    xem(k,:) = xem(k,:) - del;
                 end
-                
-                % residual
-                pos = (N*X);
-                res = pos-x;
-                
-                % update
-                del = res/(J);
-                if (norm(del) < tol)
-                    break;
-                end
-                
-                xem = xem - del;
-                
             end
-            
         end
-        
-        function [ xem ] = getNaturalCoordsRobust(this, X, x, xem, maxiters, tol)
-            % Computes the natural coordinates of point x in this element
-            %
-            % xem = getNaturalCoords(elem, X, x, xem, maxiters, tol)
-            %   Uses a modified Newton's method to compute the natural
-            %   coordinates of a point w.r.t. the element nodes.
-            %
-            %   X:  the Nx3 locations of the nodes belonging to this element
-            %   x:  the 1x3 spatial coordinates of the point for which to
-            %       determine coordinates
-            %   xem: the 1x3 initial guess  (optional, default=[0;0;0])
-            %   maxiters: maximum number of iterations (optional, default=20)
-            %   tol: error tolerance before terminating (optional,
-            %        default=1e-12)
-            
-            if (nargin < 4 || isempty(xem))
-                xem = [0 0 0];
-            end
-            if (nargin < 5 || isempty(maxiters))
-                maxiters = 20;
-            end
-            if (nargin < 6 || isempty(tol))
-                tol = 1e-12;
-            end
-            
-            for i=1:maxiters
-                dNds = getdN(this, xem(1), xem(2), xem(3));
-                N = getN(this, xem(1), xem(2), xem(3));
-                J = getJ(this, dNds, X);
                 
-                % residual
-                pos = (N*X);
-                res = pos-x;
-                
-                % update
-                del = res/(J);
-                if (norm(del) < tol)
-                    xem = xem - del;
-                    break;
-                end
-                
-                % don't jump too far, use binary search
-                r2 = (res*res');
-                nr2 = 2*r2; % initialize so we run through loop once
-                oldxem = xem;
-                while (nr2 > r2 && norm(del) >= tol)
-                    xem = oldxem - del;
-                    N = getN(this, xem(1), xem(2), xem(3));
-                    nres = (N*X)-x;
-                    nr2 = (nres*nres');
-                    del = del/2;
-                end
-                
-            end
-            
-        end
-        
         function [in, xem] = isInside(this, X, x, xem, maxiters, tol)
             % Determines whether a point is inside this element
             %
@@ -306,7 +285,7 @@ classdef fem_element < handle
             %   xem: natural coordinates of point x in this element
             
             if (nargin < 4 || isempty(xem))
-                xem = [0, 0, 0];
+                xem = zeros(size(x,1),3);
             end
             if (nargin < 5 || isempty(maxiters))
                 maxiters = 20;
@@ -364,7 +343,7 @@ classdef fem_element < handle
                 
             % linear material
             for i=1:length(w)
-                dNds = getdN(this,ipnts(i,1),ipnts(i,2),ipnts(i,3));
+                dNds = getdNds(this,ipnts(i,1),ipnts(i,2),ipnts(i,3));
                 J = getJ(this,dNds,X);
                 detJ = det(J);
                 if (detJ < minJ)
@@ -390,7 +369,7 @@ classdef fem_element < handle
             n = getNumNodes(this);
             M = zeros([n,n]);
             for i=1:length(w)
-                dNds = getdN(this,ipnts(i,1),ipnts(i,2),ipnts(i,3));
+                dNds = getdNds(this,ipnts(i,1),ipnts(i,2),ipnts(i,3));
                 N = getN(this, ipnts(i,1), ipnts(i,2), ipnts(i,3));
                 J = getJ(this,dNds,X);
                 

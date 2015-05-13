@@ -35,6 +35,41 @@ classdef fem_wedge_element < fem_element
     
     %% Implemented methods
     methods
+        function edgeIdxs = getEdgeIdxs(this)
+            nodeIdxs = getNodeIdxs(this);
+            edgeIdxs = nodeIdxs([1 2 3 4 5 6 1 2 3;
+                                 2 3 1 5 6 4 4 5 6]);
+        end
+        
+        function xem = getEdgeNaturalCoords(~, edgeIdx, t)
+            xem = zeros(numel(edgeIdx), 3);
+            
+            % loop faster than vectorized for small number of inputs
+            for i=1:numel(edgeIdx)
+                switch (edgeIdx(i))
+                    case 1
+                        xem(i,:) = [t(i), 0, -1];
+                    case 2
+                        xem(i,:) = [1-t(i), t(i), -1];
+                    case 3
+                        xem(i,:) = [0, 1-t(i), -1];
+                    case 4
+                        xem(i,:) = [t(i), 0, 1];
+                    case 5
+                        xem(i,:) = [1-t(i), t(i), 1];
+                    case 6
+                        xem(i,:) = [0, 1-t(i), 1];
+                    case 7
+                        xem(i,:) = [0, 0, 2*t(i)-1];
+                    case 8
+                        xem(i,:) = [1, 0, 2*t(i)-1];
+                    case 9
+                        xem(i,:) = [0, 1, 2*t(i)-1];
+                end
+            end
+            
+        end
+        
         function n = getNumNodes(~)
             n = fem_wedge_element.WEDGE_NUM_NODES;
         end
@@ -47,7 +82,7 @@ classdef fem_wedge_element < fem_element
             N = [xes.*mm, xi.*mm, eta.*mm, xes.*mp, xi.*mp, eta.*mp]/2;
         end
         
-        function dN = getdN(~,xi,eta,mu)
+        function dN = getdNds(~,xi,eta,mu)
             mm = (1-mu);
             mp = (1+mu);
             xes = (1-xi-eta);

@@ -9,10 +9,10 @@ classdef fem_model < handle
         nodes = [];
         
         % Pointer to bv-tree for query
-        tree = 0;
+        tree = [];
         
         % Pointer to surface-mesh tree for query
-        smesh_tree = 0;
+        smesh_tree = [];
         
         % indices for faces of surface mesh
         smesh = [];
@@ -35,6 +35,7 @@ classdef fem_model < handle
         sparse_r = [];
         sparse_c = [];
         sparse_s = [];
+        sparse_eoffset = [];
     end
     
     %% static methods
@@ -100,6 +101,103 @@ classdef fem_model < handle
         end
     end
     
+    methods (Access=protected, Static)
+        function [sidxs] = sortPoints(pnts)
+        % Make a ring of points
+            
+            M = size(pnts,1);
+            sidxs = 1:M;
+            
+            sidxs(:) = 0;
+            idxr = 2:M;
+            
+            % take first point as start
+            A1 = bsxfun(@minus, pnts(idxr,:), pnts(1,:));
+            An = sqrt(sum(A1.*A1,2));
+            z = find(An~=0);
+            idxr = idxr(z);  % delete zero-distance vectors
+            
+            % check if we have enough points
+            if (numel(idxr) < 3)
+                sidxs = [1, idxr];
+                return;
+            end
+            
+            % normalize and continue
+            A1 = bsxfun(@rdivide, A1(z,:), An(z));
+            
+            % find two vectors with largest angle (minimum cosine?)
+            minc = 2;
+            mini = 0;
+            minj = 0;
+            Ml = size(A1,1);
+            for i=1:Ml;
+                for j=(i+1):Ml
+                    cosa = A1(i,:)*(A1(j,:)');
+                    if (cosa < minc)
+                        minc = cosa;
+                        mini = i;
+                        minj = j;
+                    end
+                end
+            end
+            
+            % Make new list, removing idxr(mini), 1, idxr(minj)
+            sidxs(1:3) = [idxr(mini), 1, idxr(minj)];
+            N = 3;
+            idxr([mini,minj]) = []; % delete
+            lastvec = -A1(minj,:);
+            
+            % remove points distance zero from new point 1
+            A1 = bsxfun(@minus, pnts(idxr,:), pnts(sidxs(1),:));
+            An = sqrt(sum(A1.*A1,2));
+            idxr = idxr(An ~= 0);  % delete unwanted
+            Ml = numel(idxr);
+            
+            % middle elements
+            for i=1:(Ml-1)
+                minc = 2;
+                minj = 0;
+                
+                A1 = bsxfun(@minus, pnts(idxr,:), pnts(sidxs(N),:));
+                An = sqrt(sum(A1.*A1,2));
+                z = find(An~=0);
+                idxr = idxr(z);  % remove bad indices
+                
+                if (numel(idxr) < 2)
+                    break;
+                end
+                
+                A1 = bsxfun(@rdivide,A1(z,:), An(z));
+                Ma = size(A1,1);
+                for j=1:Ma
+                    cosa = A1(j,:)*(lastvec');
+                    if (cosa < minc)
+                        minc = cosa;
+                        minj = j;
+                    end
+                end
+                
+                N = N+1;
+                sidxs(N) = idxr(minj);
+                idxr(minj) = [];  % delete element
+                lastvec = -A1(minj,:);
+            end
+            
+            % last element
+            if (numel(idxr) > 0)
+                N = N+1;
+                sidxs(N) = idxr(1);
+            end
+            
+            % maybe trim
+            if (N < M)
+                sidxs = sidxs(1:N);  
+            end
+            
+        end
+    end
+    
     %% Public methods
     methods
         
@@ -135,8 +233,9 @@ classdef fem_model < handle
         end
         
         function buildSMeshTree(this, smesh)
-            if (this.smesh_tree > 0)
-                this.smesh_tree = 0;
+            if (~isempty(this.smesh_tree))
+                delete(this.smesh_tree);
+                this.smesh_tree = [];
             end
             
             if (nargin < 2 || isempty(smesh))
@@ -148,12 +247,26 @@ classdef fem_model < handle
             this.smesh_tree = smesh_bvtree(smesh.vertices', smesh.faces');
         end
         
+        function updateBVTree(this)
+            % Builds a BVTree containing elements and returns the index
+            
+            % clear old tree if exists
+            %XXX use empty function
+            if (isempty(this.tree))
+                buildBVTree(this);
+            else
+                update(this.tree, this.nodes');
+            end
+            
+        end
+        
         function buildBVTree(this)
             % Builds a BVTree containing elements and returns the index
             
             % clear old tree if exists
-            if (this.tree > 0)
-                this.tree = 0;
+            if (~isempty(this.tree))
+                delete(this.tree);
+                this.tree = [];
             end
             
             elemIdxs = cell(size(this.elems));
@@ -193,9 +306,17 @@ classdef fem_model < handle
             this.sparse_r = [];
             this.sparse_c = [];
             this.sparse_s = [];
-            this.tree = 0;
+            this.sparse_eoffset = [];
+            
+            if (~isempty(this.tree))
+                delete(this.tree);
+                this.tree = [];
+            end
             this.smesh = [];
-            this.smesh_tree = 0;
+            if (~isempty(this.smesh_tree))
+                delete(this.smesh_tree);
+                this.smesh_tree = [];
+            end
             
             addNode(this, nodes);
             addElement(this, elems);
@@ -213,7 +334,7 @@ classdef fem_model < handle
             idx = idx:(idx+size(pos,1)-1);
             this.nodes = [this.nodes; pos];
             this.smesh = [];
-            this.smesh_tree = 0;
+            this.smesh_tree = [];
         end
         
         function updateNodes(this, pos, idxs)
@@ -230,7 +351,9 @@ classdef fem_model < handle
                 idxs = 1:K;
             end
             this.nodes(idxs,:) = pos;
-            buildBVTree(this)
+            
+            % buildBVTree(this);    % eventually we want to update instead
+            updateBVTree(this);
         end
         
         function [idx, elem] = addElement(this, E)
@@ -304,6 +427,7 @@ classdef fem_model < handle
             this.sparse_r = [];
             this.sparse_c = [];
             this.sparse_s = [];
+            this.sparse_eoffset = [];
             
             buildBVTree(this);
         end
@@ -337,9 +461,9 @@ classdef fem_model < handle
             D = this.elasticity;
         end
         
-        function treeIdx = getTree(this)
+        function treeHandle = getTree(this)
             % Get the bv-tree associated with this model
-            treeIdx = this.tree;
+            treeHandle = this.tree;
         end
         
         function setElasticity(this, D)
@@ -384,7 +508,8 @@ classdef fem_model < handle
             end
             
             if (isempty(this.sparse_r))
-                [this.sparse_r, this.sparse_c] = getGlobalIndices(this);
+                [this.sparse_r, this.sparse_c, ...
+                    this.sparse_eoffset] = createGlobalIndices(this);
             end
             
             this.sparse_s = zeros(this.sparseVecSize,1);
@@ -432,7 +557,8 @@ classdef fem_model < handle
             %   Builds the global mass matrix
             
             if (isempty(this.sparse_r))
-                [this.sparse_r, this.sparse_c] = getGlobalIndices(this);
+                [this.sparse_r, this.sparse_c,...
+                    this.sparse_eoffset] = createGlobalIndices(this);
             end
             
             this.sparse_s = zeros(this.sparseVecSize,1);
@@ -447,6 +573,114 @@ classdef fem_model < handle
             N3 = 3*numNodes(this);
             M = sparse(this.sparse_r, this.sparse_c, this.sparse_s, ...
                 N3, N3);
+            
+        end
+                
+        
+        
+        function [idxs, elems, isect, pnts] = intersectPlane(this, plane, tol)
+        % Intersect the model with a supplied plane
+            
+            if (nargin < 3 || isempty(tol))
+                tol = 1e-15;
+            end
+            
+            if (size(plane,1) == 1)
+                plane = plane';
+            end
+            
+            lidxs = intersect_plane(this.tree, plane);
+            N = numel(lidxs);
+            if (N == 0)
+                idxs = [];
+                elems = [];
+                isect = [];
+                pnts = [];
+                return;
+            end
+            
+            elems{N,1} = [];
+            pnts{N,1} = [];
+            isect{N, 1} = [];
+            idxs = zeros(N, 1);
+            M = 0;
+            
+            % loop through all potential intersections, finding edge-plane
+            % crossings
+            for i=1:N
+                elem = this.elems{lidxs(i)};
+                eidxs = getEdgeIdxs(elem);
+                ne = size(eidxs,2);
+                lpnts = zeros(ne,3);
+                lisect = zeros(ne,2);
+                np = 0;
+                
+                % for each edge, check that nodes are on opposite sides
+                % of the plane
+                for j=1:ne
+                    p = this.nodes(eidxs(:,j),:);
+                    
+                    % signed distance to plane
+                    d = [p [1;1]]*plane;
+                    
+                    % XXX get natural coordinate instead?
+                    
+                    % check if either point is on the plane
+                    if (abs(d(1)) <=  tol)
+                        np = np+1;
+                        lpnts(np,:) = p(1,:);
+                        lisect(np,1) = j;
+                        lisect(np,2) = 0;
+                    end
+                    if (abs(d(2)) <= tol)
+                        np = np+1;
+                        lpnts(np,:) = p(2,:);
+                        lisect(np,1) = j;
+                        lisect(np,2) = 1;
+                    end
+                    
+                    % intersection
+                    if (abs(d(1)) > tol && abs(d(2)) > tol && ...
+                        d(1)*d(2) < 0)
+                            l = abs(d(1))/(abs(d(1))+abs(d(2)));
+                            np = np+1;
+                            lpnts(np,:) = (1-l)*p(1,:) + l*p(2,:);
+                            lisect(np,1) = j;
+                            lisect(np,2) = l;
+                    end
+                end
+                
+                % If there was an intersection, add it to the list
+                if (np > 0)
+                
+                    % sort intersections
+                    sidx = fem_model.sortPoints(lpnts(1:np,:));
+                    
+                    % potentially flip so cw wrt plane normal
+                    if (numel(sidx) > 2)
+                        A = lpnts(sidx,:) - [lpnts(sidx(2:end),:); 
+                                             lpnts(sidx(1),:)];
+                        B = -[A(2:end,:); A(1,:)];
+                        C = cross(A, B, 2)*plane(1:3);
+                        
+                        if (sum(C) < 0)
+                            sidx = circshift(fliplr(sidx), [0, 3]);
+                        end
+                    end
+                    
+                    M = M+1;
+                    idxs(M,1) = lidxs(i);
+                    elems{M,1} = elem;
+                    pnts{M,1} = lpnts(sidx,:);
+                    isect{M,1} = lisect(sidx,:);
+                end
+            end
+            
+            % trim
+            idxs = idxs(1:M);
+            elems = elems(1:M);
+            pnts = pnts(1:M);
+            isect = isect(1:M,:);
             
         end
         
@@ -492,6 +726,7 @@ classdef fem_model < handle
                 for j=1:numel(eidxs)
                     e = this.elems{eidxs(j)};
                     X = this.nodes(getNodeIdxs(e),:);
+
                     [inside, xem] = isInside(e, X, x(i,:));
                     if (inside == 1)
                         idx(i) = eidxs(j);
@@ -632,7 +867,6 @@ classdef fem_model < handle
                     if (nargout > 2)
                         S{i} = xem;
                     end
-                    break;
                 else 
                     [cellIdxs] = intersect_point(this.tree, x(i,:)', tol);
                     eidxs = cellIdxs{1};    
@@ -659,6 +893,17 @@ classdef fem_model < handle
                         outside(numOutside) = i;
                     end        
                 end
+                
+                %                 if (inside == 1 && nargout > 2)
+                %                     % try to recover
+                %                     xem = S{i};
+                %                     N =  getN(elem{i}, xem(1), xem(2), xem(3));
+                %                     y = N*X;
+                %                     diff = y-x(i,:);
+                %                     if (norm(diff)>1e-10)
+                %                         fprintf('ERROR!!!!');
+                %                     end
+                %                 end
             
             end
             
@@ -666,7 +911,7 @@ classdef fem_model < handle
             
             % deal with points outside
             if (numOutside > 0) 
-                if (this.smesh_tree ~= 0)
+                if (~isempty(this.smesh_tree))
                     x = x(outside,:);
                     [idx, nearest] = nearest_polygon(this.smesh_tree, x');
                     cellIdxs = intersect_point(this.tree, nearest, tol);
@@ -697,7 +942,6 @@ classdef fem_model < handle
                 end
             end
         end
-        
         
         function [idx, dist] = findNearestNode(this, x)
             % Finds the node nearest to x
@@ -775,7 +1019,7 @@ classdef fem_model < handle
                         in(i) = 1;
                     end
                     if (nargout > 2)
-                        dNds = getdN(elem{i}, xem(1), xem(2), xem(3));
+                        dNds = getdNds(elem{i}, xem(1), xem(2), xem(3));
                         XX = this.nodes(getNodeIdxs(elem{i}),:);
                         J = getJ(elem{i}, dNds, XX);
                         dNdx = getShapeGrad(elem{i}, dNds, J);
@@ -851,7 +1095,7 @@ classdef fem_model < handle
                         in(i) = 1;
                     end
                     if (nargout > 2)
-                        dNds = getdN(elem{i}, xem(1), xem(2), xem(3));
+                        dNds = getdNds(elem{i}, xem(1), xem(2), xem(3));
                         XX = this.nodes(getNodeIdxs(elem{i}),:);
                         J = getJ(elem{i}, dNds, XX);
                         dNdx = getShapeGrad(elem{i}, dNds, J);
@@ -888,28 +1132,41 @@ classdef fem_model < handle
         end
         
         function delete(this)
-            if (~isempty(this.smesh_tree) && this.smesh_tree ~= 0)
-                delete(this.smesh_tree)
+            if (~isempty(this.smesh_tree))
+                delete(this.smesh_tree);
+                this.smesh_tree = [];
             end
-            if (~isempty(this.tree) && this.tree ~= 0)
-                delete(this.tree)
+            if (~isempty(this.tree))
+                delete(this.tree);
+                this.smesh_tree = [];
             end
             if (~isempty(this.elasticity) && isa(this.elasticity,'fem_material'))
-                delete(this.elasticity)
+                delete(this.elasticity);
+                this.elasticity = [];
             end
             for i=1:numel(this.elems)
-                delete(this.elems{i})
+                delete(this.elems{i});
             end
             this.elems = {};
         end
         
+        function [r, c, eoffset] = getGlobalIndices(this)
+            if (isempty(this.sparse_r))
+                [this.sparse_r, this.sparse_c, ...
+                    this.sparse_eoffset] = createGlobalIndices(this);
+            end
+            r = this.sparse_r;
+            c = this.sparse_c;
+            eoffset = this.sparse_eoffset;
+        end
+        
     end
     
-    methods (Access = protected)
-        function [r, c] = getElementGlobalIndices(~, elem)
+    methods (Access=protected)
+        function [r, c] = createElementGlobalIndices(~, elem)
             % Returns the global matrix indices used by the element
             %
-            % [r, c] = getElementGlobalIndices(model, elem)
+            % [r, c] = createElementGlobalIndices(model, elem)
             %   Determines the global matrix rows (r) and columns (c)
             %   filled by the supplied element.  These arrays are
             %   constructed such that we can fill the sparse mass and
@@ -927,10 +1184,10 @@ classdef fem_model < handle
             c = reshape(A',[],1);
         end
         
-        function [r, c] = getGlobalIndices(this)
+        function [r, c, eoffset] = createGlobalIndices(this)
             % Returns the index vectors used for global matrix construction
             %
-            % [r, c] = getGlobalIndices(model)
+            % [r, c] = createGlobalIndices(model)
             %   Determines the global matrix rows (r) and columns (c)
             %   filled by this model's elements.  These arrays become the
             %   row/column indices for building sparse mass and stiffness
@@ -945,11 +1202,13 @@ classdef fem_model < handle
             idx = 1;
             r = zeros(this.sparseVecSize,1);
             c = r;
+            eoffset = zeros(M, 1);
             for i=1:M
-                [er, ec] = getElementGlobalIndices(this, this.elems{i});
+                [er, ec] = createElementGlobalIndices(this, this.elems{i});
                 ne = numel(er);
                 r(idx:(idx+ne-1)) = er;
                 c(idx:(idx+ne-1)) = ec;
+                eoffset(i) = idx;
                 idx = idx+ne;
             end
             

@@ -50,8 +50,10 @@ function [ TY, R, t, s, P, sigma2 ] = cpd_rigid( X, Y, w, errtol, maxiters, R, t
     if (nargin < 8 || isempty(s))
         s = 1;
     end
+    
     if ( s==0 )
         scaleFlag=0;
+        s = 1;
     end
     
     % initial transformed input

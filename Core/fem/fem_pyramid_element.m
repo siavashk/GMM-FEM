@@ -49,6 +49,38 @@ classdef fem_pyramid_element < fem_element
     
     %% Implemented methods
     methods
+        function edgeIdxs = getEdgeIdxs(this)
+            nodeIdxs = getNodeIdxs(this);
+            edgeIdxs = nodeIdxs([1 2 3 4 1 2 3 4;
+                                 2 3 4 1 5 5 5 5]);
+        end
+        
+        function xem = getEdgeNaturalCoords(~, edgeIdx, t)
+            xem = zeros(numel(edgeIdx), 3);
+            
+            % loop faster than vectorized for small number of inputs
+            for i=1:numel(edgeIdx)
+                switch (edgeIdx(i))
+                    case 1
+                        xem(i,:) = [2*t(i)-1, -1, -1];
+                    case 2
+                        xem(i,:) = [1, 2*t(i)-1, -1];
+                    case 3
+                        xem(i,:) = [1-2*t(i), 1, -1];
+                    case 4
+                        xem(i,:) = [-1, 1-2*t(i), -1];
+                    case 5
+                        xem(i,:) = [-1, -1, 2*t(i)-1];
+                    case 6
+                        xem(i,:) = [1, -1, 2*t(i)-1];
+                    case 7
+                        xem(i,:) = [1, 1, 2*t(i)-1];
+                    case 8
+                        xem(i,:) = [-1, 1, 2*t(i)-1];
+                end
+            end
+        end
+        
         function n = getNumNodes(~)
             n = fem_pyramid_element.NUM_PYRAMID_NODES;
         end
@@ -64,7 +96,7 @@ classdef fem_pyramid_element < fem_element
             N = [xm.*em.*mm, xp.*em.*mm, xp.*ep.*mm, xm.*ep.*mm, 4*mp]/8;
         end
         
-        function dN = getdN(~,xi,eta,mu)
+        function dN = getdNds(~,xi,eta,mu)
             xm = (1-xi);
             xp = (1+xi);
             em = (1-eta);
@@ -90,6 +122,7 @@ classdef fem_pyramid_element < fem_element
     
     %% Over-ridden methods
     methods
+        
          function B = getB(~, dNdx)
             B = [dNdx(1,1) 0 0  dNdx(1,2) 0 0  dNdx(1,3) 0 0 ...
                     dNdx(1,4) 0 0  dNdx(1,5) 0 0;
@@ -107,9 +140,32 @@ classdef fem_pyramid_element < fem_element
                     0 dNdx(3,3) dNdx(2,3)  0 dNdx(3,4) dNdx(2,4) ...
                     0 dNdx(3,5) dNdx(2,5)];
         end
+        
+        function [ xem ] = getNaturalCoords(this, X, x, xem, maxiters, tol)
+            
+            if (nargin < 4 || isempty(xem))
+                xem = [0 0 0];
+            end
+            if (nargin < 5 || isempty(maxiters))
+                maxiters = 20;
+            end
+            if (nargin < 6 || isempty(tol))
+                tol = 1e-12;
+            end
+            
+            % first check for degenerate
+            if (norm(x - X(5,:)) < tol)
+                xem = [0 0 1];
+                return;
+            end
+            
+            % then call parent iterative routine
+            getNaturalCoords@fem_element(this, X, x, xem, maxiters, tol);
+        end
+         
     end
     
-     % private methods
+     %% private methods
     methods (Access=private)
         % initialization
         function init(this)

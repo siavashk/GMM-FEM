@@ -34,6 +34,7 @@ function [ P, P1, Pt1, Np ] = cpd_P( X, TY, sigma2, w)
     P = exp( -P/(2*sigma2) );
     den = sum(P, 1)+c;
     den = repmat(den, [M, 1] );
+    den(den==0) = 1e-15;  % prevent division by zero
     P = P./den;
     
     Pt1 = sum(P,1)';

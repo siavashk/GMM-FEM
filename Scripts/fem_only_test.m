@@ -47,3 +47,9 @@ for i=1:size(error_before_reg,1)
     fprintf('TRE before: %f mm.', error_before_reg(i));
     fprintf(' TRE after: %f mm.\n', error_after_reg(i));
 end
+
+%% DELETE FEM, 
+%  or else MATLAB might crash on close because it clears
+%  memory in an incorrect order.  It seems MATLAB tries to clear MEX files, 
+%  first, but the fem_model class is still using it, resulting in a crash.
+clear fem;
