@@ -1,0 +1,5 @@
+# Third party builds
+ThirdParty/maslib/bin
+ThirdParty/maslib/build
+ThirdParty/tetgen1.4.3/bin
+ThirdParty/tetgen1.4.3/build
