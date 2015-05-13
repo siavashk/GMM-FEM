@@ -187,7 +187,7 @@ bool Polygon::isTriangular() const {
 
 bool Polygon::isConvex(std::vector<SharedVertex3d>& reflex) const {
 
-    int nV = numVertices();
+    size_t nV = numVertices();
 
     if (nV <= 3) {
         return true;
@@ -198,8 +198,8 @@ bool Polygon::isConvex(std::vector<SharedVertex3d>& reflex) const {
     Vector3d v1;
     Vector3d v2;
 
-    int vtx0 = nV - 2;
-    int vtx1 = nV - 1;
+    size_t vtx0 = nV - 2;
+    size_t vtx1 = nV - 1;
     for (size_t i = 0; i < verts.size(); i++) {
         v1.subtract(*verts[vtx0], *verts[vtx1]);
         v2.subtract(*verts[i], *verts[vtx1]);
@@ -219,7 +219,7 @@ bool Polygon::isConvex(std::vector<SharedVertex3d>& reflex) const {
 
 bool Polygon::isConvex() const {
 
-    int nV = numVertices();
+    size_t nV = numVertices();
     if (nV <= 3) {
         return true;
     }
@@ -228,8 +228,8 @@ bool Polygon::isConvex() const {
     Vector3d v1;
     Vector3d v2;
 
-    int vtx0 = nV - 2;
-    int vtx1 = nV - 1;
+    size_t vtx0 = nV - 2;
+    size_t vtx1 = nV - 1;
     for (size_t i = 0; i < verts.size(); i++) {
         v1.subtract(*verts[vtx0], *verts[vtx1]);
         v2.subtract(*verts[i], *verts[vtx1]);
@@ -253,8 +253,8 @@ bool Polygon::isConnected() {
 void Polygon::connect() {
 
     // build half-edges from vertex list
-    int v0 = verts.size() - 1;
-    int v1 = 0;
+    size_t v0 = verts.size() - 1;
+    size_t v1 = 0;
 
     he0 = std::make_shared<HalfEdge>(verts[v0], verts[v1], this);
     he0->connect();
@@ -813,20 +813,20 @@ double MeshFactory::maximumCosine(const Point3d& v0, const Point3d& v1,
 
 // vertex index to remove in triangulation corresponding to the
 // 2nd vertex is the most well-formed triangle
-int MeshFactory::bestTriangle(const std::vector<SharedVertex3d>& verts) {
+size_t MeshFactory::bestTriangle(const std::vector<SharedVertex3d>& verts) {
 
     if (verts.size() == 3) {
         return 1;
     }
 
-    int n = verts.size();
+    size_t n = verts.size();
 
-    int v0 = n - 1;
-    int v1 = 0;
-    int v2 = 1;
+    size_t v0 = n - 1;
+    size_t v1 = 0;
+    size_t v2 = 1;
 
     double minC = maximumCosine(*verts[v0], *verts[v1], *verts[v2]);
-    int idx = 0;
+    size_t idx = 0;
 
     for (size_t i = 1; i < verts.size(); i++) {
         v0 = v1;
@@ -865,13 +865,13 @@ std::vector<std::unique_ptr<Polygon>> MeshFactory::triangulate(
 
         // whittle down to four vertices, cutting off best triangles
         if (nverts > 4) {
-            int n = nverts;
-            int ntop = nverts-4;
+            size_t n = nverts;
+            int ntop = (int)nverts-4;
             for (int i = 0; i < ntop; i++) {
-                int idx = bestTriangle(oldVtxs);
-                int v0 = (idx + n - 1) % n;
-                int v1 = idx;
-                int v2 = (idx + 1) % n;
+                size_t idx = bestTriangle(oldVtxs);
+                size_t v0 = (idx + n - 1) % n;
+                size_t v1 = idx;
+                size_t v2 = (idx + 1) % n;
                 tris.push_back(
                         std::unique_ptr<Polygon>(
                                 new Polygon(oldVtxs[v0], oldVtxs[v1],

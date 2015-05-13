@@ -2,7 +2,7 @@
 # Run from a bash shell to generate list of source files for Makefiles 
 # and CMake
 
-makefile=Makefile.sources
+makefile=MakefileSources.mk
 cmakefile=CMakeSources.txt
 
 SRCDIR=./src

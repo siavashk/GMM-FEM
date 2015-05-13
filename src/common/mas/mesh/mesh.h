@@ -219,7 +219,7 @@ public:
 class MeshFactory {
 private:
 	static double maximumCosine(const Point3d& v0,	const Point3d& v1, const Point3d& v2);
-	static int bestTriangle(const std::vector<SharedVertex3d>& verts);
+	static size_t bestTriangle(const std::vector<SharedVertex3d>& verts);
 public:
 
 	static std::vector<std::unique_ptr<Polygon>> triangulate(

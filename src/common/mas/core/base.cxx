@@ -2012,8 +2012,8 @@ void MatrixNd::transpose() {
       size_t n = nr*nc;
       std::vector<double> nm(n);
 
-      int idx1=0;
-      int idx2 = 0;
+      size_t idx1 = 0;
+      size_t idx2 = 0;
       for (size_t i=0; i<nr; i++) {
          idx2 = i;
          for (size_t j=0; j<nc; j++) {

@@ -101,8 +101,15 @@ public:
     thread_function_wrapper(const thread_function_wrapper& f) = delete;
     thread_function_wrapper& operator=(const thread_function_wrapper& f) = delete;
 
-    thread_function_wrapper(thread_function_wrapper&& f) = default;
-    thread_function_wrapper& operator=(thread_function_wrapper&& f) = default;
+    // thread_function_wrapper(thread_function_wrapper&& f) = default;
+	thread_function_wrapper(thread_function_wrapper&& f) :
+		done(f.done), f_(std::move(f.f_)) {}
+    // thread_function_wrapper& operator=(thread_function_wrapper&& f) = default;
+    thread_function_wrapper& operator=(thread_function_wrapper&& f) {
+        this->done = f.done;
+        this->f_ = std::move(f.f_);
+        return *this;
+    }
 };
 
 class async_thread_worker {
@@ -114,7 +121,8 @@ class async_thread_worker {
 
 public:
     async_thread_worker() :
-            reserve_flag(ATOMIC_FLAG_INIT), terminated(false), f(nullptr) {
+            //reserve_flag(ATOMIC_FLAG_INIT), terminated(false), f(nullptr) {
+			reserve_flag(), terminated(false), f(nullptr) {
     }
 
     template<typename Fn, typename ... Args>

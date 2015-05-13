@@ -38,14 +38,12 @@ endif
 ifndef MATLAB_ROOT
 
 # Guess where matlab root is
-MATLAB_GUESS:=$(lastword $(wildcard C:/Program\ Files/MATLAB/*))
-ifeq (,$(MATLAB_GUESS))
-	MATLAB_GUESS:=$(lastword $(wildcard C:/Program\ Files/matlab/*))
-endif
+MATLAB_GUESS:=$(subst C:/Program Files/MATLAB/,,$(wildcard C:/Program\ Files/MATLAB/*))
+
 ifeq (,$(MATLAB_GUESS))
 $(error Cannot find MATLAB, re-run make by passing a MATLAB root folder: make -f Makefile.windows MATLAB_ROOT=<pathname>)
 endif
-MATLAB_ROOT:="C:/Program $(MATLAB_GUESS)"
+MATLAB_ROOT:="C:/Program Files/MATLAB/$(MATLAB_GUESS)"
 $(warning guessing Matlab: $(MATLAB_ROOT))
 
 endif
@@ -67,7 +65,7 @@ MEX_LDFLAGS:= $(LDFLAGS) -shared -L$(MATLAB_BINDIR) -lstdc++ -lmex -lmx -lmat
 MEX_MMFLAGS:=$(MEX_CXXFLAGS) -MM
 
 # source file definitions
--include Makefile.sources
+-include MakefileSources.mk
 
 COMMON_DEPS := $(patsubst $(COMMONDIR)/%.cxx, $(BUILDDIR)/%.d, $(COMMON_SOURCES))
 COMMON_OBJECTS := $(patsubst $(COMMONDIR)/%.cxx, $(BUILDDIR)/%.o, $(COMMON_SOURCES))
