@@ -39,6 +39,14 @@
 #include <tuple>
 #include <type_traits>
 
+#ifndef _MSC_VER
+#define NOEXCEPT noexcept
+#define CONSTEXPR const
+#else
+#define NOEXCEPT
+#define CONSTEXPR
+#endif
+
 namespace mas {
 namespace concurrency {
 namespace detail {
@@ -120,7 +128,7 @@ template<typename _MemberPointer>
 class _Mem_fn;
 template<typename _Tp, typename _Class>
 _Mem_fn<_Tp _Class::*>
-mem_fn(_Tp _Class::*) noexcept;
+mem_fn(_Tp _Class::*) NOEXCEPT;
 
 template<typename _Tp>
 class __has_result_type_helper: __sfinae_types {
@@ -133,7 +141,7 @@ class __has_result_type_helper: __sfinae_types {
     template<typename _Up>
     static __two         __test(...);
 public:
-    static constexpr bool value = sizeof(__test<_Tp>(0)) == 1;
+    static CONSTEXPR bool value = sizeof(__test<_Tp>(0)) == 1;
 };
 
 template<typename _Tp>
@@ -371,7 +379,7 @@ class __has_argument_type_helper: __sfinae_types {
     template<typename _Up>
     static __two        __test(...);
 public:
-    static constexpr bool value = sizeof(__test<_Tp>(0)) == 1;
+    static CONSTEXPR bool value = sizeof(__test<_Tp>(0)) == 1;
 };
 
 template<typename _Tp>
@@ -889,14 +897,14 @@ class _Mem_fn<_Res _Class::*> {
     // Douglas Gregor.
     // Made less elegant to support perfect forwarding and noexcept.
     template<typename _Tp>
-    auto _M_call(_Tp&& __object, const _Class *) const noexcept
+    auto _M_call(_Tp&& __object, const _Class *) const NOEXCEPT
     -> decltype(std::forward<_Tp>(__object).*std::declval<__pm_type&>())
     {
         return std::forward<_Tp>(__object).*__pm;
     }
 
     template<typename _Tp, typename _Up>
-    auto _M_call(_Tp&& __object, _Up * const *) const noexcept
+    auto _M_call(_Tp&& __object, _Up * const *) const NOEXCEPT
     -> decltype((*std::forward<_Tp>(__object)).*std::declval<__pm_type&>())
     {
         return (*std::forward<_Tp>(__object)).*__pm;
@@ -904,46 +912,46 @@ class _Mem_fn<_Res _Class::*> {
 
     template<typename _Tp>
     auto _M_call(_Tp&& __ptr, const volatile void*) const
-            noexcept(noexcept((*__ptr).*std::declval<__pm_type&>()))
+            NOEXCEPT(NOEXCEPT((*__ptr).*std::declval<__pm_type&>()))
             -> decltype((*__ptr).*std::declval<__pm_type&>())
             {
         return (*__ptr).*__pm;
     }
 
 public:
-    explicit _Mem_fn(_Res _Class::*__pm) noexcept : __pm(__pm) {}
+    explicit _Mem_fn(_Res _Class::*__pm) NOEXCEPT : __pm(__pm) {}
 
     // Handle objects
     _Res&
-    operator()(_Class& __object) const noexcept
+    operator()(_Class& __object) const NOEXCEPT
     {   return __object.*__pm;}
 
     const _Res&
-    operator()(const _Class& __object) const noexcept
+    operator()(const _Class& __object) const NOEXCEPT
     {   return __object.*__pm;}
 
     _Res&&
-    operator()(_Class&& __object) const noexcept
+    operator()(_Class&& __object) const NOEXCEPT
     {   return std::forward<_Class>(__object).*__pm;}
 
     const _Res&&
-    operator()(const _Class&& __object) const noexcept
+    operator()(const _Class&& __object) const NOEXCEPT
     {   return std::forward<const _Class>(__object).*__pm;}
 
     // Handle pointers
     _Res&
-    operator()(_Class* __object) const noexcept
+    operator()(_Class* __object) const NOEXCEPT
     {   return __object->*__pm;}
 
     const _Res&
-    operator()(const _Class* __object) const noexcept
+    operator()(const _Class* __object) const NOEXCEPT
     {   return __object->*__pm;}
 
     // Handle smart pointers and derived
     template<typename _Tp, typename _Req = _Require<_NotSame<_Class*, _Tp>>>
     auto
     operator()(_Tp&& __unknown) const
-    noexcept(noexcept(std::declval<_Mem_fn*>()->_M_call
+    NOEXCEPT(NOEXCEPT(std::declval<_Mem_fn*>()->_M_call
                     (std::forward<_Tp>(__unknown), &__unknown)))
     -> decltype(this->_M_call(std::forward<_Tp>(__unknown), &__unknown))
     {   return _M_call(std::forward<_Tp>(__unknown), &__unknown);}
@@ -951,7 +959,7 @@ public:
     template<typename _Tp, typename _Req = _Require<std::is_base_of<_Class, _Tp>>>
     auto
     operator()(std::reference_wrapper<_Tp> __ref) const
-    noexcept(noexcept(std::declval<_Mem_fn&>()(__ref.get())))
+    NOEXCEPT(NOEXCEPT(std::declval<_Mem_fn&>()(__ref.get())))
     -> decltype((*this)(__ref.get()))
     {   return (*this)(__ref.get());}
 
@@ -965,7 +973,7 @@ private:
  *  @ingroup functors
  */
 template<typename _Tp, typename _Class>
-inline _Mem_fn<_Tp _Class::*> mem_fn(_Tp _Class::* __pm) noexcept
+inline _Mem_fn<_Tp _Class::*> mem_fn(_Tp _Class::* __pm) NOEXCEPT
 {
     return _Mem_fn<_Tp _Class::*>(__pm);
 }

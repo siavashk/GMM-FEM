@@ -216,7 +216,8 @@ public:
 
     // no copy, only move
     function_wrapper(const function_wrapper&) = delete;
-    function_wrapper(function_wrapper&&) = default;
+	//function_wrapper(function_wrapper&&) = default;
+	function_wrapper(function_wrapper&& copy) : bound(std::move(copy.bound)) {}
 
     result_type operator()() {
         return invoke();

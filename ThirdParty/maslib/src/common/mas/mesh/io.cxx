@@ -1,3 +1,4 @@
+#define  _CRT_SECURE_NO_WARNINGS // prevent visual studio warning
 #include "mas/mesh/io.h"
 #include <stdlib.h>
 #include <iostream>
@@ -15,7 +16,7 @@ namespace str {
 // trim from start
 std::string ltrim(const std::string& s, const std::string& chars = "\n\r ") {
 
-	for (int i = 0; i < s.length(); i++) {
+	for (size_t i = 0; i < s.length(); i++) {
 		size_t idx = chars.find(s[i]);
 		if (idx == std::string::npos) {
 			return s.substr(i);
@@ -28,7 +29,7 @@ std::string ltrim(const std::string& s, const std::string& chars = "\n\r ") {
 // trim from end
 std::string rtrim(const std::string& s, const std::string& chars = "\n\r ") {
 
-	for (int i = s.length() - 1; i > 1; --i) {
+	for (int i = (int)s.length() - 1; i > 1; --i) {
 		size_t idx = chars.find(s[i]);
 		if (idx == std::string::npos) {
 			return s.substr(0, i + 1);
@@ -70,7 +71,7 @@ PolygonMesh* SimpleObjReader::read(std::string filename) {
 	return read(filename.c_str());
 }
 
-Vertex3d* SimpleObjReader::parseVertex(const std::string& line, int idx) {
+Vertex3d* SimpleObjReader::parseVertex(const std::string& line, size_t idx) {
 	double x, y, z;
 	//int res = sscanf(line.c_str(), "v %f %f %f",& (vtx.x),& (vtx.y),& (vtx.z));
 	int res = sscanf(line.c_str(), "v %lf %lf %lf", &x, &y, &z);
@@ -84,7 +85,7 @@ std::vector<size_t> SimpleObjReader::parseFace(const std::string& line) {
 	std::vector<size_t> faceIdxs;
 
 	// need to be careful with normal information
-	int n = line.length();
+	int n = (int)(line.length());
 	int idx = 2;
 	while (idx < n) {
 

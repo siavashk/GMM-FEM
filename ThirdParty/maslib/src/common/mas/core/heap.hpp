@@ -839,7 +839,7 @@ void __thread_worker(int threadIdx, int nthreads,
         size_t processBlock = --blocksRemaining;
 
         // safe check for negative value accounting for overflow
-        if (processBlock + nthreads < nthreads) {
+        if (processBlock + nthreads < (size_t)nthreads) {
             complete = true;
             barrier.set(threadIdx, -1);
             break;
@@ -914,7 +914,10 @@ void parallel_make_heap(RandomAccessIterator first, RandomAccessIterator last,
         maxThreads = std::max(std::thread::hardware_concurrency(), (unsigned int)2); // try 2 threads if hardware_concurrency returns 0
     }
 
-    size_t nthreads = std::min(nblocks, (size_t)maxThreads);
+    int nthreads = (int)(std::min(nblocks, (size_t)maxThreads));
+    if (nthreads < 1) {
+        nthreads = 1;
+    }
     mas::concurrency::rolling_barrier barrier(nthreads);
     std::vector<std::thread> threads;
     threads.reserve(nthreads - 1);

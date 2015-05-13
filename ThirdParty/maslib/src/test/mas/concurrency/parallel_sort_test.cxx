@@ -153,9 +153,9 @@ tracked_vector<T> do_quick_sort(tracked_vector<T> chunk_data) {
     tracked_vector<T> new_upper_chunk;
 
     // split into an upper and lower chunk
-    int nlower = 0;
-    int len = new_lower_chunk.size();
-    for (int i = 1; i < len; ++i) {
+    size_t nlower = 0;
+    size_t len = new_lower_chunk.size();
+    for (size_t i = 1; i < len; ++i) {
         if (new_lower_chunk[i] > middle) {
             new_upper_chunk.push_back(new_lower_chunk[i]);
         } else {
@@ -189,7 +189,7 @@ tracked_vector<T> do_quick_sort(tracked_vector<T> chunk_data) {
 
     result.reserve(result.size() + 1 + new_higher.size());
     result.push_back(middle);
-    for (int i = 0; i < new_higher.size(); i++) {
+    for (size_t i = 0; i < new_higher.size(); i++) {
         result.push_back(new_higher[i]);
     }
 
@@ -209,9 +209,9 @@ tracked_vector<T> do_parallel_copy_sort(tracked_vector<T> chunk_data,
     tracked_vector<T> new_upper_chunk;
 
     // split into an upper and lower chunk
-    int nlower = 0;
-    int len = new_lower_chunk.size();
-    for (int i = 1; i < len; ++i) {
+    size_t nlower = 0;
+    size_t len = new_lower_chunk.size();
+    for (size_t i = 1; i < len; ++i) {
         if (new_lower_chunk[i] > middle) {
             new_upper_chunk.push_back(new_lower_chunk[i]);
         } else {
@@ -234,7 +234,7 @@ tracked_vector<T> do_parallel_copy_sort(tracked_vector<T> chunk_data,
     tracked_vector<T> result = new_lower.get();
     result.reserve(result.size() + 1 + new_higher.size());
     result.push_back(middle);
-    for (int i = 0; i < new_higher.size(); i++) {
+    for (size_t i = 0; i < new_higher.size(); i++) {
         result.push_back(new_higher[i]);
     }
 
@@ -262,9 +262,9 @@ tracked_vector<T> do_parallel_async_copy_sort(tracked_vector<T> chunk_data,
     tracked_vector<T> new_upper_chunk;
 
     // split into an upper and lower chunk
-    int nlower = 0;
-    int len = new_lower_chunk.size();
-    for (int i = 1; i < len; ++i) {
+    size_t nlower = 0;
+    size_t len = new_lower_chunk.size();
+    for (size_t i = 1; i < len; ++i) {
         if (new_lower_chunk[i] > middle) {
             new_upper_chunk.push_back(new_lower_chunk[i]);
         } else {
@@ -273,7 +273,7 @@ tracked_vector<T> do_parallel_async_copy_sort(tracked_vector<T> chunk_data,
     }
     new_lower_chunk.resize(nlower);
 
-    int nupper = new_upper_chunk.size();
+//      size_t nupper = new_upper_chunk.size();
 //	{
 //		std::lock_guard<std::mutex> lk(mut);
 //		std::cout << "spawning (" << startidx <<  ", " << startidx+nlower-1 << ")" << std::endl;
@@ -293,7 +293,7 @@ tracked_vector<T> do_parallel_async_copy_sort(tracked_vector<T> chunk_data,
         tracked_vector<T> result = new_lower.get();
         result.reserve(result.size() + 1 + new_higher.size());
         result.push_back(middle);
-        for (int i = 0; i < new_higher.size(); i++) {
+        for (size_t  i = 0; i < new_higher.size(); i++) {
             result.push_back(new_higher[i]);
         }
         return result;
@@ -307,7 +307,7 @@ tracked_vector<T> do_parallel_async_copy_sort(tracked_vector<T> chunk_data,
 
     result.reserve(result.size() + 1 + new_higher.size());
     result.push_back(middle);
-    for (int i = 0; i < new_higher.size(); i++) {
+    for (size_t i = 0; i < new_higher.size(); i++) {
         result.push_back(new_higher[i]);
     }
 
@@ -316,7 +316,7 @@ tracked_vector<T> do_parallel_async_copy_sort(tracked_vector<T> chunk_data,
 
 template<typename T>
 tracked_vector<T> parallel_async_quick_sort(tracked_vector<T> input,
-        int nthreads = -1) {
+        size_t  nthreads = -1) {
     if (input.empty()) {
         return input;
     }
@@ -344,9 +344,9 @@ public:
         tracked_vector<int> new_upper_chunk;
 
         // split into an upper and lower chunk
-        int nlower = 0;
-        int len = new_lower_chunk.size();
-        for (int i = 1; i < len; ++i) {
+        size_t  nlower = 0;
+        size_t  len = new_lower_chunk.size();
+        for (size_t  i = 1; i < len; ++i) {
             if (new_lower_chunk[i] > middle) {
                 new_upper_chunk.push_back(new_lower_chunk[i]);
             } else {
@@ -362,7 +362,7 @@ public:
 
         result.reserve(result.size() + 1 + new_higher.size());
         result.push_back(middle);
-        for (int i = 0; i < new_higher.size(); i++) {
+        for (size_t i = 0; i < new_higher.size(); i++) {
             result.push_back(new_higher[i]);
         }
 
@@ -409,8 +409,8 @@ tracked_vector<T> do_parallel_std_async_copy_sort(
     tracked_vector<T> new_upper_chunk;
 
     // split into an upper and lower chunk
-    int nlower = 0;
-    for (int i = 1; i < chunk_data.size(); i++) {
+    size_t  nlower = 0;
+    for (size_t  i = 1; i < chunk_data.size(); i++) {
         if (chunk_data[i] > middle) {
             new_upper_chunk.push_back(chunk_data[i]);
         } else {
@@ -426,7 +426,7 @@ tracked_vector<T> do_parallel_std_async_copy_sort(
     tracked_vector<T> result = new_lower.get();
     result.reserve(result.size() + 1 + new_higher.size());
     result.push_back(middle);
-    for (int i = 0; i < new_higher.size(); i++) {
+    for (size_t  i = 0; i < new_higher.size(); i++) {
         result.push_back(new_higher[i]);
     }
 
@@ -467,7 +467,7 @@ bool check_equal(const tracked_vector<T>& v1, const tracked_vector<T>& v2) {
         return false;
     }
 
-    for (int i = 0; i < v1.size(); ++i) {
+    for (size_t i = 0; i < v1.size(); ++i) {
         if (v1[i] != v2[i]) {
             return false;
         }
@@ -521,5 +521,6 @@ int main(int argc, char **argv) {
 
     doSortTest();
 
+    return 0;
 }
 

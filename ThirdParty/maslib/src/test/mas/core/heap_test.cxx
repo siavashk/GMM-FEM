@@ -12,14 +12,14 @@
 #include "mas/core/time.h"
 
 void print_vec(const std::vector<int>& v) {
-    for (int i = 0; i < v.size(); i++) {
+    for (size_t i = 0; i < v.size(); i++) {
         std::cout << v[i] << " ";
     }
     std::cout << std::endl;
 }
 
 void print_vec(const std::vector<int>& v, const std::vector<int>& idx) {
-    for (int i = 0; i < v.size(); i++) {
+    for (size_t i = 0; i < v.size(); i++) {
         std::cout << v[idx[i]] << " ";
     }
     std::cout << std::endl;
@@ -35,7 +35,7 @@ void print_it(RA start, RA end) {
 
 bool check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
     bool equal = true;
-    for (int i = 0; i < v1.size(); i++) {
+    for (size_t i = 0; i < v1.size(); i++) {
         if (v1[i] != v2[i]) {
             equal = false;
             break;
@@ -63,7 +63,7 @@ bool move_test() {
     std::vector<int> vsort(len);
     std::vector<int> vidx(len);
 
-    for (int i = 0; i < v1.size(); i++) {
+    for (size_t i = 0; i < v1.size(); i++) {
         v1[i] = i;
         vidx[i] = i;
     }
@@ -91,8 +91,8 @@ bool move_test() {
     }
 
     std::cout << "Checking make_heap" << std::endl;
-    for (int i = 0; i < v1.size(); i++) {
-        if (i != vidx[vsort[i]]) {
+    for (size_t i = 0; i < v1.size(); i++) {
+        if (i != (size_t)(vidx[vsort[i]])) {
             std::cout << "FAIL!!" << std::endl;
         }
     }
@@ -104,8 +104,8 @@ bool move_test() {
     mas::heap::pop_heap(vidx.begin(), vidx.end()-1, cmp, mv);
     std::cout << "heap:  ";  print_vec(v1, vidx);
 
-    for (int i = 0; i < v1.size(); i++) {
-        if (i != vidx[vsort[i]]) {
+    for (size_t i = 0; i < v1.size(); i++) {
+        if (i != (size_t)(vidx[vsort[i]])) {
             std::cout << "FAIL!!" << std::endl;
         }
     }
@@ -114,8 +114,8 @@ bool move_test() {
     mas::heap::push_heap(vidx.begin(), vidx.end()-1,  cmp, mv);
     mas::heap::push_heap(vidx.begin(), vidx.end(),  cmp, mv);
     std::cout << "heap:  ";  print_vec(v1, vidx);
-    for (int i = 0; i < v1.size(); i++) {
-        if (i != vidx[vsort[i]]) {
+    for (size_t i = 0; i < v1.size(); i++) {
+        if (i != (size_t)(vidx[vsort[i]])) {
             std::cout << "FAIL!!" << std::endl;
         }
     }
@@ -125,8 +125,8 @@ bool move_test() {
     std::cout << "vorig: ";  print_vec(v1);
     std::cout << "vsort: ";  print_vec(vsort);
     std::cout << "heap:  ";  print_vec(v1, vidx);
-    for (int i = 0; i < v1.size(); i++) {
-        if (i != vidx[vsort[i]]) {
+    for (size_t i = 0; i < v1.size(); i++) {
+        if (i != (size_t)(vidx[vsort[i]])) {
             std::cout << "FAIL!!" << std::endl;
         }
     }
@@ -140,7 +140,7 @@ bool basic_heap_test() {
 
     int len = 10;//100000000;
     std::vector<int> v1(len);
-    for (int i = 0; i < v1.size(); i++) {
+    for (size_t i = 0; i < v1.size(); i++) {
         v1[i] = i;
     }
     std::random_shuffle(v1.begin(), v1.end());
@@ -159,7 +159,7 @@ bool basic_heap_test() {
     }
 
     timer.start();
-    for (int i = 0; i < v1.size(); i++) {
+    for (size_t i = 0; i < v1.size(); i++) {
         std::push_heap(v1b.begin(), v1b.begin() + i + 1, cmp);
     }
     timer.stop();
@@ -167,7 +167,7 @@ bool basic_heap_test() {
     std::cout << "std push took " << std_ms << "ms" << std::endl;
 
     timer.start();
-    for (int i = 0; i < v2.size(); i++) {
+    for (size_t i = 0; i < v2.size(); i++) {
         mas::heap::push_heap(v2b.begin(), v2b.begin() + i + 1, cmp, mv);
     }
     timer.stop();
@@ -261,13 +261,13 @@ bool basic_heap_test() {
     equal = check_equal(v1, v2);
     if (!equal) {
         // check sorted
-        for (int i=0; i<v1.size()-1; i++) {
+        for (size_t i=0; i<v1.size()-1; i++) {
             if (!cmp(v1[i], v1[i+1])) {
                 std::cout << "std NOT sorted at " << (i+1) << std::endl;
             }
         }
 
-        for (int i=0; i<v2.size()-1; i++) {
+        for (size_t i=0; i<v2.size()-1; i++) {
             if (!cmp(v2[i], v2[i+1])) {
                 std::cout << "mas NOT sorted at " << (i+1) << std::endl;
             }
@@ -420,11 +420,11 @@ bool basic_heap_test() {
 bool parallel_heap_test() {
 
     auto cmp = [](int a, int b) {return (a > b);};
-    auto mv = [](int& v, const size_t& a, const size_t& b) {};
+    // auto mv = [](int& v, const size_t& a, const size_t& b) {};
 
     int len = 200000000;
     std::vector<int> v1(len);
-    for (int i = 0; i < v1.size(); i++) {
+    for (size_t i = 0; i < v1.size(); i++) {
         v1[i] = i;
     }
     std::random_shuffle(v1.begin(), v1.end());

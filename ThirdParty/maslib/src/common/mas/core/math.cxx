@@ -530,7 +530,7 @@ bool svd3(const Matrix3d &A, Matrix3d &U, Vector3d &s, Matrix3d &V,
       return true;
    }
 
-   int iters = 0;
+   size_t iters = 0;
    maxIters = maxIters*3;	// account for dimension
 
    while (fabs(B.m[IDX3D_12]) > MAS_MATH_MACHINE_PRECISION *

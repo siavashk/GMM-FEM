@@ -8,9 +8,9 @@ COMMON_SOURCES := \
     $(COMMONDIR)/mas/csg/csg.cxx \
     $(COMMONDIR)/mas/fem/fem.cxx \
     $(COMMONDIR)/mas/mesh/io.cxx \
+    $(COMMONDIR)/mas/mesh/mesh.cxx \
     $(COMMONDIR)/mas/mesh/meshbv.cxx \
     $(COMMONDIR)/mas/mesh/meshbv_intersector.cxx \
-    $(COMMONDIR)/mas/mesh/mesh.cxx \
     $(COMMONDIR)/mas/mesh/simplification.cxx
 
 MEX_SOURCES := \
@@ -30,16 +30,16 @@ CMD_SOURCES := \
 
 TEST_SOURCES := \
     $(TESTDIR)/mas/bvtree/update_test.cxx \
+    $(TESTDIR)/mas/concurrency/parallel_sort_test.cxx \
     $(TESTDIR)/mas/concurrency/queue_test.cxx \
+    $(TESTDIR)/mas/concurrency/shared_lock_test.cxx \
+    $(TESTDIR)/mas/concurrency/tuple_test.cxx \
+    $(TESTDIR)/mas/core/heap_test.cxx \
     $(TESTDIR)/mas/core/martrix4d_test.cxx \
     $(TESTDIR)/mas/core/matrixnd_test.cxx \
     $(TESTDIR)/mas/core/qr_test.cxx \
+    $(TESTDIR)/mas/core/queue_test.cxx \
     $(TESTDIR)/mas/mesh/simplification_test.cxx
-    # $(TESTDIR)/mas/concurrency/parallel_sort_test.cxx # broken on default OSX
-    # $(TESTDIR)/mas/concurrency/shared_lock_test.cxx
-    # $(TESTDIR)/mas/concurrency/tuple_test.cxx
-    # $(TESTDIR)/mas/core/heap_test.cxx
-    # $(TESTDIR)/mas/core/queue_test.cxx
 
 M_SOURCES := \
     $(MEXDIR)/mas/bvtree/bvtree.m \

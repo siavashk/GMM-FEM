@@ -1,7 +1,9 @@
 #!/bin/bash
-# Run from a bash shell to generate list of source files for Makefile
+# Run from a bash shell to generate list of source files for Makefiles 
+# and CMake
 
-filename=Makefile.sources
+makefile=MakefileSources.mk
+cmakefile=CMakeSources.txt
 
 SRCDIR=./src
 COMMONDIR=$SRCDIR/common
@@ -15,26 +17,37 @@ CMD_SOURCES=`find $CMDDIR/ -type f -name '*_cmd.cxx' | sort | sed "s|$CMDDIR|\$\
 TEST_SOURCES=`find $TESTDIR/ -type f -name '*.cxx' | sort | sed "s|$TESTDIR|\$\(TESTDIR\)|g"`
 M_SOURCES=`find $MEXDIR/ -type f -name '*.m' | sort | sed "s|$MEXDIR|\$\(MEXDIR\)|g"`
 
-echo "COMMON_SOURCES := \\" > $filename
-echo "`echo "$COMMON_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $filename
-echo "" >> $filename
-echo "MEX_SOURCES := \\" >> $filename
-echo "`echo "$MEX_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $filename
-echo "" >> $filename
-echo "CMD_SOURCES := \\" >> $filename
-echo "`echo "$CMD_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $filename
-echo "" >> $filename
-echo "TEST_SOURCES := \\" >> $filename
-echo "`echo "$TEST_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $filename
-echo "" >> $filename
-echo "M_SOURCES := \\" >> $filename
-echo "`echo "$M_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $filename
+echo "COMMON_SOURCES := \\" > $makefile
+echo "`echo "$COMMON_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $makefile
+echo "" >> $makefile
+echo "MEX_SOURCES := \\" >> $makefile
+echo "`echo "$MEX_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $makefile
+echo "" >> $makefile
+echo "CMD_SOURCES := \\" >> $makefile
+echo "`echo "$CMD_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $makefile
+echo "" >> $makefile
+echo "TEST_SOURCES := \\" >> $makefile
+echo "`echo "$TEST_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $makefile
+echo "" >> $makefile
+echo "M_SOURCES := \\" >> $makefile
+echo "`echo "$M_SOURCES" | sed '$ ! s|$| \\\|g' | sed 's|^|    |g'`" >> $makefile
 
-#echo "MEX_SOURCES := $MEX_SOURCES"
-#echo ""
-#echo "CMD_SOURCES := $CMD_SOURCES"
-#echo ""
-#echo "TEST_SOURCES := $TEST_SOURCES"
-#echo ""
-#echo "M_SOURCES := $M_SOURCES"
-
+echo "set (COMMON_SOURCES " > $cmakefile
+echo "`echo "$COMMON_SOURCES" | sed 's|^$(\(.*DIR\))\(.*\)|${\1}\2|g' | sed 's|^|        |g'`" >> $cmakefile
+echo "    )" >> $cmakefile
+echo "" >> $cmakefile
+echo "set (MEX_SOURCES " >> $cmakefile
+echo "`echo "$MEX_SOURCES" | sed 's|^$(\(.*DIR\))\(.*\)|${\1}\2|g' | sed 's|^|        |g'`" >> $cmakefile
+echo "    )" >> $cmakefile
+echo "" >> $cmakefile
+echo "set (CMD_SOURCES " >> $cmakefile
+echo "`echo "$CMD_SOURCES" | sed 's|^$(\(.*DIR\))\(.*\)|${\1}\2|g' | sed 's|^|        |g'`" >> $cmakefile
+echo "    )" >> $cmakefile
+echo "" >> $cmakefile
+echo "set (TEST_SOURCES " >> $cmakefile
+echo "`echo "$TEST_SOURCES" | sed 's|^$(\(.*DIR\))\(.*\)|${\1}\2|g' | sed 's|^|        |g'`" >> $cmakefile
+echo "    )" >> $cmakefile
+echo "" >> $cmakefile
+echo "set (M_SOURCES " >> $cmakefile
+echo "`echo "$M_SOURCES" | sed 's|^$(\(.*DIR\))\(.*\)|${\1}\2|g' | sed 's|^|        |g'`" >> $cmakefile
+echo "    )" >> $cmakefile

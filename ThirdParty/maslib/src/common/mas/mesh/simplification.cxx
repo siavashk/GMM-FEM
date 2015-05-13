@@ -7,7 +7,7 @@ namespace mesh {
 void VERIFY_HE_INCIDENCE(PolygonMesh& mesh) {
 
     // number of faces each vertex is part of
-    std::vector<int> vtxFaceCount(mesh.numVertices(), 0);
+    std::vector<size_t> vtxFaceCount(mesh.numVertices(), 0);
 
     for (SharedPolygon& face : mesh.faces) {
         for (SharedVertex3d& vtx : face->verts) {

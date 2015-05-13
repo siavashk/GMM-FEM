@@ -44,7 +44,7 @@ void qr(Matrix& QR, Vector& tau) {
          double u1 = QR(j,j) + s*normx;
 
          // create Householder vector
-         for (int i=j+1; i<m; i++) {
+         for (size_t i=j+1; i<m; i++) {
             QR(i, j) = QR(i, j)/u1;
          }
          tau(j) = s*u1/normx;
@@ -54,18 +54,18 @@ void qr(Matrix& QR, Vector& tau) {
 
          // fill in rest of R
          // tau w'*A
-         for (int k=j+1; k<n; k++) {
+         for (size_t k=j+1; k<n; k++) {
             tmp[k] = QR(j, k);
-            for (int i=j+1; i<m; i++) {
+            for (size_t i=j+1; i<m; i++) {
                tmp[k] += QR(i, j)*QR(i, k);
             }
             tmp[k] = tmp[k]*tau(j);
          }
 
          // A = A-tau w (w'A)
-         for (int k=j+1; k<n; k++) {
+         for (size_t k=j+1; k<n; k++) {
             QR(j, k) = QR(j, k) - tmp[k];
-            for (int i=j+1; i<m; i++) {
+            for (size_t i=j+1; i<m; i++) {
                QR(i, k) = QR(i, k) - QR(i,j)*tmp[k];
             }
          }

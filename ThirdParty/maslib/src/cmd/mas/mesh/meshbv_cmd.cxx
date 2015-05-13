@@ -30,7 +30,6 @@ int main(int argc, const char* argv[]) {
 
 	if (nPoints > 0) {
 		vtxs.reserve(nPoints);
-		int dim = 3;
 
 		for (int i=0; i<nPoints; i++) {
 			mas::Point3d loc(pnts[3*i], pnts[3*i+1], pnts[3*i+2]);
@@ -55,7 +54,7 @@ int main(int argc, const char* argv[]) {
 				polyvtxs.push_back( vtxs[ gidx-1 ] );
 			}
 			SharedPolygon poly = std::make_shared<Polygon>(std::move(polyvtxs));
-			printf("Poly created, %ld verts\n", poly->verts.size());
+			printf("Poly created, %lu verts\n", (unsigned long)(poly->verts.size()));
 			SharedBoundablePolygon bpoly = std::make_shared<BoundablePolygon>(std::move(poly));
 			bpoly->polygon->setIndex(idx++);
 
@@ -63,7 +62,7 @@ int main(int argc, const char* argv[]) {
 				printf("What's going on?!?!\n");
 				printf("Polygon: %p\nBPolygon: %p\n", (void*)(poly.get()), (void*)(bpoly->polygon.get()));
 			}
-			printf("Bounded polygon has %ld verts (%ld)\n", bpoly->polygon->verts.size(), poly->verts.size());
+			printf("Bounded polygon has %lu verts (%lu)\n", (unsigned long)(bpoly->polygon->verts.size()), (unsigned long)(poly->verts.size()));
 			fflush(stdout);
 			boundableGroups.push_back(bpoly);
 		}
@@ -72,7 +71,7 @@ int main(int argc, const char* argv[]) {
 	int pidx = 1;
 	for (SharedBoundablePolygon& b : boundableGroups) {
 		SharedBoundablePolygon bpoly = std::static_pointer_cast<BoundablePolygon>(b);
-		printf("Polygon %d, %ld verts\n", pidx++, bpoly->polygon->verts.size());
+		printf("Polygon %d, %lu verts\n", pidx++, (unsigned long)(bpoly->polygon->verts.size()));
 		fflush(stdout);
 	}
 

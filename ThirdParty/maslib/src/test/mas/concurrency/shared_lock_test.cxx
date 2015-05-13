@@ -12,7 +12,7 @@ void doSharedTest() {
     mas::concurrency::shared_timed_mutex mutex;
     int val = 10;
     std::atomic<int> aval;
-    aval.store(10);
+    aval.store(val);
 
 }
 

@@ -21,7 +21,8 @@ void printstuff(mas::mesh::PolygonMesh& mesh, int offset) {
     // faces
     for (mas::mesh::SharedPolygon& face : mesh.faces) {
         std::cout << "f(" << (face->idx + offset) << ",:) = [";
-        for (int i = 0; i < face->numVertices() - 1; i++) {
+        int ntop = face->numVertices() - 1;
+        for (int i = 0; i < ntop; i++) {
             std::cout << (face->verts[i]->idx + offset) << ", ";
         }
         std::cout << (face->verts.back()->idx + offset) << "];" << std::endl;
@@ -73,7 +74,7 @@ bool doMallocDebug(const char filename[]) {
     // dealloc faces one at a time
     size_t len = facesCopy.size();
     std::reverse(facesCopy.begin(), facesCopy.end());
-    for (int i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         size_t idx = facesCopy.back()->idx;
         facesCopy.pop_back();
         facesCopy.shrink_to_fit();

@@ -13,7 +13,7 @@
 #include "mas/core/time.h"
 
 void print_vec(const std::vector<int>& v) {
-    for (int i = 0; i < v.size(); i++) {
+    for (size_t i = 0; i < v.size(); i++) {
         std::cout << v[i] << " ";
     }
     std::cout << std::endl;
@@ -21,7 +21,7 @@ void print_vec(const std::vector<int>& v) {
 
 void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
     bool equal = true;
-    for (int i = 0; i < v1.size(); i++) {
+    for (size_t i = 0; i < v1.size(); i++) {
         if (v1[i] != v2[i]) {
             equal = false;
             break;
@@ -41,9 +41,9 @@ void check_equal(const std::vector<int>& v1, const std::vector<int>& v2) {
 
 void do_pop_test() {
 
-    int len = 10;//12000000;
+    size_t len = 10;//12000000;
     std::vector<int> v1(len);
-    for (int i = 0; i < v1.size(); i++) {
+    for (size_t i = 0; i < v1.size(); i++) {
         v1[i] = i;
     }
     std::random_shuffle(v1.begin(), v1.end());
@@ -62,7 +62,7 @@ void do_pop_test() {
     double mas_time, std_time;
 
     timer.start();
-    for (int i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         v1.push_back(mas_queue.pop_top());
     }
     timer.stop();
@@ -70,7 +70,7 @@ void do_pop_test() {
     std::cout << "mas pop sort time: " << mas_time << "ms" << std::endl;
 
     timer.start();
-    for (int i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         v2.push_back(std_queue.top());
         std_queue.pop();
     }
@@ -82,9 +82,9 @@ void do_pop_test() {
 
 void do_random_pop_test() {
 
-    int len = 10;//1200000;
+    size_t len = 10;//1200000;
     std::vector<int> v1(len);
-    for (int i = 0; i < v1.size(); i++) {
+    for (size_t i = 0; i < v1.size(); i++) {
         v1[i] = i;
     }
     std::random_shuffle(v1.begin(), v1.end());
@@ -129,7 +129,7 @@ void do_random_pop_test() {
 
 void do_random_update_test() {
 
-    int len = 10;//100000000;
+    size_t len = 10;//100000000;
 
     struct widget {
         double priority;
@@ -137,7 +137,7 @@ void do_random_update_test() {
     };
 
     std::vector<widget> wc;
-    for (int i=0; i<len; i++) {
+    for (size_t i=0; i<len; i++) {
         wc.push_back(widget {(double)i, 0} );
     }
     std::random_shuffle(wc.begin(), wc.end());
@@ -153,13 +153,13 @@ void do_random_update_test() {
           mov);
 
     // push a bunch of pointers onto the stack
-    for (int i=0; i<len; i++) {
+    for (size_t i=0; i<len; i++) {
        queue.push(wc.data()+i);
     }
 
     // check that loc was set in correct order
     bool valid = true;
-    for (int i=0; i<len; i++) {
+    for (size_t i=0; i<len; i++) {
        widget* w = queue.peek(i);
        if (w->loc != i) {
           std::cout << " loc not set correctly, " << i << " vs " << w->loc << std::endl;
@@ -182,7 +182,7 @@ void do_random_update_test() {
     // update in random order
     timer.start();
     valid = true;
-    for (int i=0; i<len; i++) {
+    for (size_t i=0; i<len; i++) {
 
         std::uniform_int_distribution<size_t> dis(0, len-1);
         size_t w1idx = dis(gen);

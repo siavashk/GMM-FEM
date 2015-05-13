@@ -110,13 +110,13 @@ Polygon::~Polygon() {
 Plane Polygon::getPlane(const std::vector<SharedVertex3d>& verts) {
     size_t n = verts.size();
 
-    int v0 = 0;
-    int v1 = 1;
-    int v2 = 2;
+    size_t v0 = 0;
+    size_t v1 = 1;
+    size_t v2 = 2;
 
     Plane plane;
     bool success = plane.set(*verts[v0], *verts[v1], *verts[v2]);
-    int idx = 1;
+    size_t idx = 1;
     while (!success && idx < n) {
         v0 = v1;
         v1 = v2;
@@ -187,7 +187,7 @@ bool Polygon::isTriangular() const {
 
 bool Polygon::isConvex(std::vector<SharedVertex3d>& reflex) const {
 
-    int nV = numVertices();
+    size_t nV = numVertices();
 
     if (nV <= 3) {
         return true;
@@ -198,8 +198,8 @@ bool Polygon::isConvex(std::vector<SharedVertex3d>& reflex) const {
     Vector3d v1;
     Vector3d v2;
 
-    int vtx0 = nV - 2;
-    int vtx1 = nV - 1;
+    size_t vtx0 = nV - 2;
+    size_t vtx1 = nV - 1;
     for (size_t i = 0; i < verts.size(); i++) {
         v1.subtract(*verts[vtx0], *verts[vtx1]);
         v2.subtract(*verts[i], *verts[vtx1]);
@@ -219,7 +219,7 @@ bool Polygon::isConvex(std::vector<SharedVertex3d>& reflex) const {
 
 bool Polygon::isConvex() const {
 
-    int nV = numVertices();
+    size_t nV = numVertices();
     if (nV <= 3) {
         return true;
     }
@@ -228,9 +228,9 @@ bool Polygon::isConvex() const {
     Vector3d v1;
     Vector3d v2;
 
-    int vtx0 = nV - 2;
-    int vtx1 = nV - 1;
-    for (int i = 0; i < verts.size(); i++) {
+    size_t vtx0 = nV - 2;
+    size_t vtx1 = nV - 1;
+    for (size_t i = 0; i < verts.size(); i++) {
         v1.subtract(*verts[vtx0], *verts[vtx1]);
         v2.subtract(*verts[i], *verts[vtx1]);
         v2.cross(v1);
@@ -253,15 +253,15 @@ bool Polygon::isConnected() {
 void Polygon::connect() {
 
     // build half-edges from vertex list
-    int v0 = verts.size() - 1;
-    int v1 = 0;
+    size_t v0 = verts.size() - 1;
+    size_t v1 = 0;
 
     he0 = std::make_shared<HalfEdge>(verts[v0], verts[v1], this);
     he0->connect();
     HalfEdge* he = he0.get();
 
     // attach half-edges to themselves
-    for (int i = 1; i < verts.size(); i++) {
+    for (size_t i = 1; i < verts.size(); i++) {
         v0 = v1;
         v1 = i;
         he->next = std::make_shared<HalfEdge>(verts[v0], verts[v1], this);
@@ -611,7 +611,7 @@ SharedVertex3d PolygonMesh::removeVertex(size_t idx, bool swapLast) {
 
         } else {
             // shift
-            for (int i = idx; i < last; i++) {
+            for (size_t i = idx; i < last; i++) {
                 verts[i] = std::move(verts[i + 1]);
                 verts[i]->setIndex(i);
             }
@@ -673,7 +673,7 @@ SharedPolygon PolygonMesh::removeFace(size_t idx, bool swapLast) {
 
         } else {
             // shift
-            for (int i = idx; i < last; i++) {
+            for (size_t i = idx; i < last; i++) {
                 faces[i] = std::move(faces[i + 1]);
                 faces[i]->setIndex(i);
             }
@@ -813,28 +813,28 @@ double MeshFactory::maximumCosine(const Point3d& v0, const Point3d& v1,
 
 // vertex index to remove in triangulation corresponding to the
 // 2nd vertex is the most well-formed triangle
-int MeshFactory::bestTriangle(const std::vector<SharedVertex3d>& verts) {
+size_t MeshFactory::bestTriangle(const std::vector<SharedVertex3d>& verts) {
 
     if (verts.size() == 3) {
         return 1;
     }
 
-    int n = verts.size();
+    size_t n = verts.size();
 
-    int v0 = n - 1;
-    int v1 = 0;
-    int v2 = 1;
+    size_t v0 = n - 1;
+    size_t v1 = 0;
+    size_t v2 = 1;
 
     double minC = maximumCosine(*verts[v0], *verts[v1], *verts[v2]);
-    int idx = 0;
+    size_t idx = 0;
 
-    for (int i = 1; i < verts.size(); i++) {
+    for (size_t i = 1; i < verts.size(); i++) {
         v0 = v1;
         v1 = v2;
         v2 = (i + 1) % n;
 
         double c = maximumCosine(*verts[v0], *verts[v1], *verts[v2]);
-        ;
+        
         if (c < minC) {
             minC = c;
             idx = i;
@@ -865,13 +865,13 @@ std::vector<std::unique_ptr<Polygon>> MeshFactory::triangulate(
 
         // whittle down to four vertices, cutting off best triangles
         if (nverts > 4) {
-            int n = nverts;
-
-            for (int i = 0; i < nverts - 4; i++) {
-                int idx = bestTriangle(oldVtxs);
-                int v0 = (idx + n - 1) % n;
-                int v1 = idx;
-                int v2 = (idx + 1) % n;
+            size_t n = nverts;
+            int ntop = (int)nverts-4;
+            for (int i = 0; i < ntop; i++) {
+                size_t idx = bestTriangle(oldVtxs);
+                size_t v0 = (idx + n - 1) % n;
+                size_t v1 = idx;
+                size_t v2 = (idx + 1) % n;
                 tris.push_back(
                         std::unique_ptr<Polygon>(
                                 new Polygon(oldVtxs[v0], oldVtxs[v1],
@@ -1147,8 +1147,6 @@ double volume_integrals(const std::vector<SharedPolygon>& polygons,
         double ncinv_2 = ncinv * ncinv;
 
         if (m1 != nullptr) {
-            double na_3 = na_2 * na;
-            double nb_3 = nb_2 * nb;
             double Icc = (na_2 * Iaa + 2 * na * nb * Iab + nb_2 * Ibb
                     + d * (2 * (na * Ia + nb * Ib) + d * I)) * (ncinv * ncinv);
 
@@ -1280,7 +1278,7 @@ double polygon_area(const Polygon& poly) {
     double d2y = v1->y - v0->y;
     double d2z = v1->z - v0->z;
 
-    for (int i = 2; i < poly.numVertices(); i++) {
+    for (size_t i = 2; i < poly.numVertices(); i++) {
 
         const SharedVertex3d& v2 = poly.verts[i];
 

@@ -93,7 +93,7 @@ EdgeCollapser<CostFunc, CollapseCallback>::EdgeCollapser(PolygonMesh& mesh,
     // gather edges
     edgeinfo = std::vector<std::unique_ptr<EdgeInfo> >();
     edgeinfo.reserve(nedges);
-    for (int i = 0; i < nedges; i++) {
+    for (size_t i = 0; i < nedges; i++) {
         edgeinfo.push_back(std::unique_ptr<EdgeInfo>(new EdgeInfo()));
     }
 
@@ -273,8 +273,8 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
     // keep edge's head, replace tail
     std::vector<HalfEdge*> hedges = edge->tail->getIncidentEdges();
     for (HalfEdge* he : hedges) {
-        size_t idx = he->idx;
-        //                std::cout << "idx: " << idx << std::endl;
+        // size_t idx = he->idx;
+        // std::cout << "idx: " << idx << std::endl;
 
         // only modify face if it's not one of the two faces to remove
         if (he->face != face1 && he->face != face2) {
@@ -286,7 +286,7 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
 
             he->next->tail = edge->head;
             // replace face vertex
-            for (int i = 0; i < he->face->verts.size(); i++) {
+            for (size_t i = 0; i < he->face->verts.size(); i++) {
                 if (he->face->verts[i] == edge->tail) {
                     he->face->verts[i] = edge->head;
                     // XXX more than one? break;
@@ -308,7 +308,7 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
                 next->opposite->opposite = prev->opposite;
 
                 // re-index merged edge, prev's edge gets merged into next
-                size_t oldidx = prev->getIndex();
+                // size_t oldidx = prev->getIndex();
                 prev->opposite->setIndex(next->getIndex(), true);
                 prev->opposite->opposite->setIndex(next->getIndex(), false); // ensure only one primary
                 // edge at the new index might be referring to the half-edge belonging to the removed face
@@ -362,10 +362,12 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
 
         // remove actual vertex
         std::vector<SharedVertex3d>& vtxs = edge->face->verts;
-        for (int i=vidx; i<vtxs.size()-1; i++) {
-            vtxs[i] = std::move(vtxs[i+1]);
+	if (vtxs.size() > 0) {
+            for (size_t i=vidx; i<vtxs.size()-1; i++) {
+                vtxs[i] = std::move(vtxs[i+1]);
+            }
+            vtxs.pop_back();
         }
-        vtxs.pop_back();
 
         // replace he0 if need be
         if (edge->face->he0 == edge) {
@@ -392,7 +394,7 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
                 next->opposite->opposite = prev->opposite;
 
                 // re-index merged edge, prev's edge gets merged into next
-                size_t oldidx = prev->getIndex();
+                // size_t oldidx = prev->getIndex();
                 prev->opposite->setIndex(next->getIndex(), true);
                 prev->opposite->opposite->setIndex(next->getIndex(), false); // ensure only one primary
                 // edge at the new index might be referring to the half-edge belonging to the removed face
@@ -442,10 +444,12 @@ void EdgeCollapser<CostFunc, CollapseCallback>::collapse(
 
         // remove actual vertex
         std::vector<SharedVertex3d>& vtxs = oedge->face->verts;
-        for (int i=vidx; i<vtxs.size()-1; i++) {
-            vtxs[i] = std::move(vtxs[i+1]);
+        if (vtxs.size() > 1) {
+            for (size_t i=vidx; i<vtxs.size()-1; i++) {
+                vtxs[i] = std::move(vtxs[i+1]);
+            }
+            vtxs.pop_back();
         }
-        vtxs.pop_back();
 
         // replace he0 if need be
         if (oedge->face->he0 == oedge) {
@@ -506,7 +510,6 @@ template<typename CostFunc, typename CollapseCallback>
 void EdgeCollapser<CostFunc, CollapseCallback>::collapseTo(size_t targetFaces) {
 
     // go through and collapse edges
-    int nfaces = mesh.numFaces();
     while (mesh.numFaces() > targetFaces && !queue.empty()) {
 
         size_t eidx = queue.top();

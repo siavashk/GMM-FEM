@@ -43,7 +43,7 @@ private:
     bool zeroIndexed;
 
 protected:
-    virtual Vertex3d* parseVertex(const std::string& line, int idx = -1);
+    virtual Vertex3d* parseVertex(const std::string& line, size_t idx = (size_t)(-1));
     virtual std::vector<size_t> parseFace(const std::string& line);
 
 public:
