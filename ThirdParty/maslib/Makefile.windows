@@ -38,7 +38,7 @@ endif
 ifndef MATLAB_ROOT
 
 # Guess where matlab root is
-MATLAB_GUESS:=$(subst C:/Program Files/MATLAB/,,$(wildcard C:/Program\ Files/MATLAB/*))
+MATLAB_GUESS:=$(lastword $(subst C:/Program Files/MATLAB/,,$(wildcard C:/Program\ Files/MATLAB/*)))
 
 ifeq (,$(MATLAB_GUESS))
 $(error Cannot find MATLAB, re-run make by passing a MATLAB root folder: make -f Makefile.windows MATLAB_ROOT=<pathname>)

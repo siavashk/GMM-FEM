@@ -5,13 +5,13 @@ MM=g++
 # DEBUG = 0
 # PROFILE = 0
 
+BINDIR = ./bin
 BUILDDIR = ./build
 SRCDIR = ./src
 TET_DIR = ./tetgen
 INCLUDEDIR = $(TET_DIR)
-BINDIR = ./bin
 
-CXXFLAGS=-I$(INCLUDEDIR) --std=c++11 -pedantic -DPTR_EXCEEDS_LONG -DTETLIBRARY
+CXXFLAGS=-I$(INCLUDEDIR) --std=c++11 -pedantic -DPTR_EXCEEDS_LONG -DTETLIBRARY -Wall
 ifdef DEBUG
 CXXFLAGS:=$(CXXFLAGS) -g -O0
 else
@@ -36,14 +36,12 @@ endif
 ifndef MATLAB_ROOT
 
 # Guess where matlab root is
-MATLAB_GUESS:=$(lastword $(wildcard C:/Program\ Files/MATLAB/*))
-ifeq (,$(MATLAB_GUESS))
-	MATLAB_GUESS:=$(lastword $(wildcard C:/Program\ Files/matlab/*))
-endif
+MATLAB_GUESS:=$(lastword $(subst C:/Program Files/MATLAB/,,$(wildcard C:/Program\ Files/MATLAB/*)))
+
 ifeq (,$(MATLAB_GUESS))
 $(error Cannot find MATLAB, re-run make by passing a MATLAB root folder: make -f Makefile.windows MATLAB_ROOT=<pathname>)
 endif
-MATLAB_ROOT:="C:/Program $(MATLAB_GUESS)"
+MATLAB_ROOT:="C:/Program Files/MATLAB/$(MATLAB_GUESS)"
 $(warning guessing Matlab: $(MATLAB_ROOT))
 
 endif

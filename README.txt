@@ -2,7 +2,7 @@
 # GMM-FEM Registration PACKAGE #
 ################################
 
-###########################################################################################
+###############################################################################
 
 --------------------------------
 1 WHAT DOES THE PACKAGE CONTAIN?
@@ -29,7 +29,7 @@ Medical Imaging, IEEE Transactions on, June 2014.
 in support of MRI/ultrasound-guided prostate interventions", Accepted for 
 Publication in IJCARS, 2015.
 
-###########################################################################################
+###############################################################################
 
 ----------------------------
 2 WINDOWS BUILD INSTRUCTIONS
@@ -39,38 +39,59 @@ Publication in IJCARS, 2015.
 2.1 KNOWN DEPENDENCIES
 ----------------------
 
-Two libraries, Tetgen and Maslib, need to be built prior to mex generation. 
-We have already supplied these packages in /GMM-FEM/ThirdParty, however, 
-the Windows user needs a make.exe and a Linux style find.exe to generate 
-these libraries.
- 
-We recommend MinGW for both make and find executabels. This project can be
-downloaded from: http://www.mingw.org/
-
-Once MinGW is downloaded, we recommend changing the default mingw32-make.exe
-to make.exe and adding the location of both make.exe and find.exe to environmental
-variables.
+Two libraries, Tetgen and Maslib, need to be built in order to run the
+algorithms.  We have already supplied these packages in /GMM-FEM/ThirdParty.  
 
 ------------------------------
 2.2 BUILDING TETGEN AND MASLIB
 ------------------------------
 
-Open the command prompt (cmd.exe) and navigate to /GMM-FEM/ThirdParty/maslib/
-and /GMM-FEM/ThirdParty/tetgen1.4.3. Call make to generate these libraries.
-If the Matlab version is different from R2014b, please modifly both MakeFiles
-(in maslib and tetgen) to reflect the correct version. 
+Makefiles are provided in the root folders of the packages for building the
+libraries and MATLAB mex files.  They can be invoked using the GNU make
+build system:
+
+  >> make -f Makefile.<platform>
+
+where <platform> is either 'linux', 'mac', or 'windows'.  The utility will
+attempt to guess where MATLAB is installed so it can find the required mex
+libraries.  To specify a path, provide the root folder:
+
+  >> make -f Makefile.<platform> MATLAB_ROOT=<path to matlab>
+
+e.g. MATLAB_ROOT="C:/Program Files/MATLAB/R2013b"
+
+
+Windows Users:
+----------------------
+Note that the code relies on some C++11 features that are not yet fully
+implemented in the VC++ compiler provided by Visual Studio 2013.  Therefore,
+we suggest downloading MinGW64 for compiling:
+
+   http://sourceforge.net/projects/mingw-w64/
+
+When prompted, allow the installer to add the MinGW directory to your system
+path.  This will allow you to use the "make.exe" program for compiling.  
+Depending on the version of MinGW64 installed, you may need to invoke:
+
+  >> mingw32-make -f Makefile.windows
 
 -----------------------
 2.3 VERIFYING THE BUILD
 -----------------------
 
-Run /GMM-FEM/Scripts/fem_only_test.m to perform non-rigid FEM-based registration.
+Run /GMM-FEM/Scripts/fem_only_test.m to perform non-rigid FEM-based 
+registration.
 
 -------------------
 2.4 TROUBLESHOOTING
 -------------------
 
-If you get an error regarding find during Tetgen and Maslib, it could be that the
-Windows find.exe is being called instead of Linux style find.exe in MinGW. One
-workaround is to make sure the Linux style is placed at the beginning of %PATH%
-in environment variables.
+If you get an error regarding not being able to find or link to the MATLAB
+libraries, first verify that the correct MATLAB path is being detected.
+Internal variables can be printed using
+
+  >> make -f Makefile.<platform> vars
+
+If the MATLAB path is incorrect, then pass in the appropriate MATLAB_ROOT
+variable.  If the libraries still cannot be found, verify that you are
+using a 64-bit compiler with 64-bit MATLAB.
