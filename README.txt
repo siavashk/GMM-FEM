@@ -22,12 +22,13 @@ Pattern Analysis and Machine Intelligence, IEEE Transactions on 32.12 (2010):
 2262-2275.
 
 [2] Khallaghi et al., "Biomechanically Constrained Surface Registration: 
-Application to MR-TRUS Fusion for Prostate Interventions", Submitted to 
-Medical Imaging, IEEE Transactions on, June 2014.
+Application to MR-TRUS Fusion for Prostate Interventions", Accepted for
+publication in IEEE Transactions on Medical Imaging, May, 2015.
  
 [3] Fedorov et al., "Towards an open source framework for image registration
-in support of MRI/ultrasound-guided prostate interventions", Accepted for 
-Publication in IJCARS, 2015.
+in support of MRI/ultrasound-guided prostate interventions", International 
+Journal of Computer Assisted Radiology and Surgery, Springer Berlin Heidelberg,
+pages 1-10, 2015.
 
 ###############################################################################
 
