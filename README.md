@@ -1,5 +1,5 @@
 
-# GMM-FEM Registration PACKAGE #
+# GMM-FEM Registration #
 
 ## WHAT DOES THE PACKAGE CONTAIN?
 
