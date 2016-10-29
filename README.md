@@ -52,8 +52,7 @@ implemented in the VC++ compiler provided by Visual Studio 2013. Unfortunately, 
    http://sourceforge.net/projects/mingw-w64/
 
 When prompted, allow the installer to add the MinGW directory to your system
-path.  This will allow you to use the "make.exe" program for compiling.  
-Depending on the version of MinGW64 installed, you may need to invoke:
+path.  This will allow you to use the "make.exe" program for compiling. Depending on the version of MinGW64 installed, you may need to invoke:
 
   $ mingw32-make -f Makefile.windows
 
