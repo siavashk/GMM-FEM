@@ -77,3 +77,5 @@ Internal variables can be printed using
 If the MATLAB path is incorrect, then pass in the appropriate MATLAB_ROOT
 variable.  If the libraries still cannot be found, verify that you are
 using a 64-bit compiler with 64-bit MATLAB.
+
+If you get an issue similar to "Invalid MEX-file bvtree_build.mexa64 ... libstdc++.so.6: version `GLIBCXX_3.4.18' not found", it might be that Matlab is loading a different version of libstdc++. On Ubuntu machines, Matlab internally links libstdc++ to a version found under its own binary directory. A workaround is to change this linkage to point to gcc's std library, which on Ubuntu machines is usually found under /usr/lib/x86_64-linux-gnu.
