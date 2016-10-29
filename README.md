@@ -24,7 +24,6 @@ in support of MRI/ultrasound-guided prostate interventions", International Journ
 ## BUILD INSTRUCTIONS
 
 ### KNOWN DEPENDENCIES
-----------------------
 
 Two libraries, Tetgen and Maslib, need to be built in order to run the
 algorithms.  We have already supplied these packages in /GMM-FEM/ThirdParty.  
