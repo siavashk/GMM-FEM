@@ -44,11 +44,10 @@ libraries.  To specify a path, provide the root folder:
 
 e.g. MATLAB_ROOT="C:/Program Files/MATLAB/R2013b"
 
-#### Windows Users:
+#### Windows Users
 
-Note that the code relies on some C++11 features that are not yet fully
-implemented in the VC++ compiler provided by Visual Studio 2013.  Therefore,
-we suggest downloading MinGW64 for compiling:
+Note that the code relies on some C++11 features that are not yet (as of September 2015) fully 
+implemented in the VC++ compiler provided by Visual Studio 2013. Unfortunately, lack of Matlab  and a Windows machine prohibit us from testing the build with new versions of Visual Studio. Therefore, we suggest downloading MinGW64 for compiling:
 
    http://sourceforge.net/projects/mingw-w64/
 
