@@ -36,7 +36,7 @@ build system:
 
   $ make -f Makefile.\<platform\>
 
-where <platform> is either 'linux', 'mac', or 'windows'.  The utility will
+where \<platform\> is either 'linux', 'mac', or 'windows'.  The utility will
 attempt to guess where MATLAB is installed so it can find the required mex
 libraries.  To specify a path, provide the root folder:
 
